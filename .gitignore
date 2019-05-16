@@ -1,0 +1,45 @@
+# Build outputs
+*.o
+*.d
+lib*.so
+lib*.so.*
+*.a
+build/
+.dep
+__pycache__
+*.pyc
+.mypy*
+.pytest_cache
+*.egg-info
+*.patch
+.tox
+.coverage*
+.venv
+coverage.xml
+.out*
+.docker*
+.pyenv
+_build
+.env*
+dist
+.clear*
+
+# Eclipse
+.metadata
+.settings
+.project
+.cproject
+.pydevproject
+.gdbinit
+
+# vsstudio code
+.vscode*
+
+# vagrant
+.vagrant
+
+# Log files
+*.log
+
+# Coveralls local config
+.coveralls.yml
