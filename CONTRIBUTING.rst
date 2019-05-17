@@ -53,14 +53,14 @@ debugging
 ------------------------------------------------
 
 The Python plugin for vscode comes with a full-featured Python debugger. To setup a debug session
-for nnvg open the launch.json for your workspace and add a configuration like the following
+for nait open the launch.json for your workspace and add a configuration like the following
 to the configurations array::
 
     {
-        "name": "Python: nantest",
+        "name": "Python: nait",
         "type": "python",
         "request": "launch",
-        "program": "${workspaceFolder}/src/nantest",
+        "program": "${workspaceFolder}/src/nait",
         "cwd": "${workspaceFolder}",
         "console": "integratedTerminal",
         "args": []

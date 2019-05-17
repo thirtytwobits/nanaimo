@@ -2,19 +2,23 @@
 # Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # This software is distributed under the terms of the MIT License.
 #
-import serial
-import concurrent.futures
-import typing
-import types
 import asyncio
-import queue
+import concurrent.futures
+import logging
 import pathlib
+import queue
+import re
+import time
+import types
+import typing
+
+import serial
 
 
 class ConcurrentUartMonitor:
 
     TIMEOUT_SEC = 1
-    LINE_BUFFER_SIZE = 100
+    LINE_BUFFER_SIZE = 255
 
     @classmethod
     def new_default(cls, port: str, baudrate: int) -> 'ConcurrentUartMonitor':
@@ -26,6 +30,11 @@ class ConcurrentUartMonitor:
         self._buffer: queue.Queue[str] = queue.Queue(self.LINE_BUFFER_SIZE)
         self._running = True
         self._serial_future: typing.Optional[concurrent.futures.Future] = None
+        self._full_events = 0
+
+    @property
+    def buffer_full_events(self) -> int:
+        return self._full_events
 
     @property
     def serial_port(self) -> serial.Serial:
@@ -45,12 +54,7 @@ class ConcurrentUartMonitor:
                  traceback: typing.Optional[types.TracebackType]) -> None:
         self._running = False
         if self._serial_future is not None:
-            try:
-                data = self._serial_future.result()
-            except Exception as exc:
-                print('generated an exception: %s' % (exc))
-            else:
-                print('page is %d bytes' % (len(data)))
+            self._serial_future.result()
         self._executor.shutdown(wait=True)
 
     # +-----------------------------------------------------------------------+
@@ -69,37 +73,85 @@ class ConcurrentUartMonitor:
 
     def _buffer_input(self) -> None:
         while self._running:
-            try:
-                self._buffer.put(self._s.readline(), block=True, timeout=1)
-            except queue.Full:
-                pass
+            line = self._s.readline()
+            if (len(line) > 0):
+                decoded_line = line.decode('utf-8')
+                if decoded_line.endswith('\n'):
+                    decoded_line = decoded_line[:-1]
+                while True:
+                    try:
+                        self._buffer.put(decoded_line, block=True, timeout=.1)
+                        break
+                    except queue.Full:
+                        self._full_events += 1
+                        time.sleep(.010)
 
 
 class GTestParser:
     """
-    TODO: run UART through this class and emit events.
+    Uses a given monitor to watch for google test results.
     """
-    pass
+
+    def __init__(self, timeout_seconds: float):
+        self._logger = logging.getLogger(__name__)
+        self._timeout_seconds = timeout_seconds
+        self._completion_pattern = re.compile(r'\[\s*(PASSED|FAILED)\s*\]\s*(\d+)\s+tests.')
+
+    async def read_test(self, uart: ConcurrentUartMonitor) -> int:
+        start_time = time.monotonic()
+        result = 1
+        line_count = 0
+        while True:
+            if time.monotonic() - start_time > self._timeout_seconds:
+                result = 2
+                self._logger.warning('GTestParser timeout after %f seconds', time.monotonic() - start_time)
+                break
+            line = uart.readline()
+            if line is None:
+                await asyncio.sleep(.250)
+                continue
+
+            self._logger.debug(line)
+            line_count += 1
+            line_match = self._completion_pattern.match(line)
+            if line_match is not None:
+                result = (0 if line_match.group(1) == 'PASSED' else 1)
+                break
+        if 0 == result:
+            self._logger.info('Detected successful test after %f seconds.', time.monotonic() - start_time)
+        self._logger.debug('Processed %d lines. There were %d buffer full events reported.', line_count, uart.buffer_full_events)
+        return result
 
 
 class ProgramUploader:
 
-    def __init__(self, jlink_script: pathlib.Path):
-        self._jlink_exe = 'JLinkExe'
+    def __init__(self,
+                 jlink_script: pathlib.Path,
+                 jlink_executable: pathlib.Path = pathlib.Path('JLinkExe'),
+                 extra_arguments: typing.Optional[typing.List[str]] = None):
+        self._logger = logging.getLogger(__name__)
+        self._jlink_exe = jlink_executable
         self._jlink_script = jlink_script
+        self._extra_arguments = extra_arguments
 
-    async def upload(self) -> None:
-        # JLinkExe -CommanderScript test_math_saturation_loadfile_swd.jlink
-        cmd = '{} {}'.format(self._jlink_exe, self._jlink_script)
-        proc = await asyncio.create_subprocess_shell(
+    async def upload(self) -> int:
+        cmd = '{} -CommanderScript {}'.format(self._jlink_exe, self._jlink_script)
+        if self._extra_arguments is not None:
+            cmd += ' ' + ' '.join(self._extra_arguments)
+
+        self._logger.info('starting upload: %s', cmd)
+        proc: asyncio.subprocess.Process = await asyncio.create_subprocess_shell(
             cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE)
 
         stdout, stderr = await proc.communicate()
 
-        print(f'[{cmd!r} exited with {proc.returncode}]')
+        self._logger.info('%s exited with %i', cmd, proc.returncode)
+
         if stdout:
-            print(f'[stdout]\n{stdout.decode()}')
+            self._logger.debug(stdout.decode())
         if stderr:
-            print(f'[stderr]\n{stderr.decode()}')
+            self._logger.error(stderr.decode())
+
+        return proc.returncode

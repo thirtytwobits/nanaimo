@@ -1,0 +1,14 @@
+log test_math_saturation_jlink.log
+f
+device S32K148
+speed 4000 kHz
+si SWD
+connect
+hwinfo
+st
+h
+moe
+rx 400
+loadfile test_math_saturation.hex
+r
+qc

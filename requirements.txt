@@ -24,6 +24,7 @@ doc8
 # +---------------------------------------------------------------------------+
 pytest ~= 3.3
 pytest-asyncio
+pytest-timeout
 flake8
 coverage
 mypy

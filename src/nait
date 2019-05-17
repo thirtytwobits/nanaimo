@@ -14,16 +14,6 @@ import asyncio
 import pathlib
 import sys
 import typing
-import nanaimo
-
-
-async def monitor_uart(args: argparse.Namespace) -> None:
-    with nanaimo.ConcurrentUartMonitor.new_default(args.port, args.port_speed) as s:
-        while True:
-            input = s.readline()
-            if input is not None:
-                sys.stdout.write(input)
-            asyncio.sleep(1)
 
 
 async def _run(args: argparse.Namespace) -> int:  # noqa: C901
@@ -33,11 +23,13 @@ async def _run(args: argparse.Namespace) -> int:  # noqa: C901
     import nanaimo
 
     uploader = nanaimo.ProgramUploader(args.jlink_script)
+    parser = nanaimo.GTestParser(args.test_timeout_seconds)
 
-    await monitor_uart(args)
-    await uploader.upload()
-
-    return 0
+    with nanaimo.ConcurrentUartMonitor.new_default(args.port, args.port_speed) as monitor:
+        result = await uploader.upload()
+        if 0 == result:
+            result = await parser.read_test(monitor)
+    return result
 
 
 class _LazyVersionAction(argparse._VersionAction):
@@ -53,9 +45,7 @@ class _LazyVersionAction(argparse._VersionAction):
                  option_string: typing.Optional[str] = None) -> None:
         from nanaimo.version import __version__
         version_string = '.'.join(map(str, __version__))
-        formatter = parser._get_formatter()
-        formatter.add_text(version_string)
-        parser._print_message(formatter.format_help(), sys.stdout)
+        parser._print_message(version_string, sys.stdout)
         parser.exit()
 
 
@@ -67,7 +57,7 @@ def _make_parser() -> argparse.ArgumentParser:
 
     epilog = '''**Example Usage**::
 
-    TODO
+    nait --port /dev/serial/by-id/usb-FTDI_TTL232R_BLAH_port0 --port-speed 115200 -vv test_math_saturation_loadfile_swd.jlink
 
 ----
 '''
@@ -79,18 +69,27 @@ def _make_parser() -> argparse.ArgumentParser:
 
     parser.add_argument('--version', action=_LazyVersionAction)
 
+    parser.add_argument('--verbose', '-v', action='count',
+                        help='verbosity level (-v, -vv)')
+
     parser.add_argument('--port',
                         help='The port to monitor.')
 
     parser.add_argument('--port-speed', '-b', help='the speed of the port (e.g. baud rate for serial ports).')
 
-    parser.add_argument('binary',
+    parser.add_argument('-for', '--test-timeout-seconds',
+                        default='30',
+                        type=float,
+                        help='''Test will be killed and marked as a failure after
+                                 waiting for a result for this amount of time.''')
+
+    parser.add_argument('jlink_script',
                         help='The googletest binary to flash, run, and report on.')
 
     return parser
 
 
-def main() -> int:
+async def main() -> int:
     """
         Main entry point for this program.
     """
@@ -108,11 +107,8 @@ def main() -> int:
              2: logging.DEBUG}.get(args.verbose or 0, logging.DEBUG)
     logging.basicConfig(stream=sys.stderr, level=level, format=fmt)
 
-    logging.info('Running %s using sys.prefix: %s',
-                 pathlib.Path(__file__).name, sys.prefix)
-
-    return asyncio.run(_run(args))
+    return await _run(args)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(asyncio.run(main()))

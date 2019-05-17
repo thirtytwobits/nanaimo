@@ -1,7 +1,7 @@
-.. _nantest:
+.. _nait:
 
 ################################################
-nantest
+nait
 ################################################
 
 .. toctree::
@@ -16,7 +16,7 @@ Usage
 *************************************
 
 .. argparse::
-   :filename: nantest
+   :filename: nait
    :func: _make_parser
-   :prog: nantest
+   :prog: nait
 
