@@ -16,7 +16,7 @@ import typing
 
 
 async def _run(args: argparse.Namespace) -> int:  # noqa: C901
-    
+
     import nanaimo
 
     uploader = nanaimo.ProgramUploaderJLink(args.jlink_script)
@@ -115,4 +115,5 @@ async def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(asyncio.run(main()))
+    loop = asyncio.get_event_loop()
+    sys.exit(loop.run_until_complete(main()))

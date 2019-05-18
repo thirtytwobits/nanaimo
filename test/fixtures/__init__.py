@@ -351,8 +351,7 @@ def run_nait(args: typing.List[str],
         this_env.update(env)
     return subprocess.run(coverage_args + [str(nait)] + args,
                           check=check_result,
-                          text=True,
-                          capture_output=True,
+                          stdout=subprocess.PIPE,
                           env=this_env)
 
 

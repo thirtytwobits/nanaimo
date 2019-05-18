@@ -5,7 +5,6 @@
 
 import fixtures
 import nanaimo
-
 import nanaimo.version
 
 
@@ -14,4 +13,4 @@ def test_arg_version() -> None:
     Verify --version argument contract.
     """
     expected = '.'.join(map(str, nanaimo.version.__version__))
-    assert expected == fixtures.run_nait(['--version']).stdout
+    assert expected == fixtures.run_nait(['--version']).stdout.decode('utf-8')

@@ -30,9 +30,9 @@ class ConcurrentUartMonitor:
     def __init__(self, serial_port: serial.Serial) -> None:
         self._s = serial_port
         self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-        self._buffer: queue.Queue[str] = queue.Queue(self.LINE_BUFFER_SIZE)
+        self._buffer = queue.Queue(self.LINE_BUFFER_SIZE)  # type: queue.Queue[str]
         self._running = True
-        self._serial_future: typing.Optional[concurrent.futures.Future] = None
+        self._serial_future = None  # type: typing.Optional[concurrent.futures.Future]
         self._full_events = 0
 
     @property
@@ -144,10 +144,11 @@ class ProgramUploaderJLink:
             cmd += ' ' + ' '.join(self._extra_arguments)
 
         self._logger.info('starting upload: %s', cmd)
-        proc: asyncio.subprocess.Process = await asyncio.create_subprocess_shell(
+        proc = await asyncio.create_subprocess_shell(
             cmd,
             stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE)
+            stderr=asyncio.subprocess.PIPE
+        )  # type: asyncio.subprocess.Process
 
         stdout, stderr = await proc.communicate()
 
