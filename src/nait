@@ -11,22 +11,19 @@
 import argparse
 import logging
 import asyncio
-import pathlib
 import sys
 import typing
 
 
 async def _run(args: argparse.Namespace) -> int:  # noqa: C901
-    #
-    # nanaimo : load module
-    #
+    
     import nanaimo
 
-    uploader = nanaimo.ProgramUploader(args.jlink_script)
+    uploader = nanaimo.ProgramUploaderJLink(args.jlink_script)
     parser = nanaimo.GTestParser(args.test_timeout_seconds)
 
     with nanaimo.ConcurrentUartMonitor.new_default(args.port, args.port_speed) as monitor:
-        result = await uploader.upload()
+        result = await asyncio.wait_for(uploader.upload(), timeout=args.upload_timeout_seconds)
         if 0 == result:
             result = await parser.read_test(monitor)
     return result
@@ -77,11 +74,18 @@ def _make_parser() -> argparse.ArgumentParser:
 
     parser.add_argument('--port-speed', '-b', help='the speed of the port (e.g. baud rate for serial ports).')
 
-    parser.add_argument('-for', '--test-timeout-seconds',
+    parser.add_argument('--test-timeout-seconds',
                         default='30',
                         type=float,
                         help='''Test will be killed and marked as a failure after
                                  waiting for a result for this amount of time.''')
+
+    parser.add_argument('--upload-timeout-seconds',
+                        default='20',
+                        type=float,
+                        help='''The upload will be killed and an error returned
+                                after waiting for the upload to complete for this
+                                amount of time.''')
 
     parser.add_argument('jlink_script',
                         help='The googletest binary to flash, run, and report on.')

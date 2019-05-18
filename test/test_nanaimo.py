@@ -29,19 +29,19 @@ def test_uart_monitor() -> None:
 
 @pytest.mark.asyncio
 async def test_program_uploader() -> None:
-    uploader = nanaimo.ProgramUploader(fixtures.get_s32K144_jlink_script(), fixtures.get_mock_JLinkExe())
+    uploader = nanaimo.ProgramUploaderJLink(fixtures.get_s32K144_jlink_script(), fixtures.get_mock_JLinkExe())
     assert 0 == await uploader.upload()
 
 
 @pytest.mark.asyncio
 async def test_program_uploader_failure() -> None:
-    uploader = nanaimo.ProgramUploader(fixtures.get_s32K144_jlink_script(), fixtures.get_mock_JLinkExe(), ['--simulate-error'])
+    uploader = nanaimo.ProgramUploaderJLink(fixtures.get_s32K144_jlink_script(), fixtures.get_mock_JLinkExe(), ['--simulate-error'])
     assert 0 != await uploader.upload()
 
 
 @pytest.mark.asyncio
 async def test_program_while_monitoring() -> None:
-    uploader = nanaimo.ProgramUploader(fixtures.get_s32K144_jlink_script(), fixtures.get_mock_JLinkExe())
+    uploader = nanaimo.ProgramUploaderJLink(fixtures.get_s32K144_jlink_script(), fixtures.get_mock_JLinkExe())
     serial = fixtures.MockSerial(fixtures.FAKE_TEST_SUCCESS)
     with nanaimo.ConcurrentUartMonitor(serial) as monitor:
         results = await asyncio.gather(

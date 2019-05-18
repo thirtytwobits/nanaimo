@@ -16,7 +16,10 @@ import serial
 
 
 class ConcurrentUartMonitor:
-
+    """
+    Buffers serial input on another thread and provides line-oriented data
+    from the tty via a synchronized queue.
+    """
     TIMEOUT_SEC = 1
     LINE_BUFFER_SIZE = 255
 
@@ -80,11 +83,10 @@ class ConcurrentUartMonitor:
                     decoded_line = decoded_line[:-1]
                 while True:
                     try:
-                        self._buffer.put(decoded_line, block=True, timeout=.1)
+                        self._buffer.put(decoded_line, block=True, timeout=.500)
                         break
                     except queue.Full:
                         self._full_events += 1
-                        time.sleep(.010)
 
 
 class GTestParser:
@@ -123,8 +125,10 @@ class GTestParser:
         return result
 
 
-class ProgramUploader:
-
+class ProgramUploaderJLink:
+    """
+    Async manager of a JLinkExe subprocess.
+    """
     def __init__(self,
                  jlink_script: pathlib.Path,
                  jlink_executable: pathlib.Path = pathlib.Path('JLinkExe'),

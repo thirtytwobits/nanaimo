@@ -1,6 +1,6 @@
 log test_math_saturation_jlink.log
 f
-device S32K148
+device S32K144
 speed 4000 kHz
 si SWD
 connect
