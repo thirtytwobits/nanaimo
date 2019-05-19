@@ -14,8 +14,8 @@ Nanaimo: Hardware-In-the-Loop CI Testing
 
 The :code:`nait` script is designed as a glue between CI automation like
 `buildkite`_ or `jenkins`_ and a micro-controller test fixture physically
-attached to a build host. This may evolve over time to be more generalized
-supporting more advanced HIL apparatuses but for now we're stating small.
+attached to a build host. This project may evolve over time to become more
+generalized but for now we're starting small.
 
 To use the current version of the :code:`nait` script simply produce `JLink Commander`_
 scripts and hex files in one stage of your CI pipeline and deliver these
@@ -32,24 +32,24 @@ Example::
      --port \
      /dev/serial/by-id/usb-Signoid_Kft._USB-UART_adapter_MACX98-if00-port0 \
      --port-speed 115200 \
-     jlink_scripts/**
+     *.jlink
 
 ***********************************
 JLink
 ***********************************
 
-This version of nanaimo does require a segger JLink because it uses JLinkExe to upload
-to and reset the test target.
+This version of nanaimo does require a segger JLink and the Segger JLinkExe tool. Nanaimo
+uses JLinkExe to upload binaries and to reset the test target.
 
 .. Note::
     There is no plan to support OpenSDA as its mass storage upload solution
-    does not have a portable API for resetting the target. For open source projects
-    this seems like an ideal solution.
+    does not have a portable API for resetting the target.
 
 In the future we plan on adding support for `OpenOCD`_ and `pyOCD`_ both of which provide a
 portable API to a large set of micro-controllers but JLink is the industry standard and the
 `JLink EDU Mini`_ is an inexpensive probe (about $20 USD) with free software available for
-linux, mac, and Windows that can be used for non-commercial purposes.
+linux, mac, and Windows that can be used for non-commercial purposes. For open source projects
+this seems like an ideal solution.
 
 .. _`Nanimo bars`: https://en.wikipedia.org/wiki/Nanaimo_bar
 .. _`buildkite`: https://buildkite.com
