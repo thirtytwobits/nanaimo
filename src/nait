@@ -62,7 +62,10 @@ def _make_parser() -> argparse.ArgumentParser:
 
     epilog = '''**Example Usage**::
 
-    nait --port /dev/serial/by-id/usb-FTDI_TTL232R_BLAH_port0 --port-speed 115200 -vv test_math_saturation_loadfile_swd.jlink
+    nait -vv \\
+         --port /dev/serial/by-id/usb-FTDI_TTL232R_BLAH_port0 \\
+         --port-speed 115200 \\
+         \\*.jlink
 
 ----
 '''
@@ -70,7 +73,7 @@ def _make_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description='Run googletest binaries on a microcontroller.',
         epilog=epilog,
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        formatter_class=argparse.RawTextHelpFormatter)
 
     parser.add_argument('--version', action=_LazyVersionAction)
 
@@ -86,14 +89,14 @@ def _make_parser() -> argparse.ArgumentParser:
                         default='30',
                         type=float,
                         help='''Test will be killed and marked as a failure after
-                                 waiting for a result for this amount of time.''')
+waiting for a result for this amount of time.''')
 
     parser.add_argument('--upload-timeout-seconds',
                         default='20',
                         type=float,
                         help='''The upload will be killed and an error returned
-                                after waiting for the upload to complete for this
-                                amount of time.''')
+after waiting for the upload to complete for this
+amount of time.''')
 
     parser.add_argument('--base_path',
                         default=str(pathlib.Path().cwd()),
