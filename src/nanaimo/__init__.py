@@ -130,16 +130,14 @@ class ProgramUploaderJLink:
     Async manager of a JLinkExe subprocess.
     """
     def __init__(self,
-                 jlink_script: pathlib.Path,
                  jlink_executable: pathlib.Path = pathlib.Path('JLinkExe'),
                  extra_arguments: typing.Optional[typing.List[str]] = None):
         self._logger = logging.getLogger(__name__)
         self._jlink_exe = jlink_executable
-        self._jlink_script = jlink_script
         self._extra_arguments = extra_arguments
 
-    async def upload(self) -> int:
-        cmd = '{} -CommanderScript {}'.format(self._jlink_exe, self._jlink_script)
+    async def upload(self, jlink_script: pathlib.Path) -> int:
+        cmd = '{} -CommanderScript {}'.format(self._jlink_exe, jlink_script)
         if self._extra_arguments is not None:
             cmd += ' ' + ' '.join(self._extra_arguments)
 

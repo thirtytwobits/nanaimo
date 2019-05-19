@@ -323,6 +323,9 @@ class MockSerial:
         self._fake_data = fake_data
         self._fake_data_index = 0
 
+    def reset_mock(self) -> None:
+        self._fake_data_index = 0
+
     def readline(self) -> typing.Optional[bytes]:
         line = None
         try:
@@ -361,3 +364,7 @@ def get_mock_JLinkExe() -> pathlib.Path:
 
 def get_s32K144_jlink_script() -> pathlib.Path:
     return pathlib.Path(__file__).parent / pathlib.Path('test_math_saturation_loadfile_swd').with_suffix('.jlink')
+
+
+def get_s32K144_jlink_scripts() -> typing.List[pathlib.Path]:
+    return pathlib.Path(__file__).parent.glob('*.jlink')

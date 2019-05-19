@@ -9,8 +9,9 @@
 """
 
 import argparse
-import logging
 import asyncio
+import logging
+import pathlib
 import sys
 import typing
 
@@ -19,13 +20,20 @@ async def _run(args: argparse.Namespace) -> int:  # noqa: C901
 
     import nanaimo
 
-    uploader = nanaimo.ProgramUploaderJLink(args.jlink_script)
+    uploader = nanaimo.ProgramUploaderJLink()
+    jlink_scripts = pathlib.Path(args.base_path).glob(args.jlink_scripts)
     parser = nanaimo.GTestParser(args.test_timeout_seconds)
 
+    result = 0
     with nanaimo.ConcurrentUartMonitor.new_default(args.port, args.port_speed) as monitor:
-        result = await asyncio.wait_for(uploader.upload(), timeout=args.upload_timeout_seconds)
-        if 0 == result:
+        for script in jlink_scripts:
+            if result != 0:
+                break
+            result = await asyncio.wait_for(uploader.upload(script), timeout=args.upload_timeout_seconds)
+            if result != 0:
+                break
             result = await parser.read_test(monitor)
+
     return result
 
 
@@ -62,7 +70,7 @@ def _make_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description='Run googletest binaries on a microcontroller.',
         epilog=epilog,
-        formatter_class=argparse.RawTextHelpFormatter)
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument('--version', action=_LazyVersionAction)
 
@@ -87,8 +95,12 @@ def _make_parser() -> argparse.ArgumentParser:
                                 after waiting for the upload to complete for this
                                 amount of time.''')
 
-    parser.add_argument('jlink_script',
-                        help='The googletest binary to flash, run, and report on.')
+    parser.add_argument('--base_path',
+                        default=str(pathlib.Path().cwd()),
+                        help='The folder under which to search for jlink scripts.')
+
+    parser.add_argument('jlink_scripts',
+                        help='A globbing pattern to collect jlink scripts for flashing tests.')
 
     return parser
 

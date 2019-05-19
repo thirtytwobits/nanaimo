@@ -10,9 +10,6 @@ your dev environment setup.
     This is documentation for contributors developing nanaimo. If you are
     a user of this software you can ignore everything here.
 
-    - To ask questions about nanaimo or UAVCAN in general please see the `UAVCAN forum`_.
-    - See the `UAVCAN website`_ for documentation on the UAVCAN protocol.
-
 ************************************************
 Tools
 ************************************************
@@ -219,6 +216,3 @@ At the end of the mypy run we generate the following summaries:
 
 .. _`read the docs`: https://readthedocs.org/
 .. _`tox`: https://tox.readthedocs.io/en/latest/
-.. _`Codacy`: https://app.codacy.com/project/UAVCAN/nanaimo/dashboard
-.. _`UAVCAN website`: http://uavcan.org
-.. _`UAVCAN forum`: https://forum.uavcan.org

@@ -1,0 +1,7 @@
+{% extends "!footer.html" %}
+{% block extrafooter %}
+    <div style="float:right; padding: 10pt">
+        <a href="http://32bits.io"><img src="{{pathto('_static/' + favicon, 1)}}" class="logo" alt="32bits" /></a>
+    </div>
+    {{ super() }}
+{% endblock %}

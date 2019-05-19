@@ -99,7 +99,7 @@ html_context = {
     "github_user": "thirtytwobits",
     "github_repo": "nanaimo",
     "github_version": "master",
-    "conf_py_path": "/src/",
+    "conf_py_path": "/",
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
@@ -119,7 +119,7 @@ html_static_path = ['docs']
 
 html_logo = 'docs/images/nanaimo_logo.svg'
 
-html_favicon = 'docs/images/uavcan_logo_icon.svg'
+html_favicon = 'docs/images/32bit_logo.png'
 
 html_css_files = ['css/custom.css']
 

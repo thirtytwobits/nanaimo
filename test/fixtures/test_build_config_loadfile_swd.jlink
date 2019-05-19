@@ -1,0 +1,14 @@
+log test_build_config_jlink.log
+f
+device S32K146
+speed 4000 kHz
+si SWD
+connect
+hwinfo
+st
+h
+moe
+rx 400
+loadfile test_build_config.hex
+r
+qc
