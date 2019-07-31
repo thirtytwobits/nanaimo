@@ -14,7 +14,6 @@ import typing
 
 import serial
 
-
 class ConcurrentUartMonitor:
     """
     Buffers serial input on another thread and provides line-oriented data
@@ -97,7 +96,7 @@ class GTestParser:
     def __init__(self, timeout_seconds: float):
         self._logger = logging.getLogger(__name__)
         self._timeout_seconds = timeout_seconds
-        self._completion_pattern = re.compile(r'\[\s*(PASSED|FAILED)\s*\]\s*(\d+)\s+tests.')
+        self._completion_pattern = re.compile(r'\[\s*(PASSED|FAILED)\s*\]\s*(\d+)\s+tests?\.')
 
     async def read_test(self, uart: ConcurrentUartMonitor) -> int:
         start_time = time.monotonic()
