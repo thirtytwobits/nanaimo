@@ -28,7 +28,7 @@ async def _run(args: argparse.Namespace) -> int:  # noqa: C901
     parser = nanaimo.gtest.Parser(args.test_timeout_seconds)
 
     result = 0
-    with nanaimo.serial.ConcurrentUartMonitor.new_default(args.port, args.port_speed) as monitor:
+    with nanaimo.serial.ConcurrentUart.new_default(args.port, args.port_speed) as monitor:
         for script in jlink_scripts:
             if result != 0:
                 break
@@ -66,7 +66,7 @@ def _make_parser() -> argparse.ArgumentParser:
     epilog = '''**Example Usage**::
 
     nait -vv \\
-         --port /dev/serial/by-id/usb-FTDI_TTL232R_BLAH_port0 \\
+         --port /dev/serial/by-id/usb-TTL232R_BLAH_port0 \\
          --port-speed 115200 \\
          \\*.jlink
 

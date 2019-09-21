@@ -9,7 +9,7 @@
             "options": {
                 "cwd": "${workspaceFolder}/test"
             },
-            "command": "python -m pytest -s",
+            "command": "python -m pytest --log-cli-level=DEBUG -s",
             "group": {
                 "kind": "test",
                 "isDefault": true

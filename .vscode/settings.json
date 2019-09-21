@@ -28,7 +28,12 @@
     },
     "cSpell.words": [
         "Nanaimo",
+        "bkprecision",
         "cleandir",
+        "ctypes",
+        "functools",
+        "globbing",
+        "gtest",
         "jlink",
         "mkdir",
         "mypy",
@@ -44,8 +49,7 @@
         "uart",
         "uploader",
         "virtualenv",
-        "xargs",
-        "mkdir",
-        "gtest"
+        "wchar",
+        "xargs"
     ]
 }

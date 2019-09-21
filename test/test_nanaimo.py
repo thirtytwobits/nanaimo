@@ -17,11 +17,11 @@ import asyncio
 @pytest.mark.timeout(10)
 def test_uart_monitor() -> None:
     """
-    Verify the nanaimo.ConcurrentUartMonitor class using a mock serial port.
+    Verify the nanaimo.ConcurrentUart class using a mock serial port.
     """
     serial = fixtures.simulators.Serial(fixtures.FAKE_TEST_SUCCESS)
     last_line = fixtures.FAKE_TEST_SUCCESS[-1]
-    with nanaimo.serial.ConcurrentUartMonitor(serial) as monitor:
+    with nanaimo.serial.ConcurrentUart(serial) as monitor:
         while True:
             line = monitor.readline()
             if line is None:
@@ -49,9 +49,9 @@ async def test_program_while_monitoring() -> None:
     uploader = nanaimo.jlink.ProgramUploaderJLink(fixtures.get_mock_JLinkExe())
     serial = fixtures.simulators.Serial(fixtures.FAKE_TEST_SUCCESS)
     uploads = 0
-    with nanaimo.serial.ConcurrentUartMonitor(serial) as monitor:
+    with nanaimo.serial.ConcurrentUart(serial) as monitor:
         for script in scripts:
-            serial.reset_mock()
+            serial.reset_fake_input()
             results = await asyncio.gather(
                 nanaimo.gtest.Parser(10).read_test(monitor),
                 uploader.upload(script)
@@ -67,12 +67,12 @@ async def test_program_while_monitoring() -> None:
 @pytest.mark.asyncio
 async def test_failed_test() -> None:
     serial = fixtures.simulators.Serial(fixtures.FAKE_TEST_FAILURE)
-    with nanaimo.serial.ConcurrentUartMonitor(serial) as monitor:
+    with nanaimo.serial.ConcurrentUart(serial) as monitor:
         assert 1 == await nanaimo.gtest.Parser(10).read_test(monitor)
 
 
 @pytest.mark.asyncio
 async def test_timeout_while_monitoring() -> None:
-    serial = fixtures.simulators.Serial(['gibberish'])
-    with nanaimo.serial.ConcurrentUartMonitor(serial) as monitor:
-        assert 0 != await nanaimo.gtest.Parser(1.0).read_test(monitor)
+    serial = fixtures.simulators.Serial(['gibberish'], loop_fake_data=False)
+    with nanaimo.serial.ConcurrentUart(serial) as monitor:
+        assert 0 != await nanaimo.gtest.Parser(4.0).read_test(monitor)
