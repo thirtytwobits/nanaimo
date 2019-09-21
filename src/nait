@@ -19,13 +19,16 @@ import typing
 async def _run(args: argparse.Namespace) -> int:  # noqa: C901
 
     import nanaimo
+    import nanaimo.serial
+    import nanaimo.gtest
+    import nanaimo.jlink
 
-    uploader = nanaimo.ProgramUploaderJLink()
+    uploader = nanaimo.jlink.ProgramUploaderJLink()
     jlink_scripts = pathlib.Path(args.base_path).glob(args.jlink_scripts)
-    parser = nanaimo.GTestParser(args.test_timeout_seconds)
+    parser = nanaimo.gtest.Parser(args.test_timeout_seconds)
 
     result = 0
-    with nanaimo.ConcurrentUartMonitor.new_default(args.port, args.port_speed) as monitor:
+    with nanaimo.serial.ConcurrentUartMonitor.new_default(args.port, args.port_speed) as monitor:
         for script in jlink_scripts:
             if result != 0:
                 break

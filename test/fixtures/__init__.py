@@ -317,28 +317,6 @@ FAKE_TEST_FAILURE = '''[----------] 20 tests from SaturatedMathTest/6 (signed 8)
 '''.splitlines()
 
 
-class MockSerial:
-
-    def __init__(self, fake_data: typing.List[str]):
-        self._fake_data = fake_data
-        self._fake_data_index = 0
-
-    def reset_mock(self) -> None:
-        self._fake_data_index = 0
-
-    def readline(self) -> typing.Optional[bytes]:
-        line = None
-        try:
-            line = self._fake_data[self._fake_data_index]
-            self._fake_data_index += 1
-        except IndexError:
-            pass
-        if line is not None:
-            return bytearray(line, 'utf-8')
-        else:
-            return bytearray()
-
-
 def run_nait(args: typing.List[str],
              check_result: bool = True,
              env: typing.Optional[typing.Dict[str, str]] = None) -> subprocess.CompletedProcess:
@@ -366,5 +344,51 @@ def get_s32K144_jlink_script() -> pathlib.Path:
     return pathlib.Path(__file__).parent / pathlib.Path('test_math_saturation_loadfile_swd').with_suffix('.jlink')
 
 
-def get_s32K144_jlink_scripts() -> typing.List[pathlib.Path]:
+def get_s32K144_jlink_scripts() -> typing.Iterable[pathlib.Path]:
     return pathlib.Path(__file__).parent.glob('*.jlink')
+
+
+class Paths:
+    """
+    Helpers for accessing text fixtures, writing temporary per-test output, and otherwise
+    finding things on the filesystem from a unit test.
+    """
+
+    def __init__(self, test_file: str):
+        test_file_path = pathlib.Path(test_file)
+        self.test_name = test_file_path.parent.stem
+        self.test_dir = test_file_path.parent
+        self.root_dir = self.test_dir.resolve().parent
+        self.fixtures_dir = self.test_dir / pathlib.Path('fixtures')
+        self.long_text = self.fixtures_dir / pathlib.Path('pg1636.txt')
+
+        self._build_dir = None  # type: typing.Optional[pathlib.Path]
+        self._out_dir = None  # type: typing.Optional[pathlib.Path]
+        print('Paths for test "{}" under dir {}'.format(self.test_name, self.test_dir))
+        print('(root directory: {})'.format(self.root_dir))
+
+    @property
+    def build_dir(self) -> pathlib.Path:
+        if self._build_dir is None:
+            self._build_dir = self._ensure_dir(self.root_dir / pathlib.Path('build'))
+        return self._build_dir
+
+    @property
+    def out_dir(self) -> pathlib.Path:
+        """
+        The directory to place test output under for this test case.
+        """
+        if self._out_dir is None:
+            test_output_base = self._ensure_dir(self.build_dir / pathlib.Path('test_output'))
+            self._out_dir = self._ensure_dir(self.build_dir / test_output_base / pathlib.Path(self.test_name))
+        return self._out_dir
+
+    @staticmethod
+    def _ensure_dir(path_dir: pathlib.Path) -> pathlib.Path:
+        try:
+            path_dir.mkdir()
+        except FileExistsError:
+            pass
+        if not path_dir.exists() or not path_dir.is_dir():
+            raise RuntimeWarning('Test directory "{}" was not setup properly. Tests may fail.'.format(path_dir))
+        return path_dir
