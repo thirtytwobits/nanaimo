@@ -7,12 +7,15 @@ import asyncio
 import typing
 import logging
 import re
+import contextlib
 
 
 class Series1900BUart:
     """
     Control of a 1900B series BK Precision power supply via UART.
     """
+
+    DefaultCommandTimeoutSeconds = 2.0
 
     # cspell: disable
     CommandTurnOn = 'SOUT0'
@@ -31,6 +34,13 @@ class Series1900BUart:
     }
 
     # cspell: enable
+
+    @classmethod
+    @contextlib.contextmanager
+    def default_configuration(cls, port: str) -> typing.Generator['Series1900BUart', None, None]:
+        with nanaimo.serial.ConcurrentUart.new_default(port, 9600) as bkserial:
+            bk = cls(bkserial, cls.DefaultCommandTimeoutSeconds)
+            yield bk
 
     def __init__(self,
                  uart: nanaimo.serial.ConcurrentUart,

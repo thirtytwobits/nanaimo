@@ -15,9 +15,9 @@ pyserial
 # | DEVELOPER DEPENDENCIES
 # +---------------------------------------------------------------------------+
 autopep8
-# Useful for vscode development
 rope
 doc8
+isort
 
 # +---------------------------------------------------------------------------+
 # | TEST AND BUILD DEPENDENCIES
