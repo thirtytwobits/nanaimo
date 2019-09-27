@@ -8,130 +8,18 @@
     binaries in parallel.
 """
 
-import argparse
-import asyncio
-import logging
-import pathlib
 import sys
-import typing
-
-
-async def _run(args: argparse.Namespace) -> int:  # noqa: C901
-
-    import nanaimo
-    import nanaimo.serial
-    import nanaimo.gtest
-    import nanaimo.jlink
-
-    uploader = nanaimo.jlink.ProgramUploaderJLink()
-    jlink_scripts = pathlib.Path(args.base_path).glob(args.jlink_scripts)
-    parser = nanaimo.gtest.Parser(args.test_timeout_seconds)
-
-    result = 0
-    with nanaimo.serial.ConcurrentUart.new_default(args.port, args.port_speed) as monitor:
-        for script in jlink_scripts:
-            if result != 0:
-                break
-            result = await asyncio.wait_for(uploader.upload(script), timeout=args.upload_timeout_seconds)
-            if result != 0:
-                break
-            result = await parser.read_test(monitor)
-
-    return result
-
-
-class _LazyVersionAction(argparse._VersionAction):
-    '''
-    Changes argparse._VersionAction so we only load nanaimo.version
-    if the --version action is requested.
-    '''
-
-    def __call__(self,
-                 parser: argparse.ArgumentParser,
-                 namespace: argparse.Namespace,
-                 values: typing.Any,
-                 option_string: typing.Optional[str] = None) -> None:
-        from nanaimo.version import __version__
-        version_string = '.'.join(map(str, __version__))
-        parser._print_message(version_string, sys.stdout)
-        parser.exit()
+import argparse
 
 
 def _make_parser() -> argparse.ArgumentParser:
     """
-        Defines the command-line interface. Provided as a separate factory method to
-        support sphinx-argparse documentation.
+    Provided for documentation purposes only (sphinx-argparse). Do not use.
     """
-
-    epilog = '''**Example Usage**::
-
-    nait -vv \\
-         --port /dev/serial/by-id/usb-TTL232R_BLAH_port0 \\
-         --port-speed 115200 \\
-         \\*.jlink
-
-----
-'''
-
-    parser = argparse.ArgumentParser(
-        description='Run googletest binaries on a microcontroller.',
-        epilog=epilog,
-        formatter_class=argparse.RawTextHelpFormatter)
-
-    parser.add_argument('--version', action=_LazyVersionAction)
-
-    parser.add_argument('--verbose', '-v', action='count',
-                        help='verbosity level (-v, -vv)')
-
-    parser.add_argument('--port',
-                        help='The port to monitor.')
-
-    parser.add_argument('--port-speed', '-b', help='the speed of the port (e.g. baud rate for serial ports).')
-
-    parser.add_argument('--test-timeout-seconds',
-                        default='30',
-                        type=float,
-                        help='''Test will be killed and marked as a failure after
-waiting for a result for this amount of time.''')
-
-    parser.add_argument('--upload-timeout-seconds',
-                        default='20',
-                        type=float,
-                        help='''The upload will be killed and an error returned
-after waiting for the upload to complete for this
-amount of time.''')
-
-    parser.add_argument('--base_path',
-                        default=str(pathlib.Path().cwd()),
-                        help='The folder under which to search for jlink scripts.')
-
-    parser.add_argument('jlink_scripts',
-                        help='A globbing pattern to collect jlink scripts for flashing tests.')
-
-    return parser
-
-
-async def main() -> int:
-    """
-        Main entry point for this program.
-    """
-
-    #
-    # Parse the command-line arguments.
-    #
-    args = _make_parser().parse_args()
-
-    #
-    # Setup Python logging.
-    #
-    fmt = '%(message)s'
-    level = {0: logging.WARNING, 1: logging.INFO,
-             2: logging.DEBUG}.get(args.verbose or 0, logging.DEBUG)
-    logging.basicConfig(stream=sys.stderr, level=level, format=fmt)
-
-    return await _run(args)
+    import nanaimo
+    return nanaimo._make_parser()
 
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    sys.exit(loop.run_until_complete(main()))
+    import nanaimo
+    sys.exit(nanaimo.main())

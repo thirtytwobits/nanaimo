@@ -28,6 +28,7 @@
     },
     "cSpell.words": [
         "Nanaimo",
+        "argparse",
         "bkprecision",
         "cleandir",
         "ctypes",

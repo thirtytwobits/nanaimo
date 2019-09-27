@@ -40,3 +40,6 @@ dist
 
 # Coveralls local config
 .coveralls.yml
+
+# sonarqube
+.scannerwork

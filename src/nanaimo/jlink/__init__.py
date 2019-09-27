@@ -2,6 +2,7 @@
 # Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # This software is distributed under the terms of the MIT License.
 #
+import argparse
 import asyncio
 import logging
 import pathlib
@@ -12,6 +13,21 @@ class ProgramUploaderJLink:
     """
     Async manager of a JLinkExe subprocess.
     """
+
+    @classmethod
+    def on_visit_argparse_subparser(cls, subparsers: argparse._SubParsersAction, subparser: argparse.ArgumentParser) -> None:
+        subparser.add_argument('--base_path',
+                               default=str(pathlib.Path().cwd()),
+                               help='The folder under which to search for jlink scripts.')
+        subparser.add_argument('jlink-scripts',
+                               help='A globbing pattern to collect jlink scripts for flashing tests.')
+        subparser.add_argument('--upload-timeout-seconds',
+                               default='20',
+                               type=float,
+                               help='''The upload will be killed and an error returned
+after waiting for the upload to complete for this
+amount of time.''')
+
     def __init__(self,
                  jlink_executable: pathlib.Path = pathlib.Path('JLinkExe'),
                  extra_arguments: typing.Optional[typing.List[str]] = None):

@@ -2,16 +2,17 @@
 # Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # This software is distributed under the terms of the MIT License.
 #
+import argparse
+import asyncio
+import codecs
+import concurrent.futures
+import logging
+import queue
+import re
+import threading
+import time
 import types
 import typing
-import asyncio
-import concurrent.futures
-import threading
-import queue
-import codecs
-import time
-import logging
-import re
 
 import serial
 
@@ -32,7 +33,17 @@ class TimestampedLine(str):
         return self._timestamp_seconds
 
 
-class AbstractAsyncSerial:
+class AbstractSerial:
+
+    @classmethod
+    def on_visit_argparse_subparser(cls, subparsers: argparse._SubParsersAction, subparser: argparse.ArgumentParser) -> None:
+        subparser.add_argument('--port',
+                               help='The port to monitor.')
+
+        subparser.add_argument('--port-speed', '-b', help='the speed of the port (e.g. baud rate for serial ports).')
+
+
+class AbstractAsyncSerial(AbstractSerial):
 
     def __init__(self, loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> None:
         self._loop = (loop if loop is not None else asyncio.get_event_loop())

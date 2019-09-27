@@ -3,6 +3,8 @@
 # This software is distributed under the terms of the MIT License.
 #
 
-__version__ = 0, 0, 1
+import sys
 
-__license__ = 'MIT'
+import nanaimo
+
+sys.exit(nanaimo.main())
