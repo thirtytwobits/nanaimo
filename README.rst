@@ -2,6 +2,8 @@
 Nanaimo: Hardware-In-the-Loop CI Testing
 ############################################
 
+|badge_docs|_ |badge_build|_ |badge_github_license|_
+
 .. image:: docs/images/nanaimo.png
    :alt: A delicious Nanaimo bar
 
@@ -59,3 +61,16 @@ this seems like an ideal solution.
 .. _`JLink EDU`: https://www.segger.com/products/debug-probes/j-link/models/j-link-edu/
 .. _`pyOCD`: https://github.com/mbedmicro/pyOCD
 .. _`OpenOCD`: http://openocd.org/
+
+
+.. |badge_docs| image:: https://readthedocs.org/projects/nanaimo/badge/?version=latest
+    :alt: Documentation Status
+.. _badge_docs: https://nanaimo.readthedocs.io/en/latest/?badge=latest
+
+.. |badge_build| image:: https://badge.buildkite.com/0cf50056296ba113958b93f9058aad4cfffb8018062c044bf7.svg
+    :alt: Build status
+.. _badge_build: https://buildkite.com/friends-of-scott/nanaimo
+
+.. |badge_github_license| image:: https://img.shields.io/badge/license-MIT-blue.svg
+    :alt: MIT license
+.. _badge_github_license: https://github.com/thirtytwobits/nanaimo/blob/master/LICENSE.rst
