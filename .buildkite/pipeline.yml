@@ -1,11 +1,11 @@
 steps:
   - label: ':hammer: tox build and test'
     id: toxic-docker
-    command: "docker run --rm -e TRAVIS_BUILD_NUMBER=$TRAVIS_BUILD_NUMBER -e CODACY_PROJECT_TOKEN=$CODACY_PROJECT_TOKEN -e PYPI_USERNAME=$PYPI_USERNAME -e PYPI_PASSWORD=$PYPI_PASSWORD -v $TRAVIS_BUILD_DIR:/repo uavcan/toxic:py35-py38 /bin/sh -c tox"
+    command: "tox"
     artifact_paths: 
       - ".tox/report/tmp"
     plugins:
-      - docker#v3.1.0:
+      - docker#v3.3.0:
           workdir: /repo
           image: "uavcan/toxic:py35-py38"
           propagate-environment: true
