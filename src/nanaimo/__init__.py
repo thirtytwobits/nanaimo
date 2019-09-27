@@ -63,6 +63,7 @@ waiting for a result for this amount of time.''')
     async def observe_tasks(self,
                             observer_co_or_f: typing.Union[typing.Coroutine, asyncio.Future],
                             timeout_seconds: float,
+                            assert_observed_arent_done: bool, 
                             *args: typing.Union[typing.Coroutine, asyncio.Future]) -> typing.Set[asyncio.Future]:
         """
         Allows running a set of tasks but returning when an observer task completes. This allows a pattern where
@@ -84,7 +85,7 @@ waiting for a result for this amount of time.''')
                 return_when=asyncio.FIRST_COMPLETED)
 
             if observing_my_future.done():
-                if len(done) > 1:
+                if assert_observed_arent_done and len(done) > 1:
                     raise AssertionError('Tasks under observation completed before the observation was complete.')
                 return pending
 

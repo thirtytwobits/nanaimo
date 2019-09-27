@@ -101,8 +101,9 @@ async def test_observe_tasks(event_loop: asyncio.AbstractEventLoop) -> None:
         return 1
 
     result = await subject.observe_tasks(evaluating(),
-                                        0,
-                                        running())
+                                         0,
+                                         True,
+                                         running())
     assert len(result) == 1
     should_be_running = result.pop()
 
@@ -132,8 +133,37 @@ async def test_observe_tasks_failure(event_loop: asyncio.AbstractEventLoop) -> N
 
     with pytest.raises(nanaimo.AssertionError):
         await subject.observe_tasks(evaluating(),
-                                   0,
-                                   running())
+                                    0,
+                                    True,
+                                    running())
+
+
+@pytest.mark.timeout(10)
+@pytest.mark.asyncio
+async def test_observe_tasks_failure_no_assert(event_loop: asyncio.AbstractEventLoop) -> None:
+    """
+    Test the observe_tasks method of NanaimoTest where the running tasks exit but without throwing
+    an assertion error.
+    """
+
+    subject = fixtures.DummyNanaimoTest(event_loop)
+
+    async def evaluating() -> int:
+        waits = 2
+        while waits > 0:
+            await asyncio.sleep(.1)
+            waits -= 1
+        return 1
+
+    async def running() -> int:
+        return 1
+
+    result = await subject.observe_tasks(evaluating(),
+                                         0,
+                                         False,
+                                         running())
+
+    assert 0 == len(result)
 
 
 @pytest.mark.timeout(10)
@@ -155,8 +185,10 @@ async def test_observe_tasks_timeout(event_loop: asyncio.AbstractEventLoop) -> N
 
     with pytest.raises(asyncio.TimeoutError):
         await subject.observe_tasks(evaluating(),
-                                   1,
-                                   running())
+                                    1,
+                                    True,
+                                    running())
+
 
 @pytest.mark.timeout(20)
 @pytest.mark.asyncio

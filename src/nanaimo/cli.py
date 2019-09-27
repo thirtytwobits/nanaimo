@@ -49,7 +49,7 @@ def _setup_logging(args: argparse.Namespace) -> None:
     level = {0: logging.WARNING, 1: logging.INFO,
              2: logging.DEBUG}.get(args.verbose or 0, logging.DEBUG)
     logging.basicConfig(stream=sys.stderr, level=level, format=fmt)
-    if args.verbose >= 3:
+    if args.verbose is not None and args.verbose >= 3:
         logging.getLogger('asyncio').setLevel(logging.DEBUG)
 
 
