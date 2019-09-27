@@ -16,10 +16,10 @@ def _make_parser() -> argparse.ArgumentParser:
     """
     Provided for documentation purposes only (sphinx-argparse). Do not use.
     """
-    import nanaimo
-    return nanaimo._make_parser()
+    import nanaimo.cli
+    return nanaimo.cli._make_parser()
 
 
 if __name__ == "__main__":
-    import nanaimo
-    sys.exit(nanaimo.main())
+    import nanaimo.cli
+    sys.exit(nanaimo.cli.main())

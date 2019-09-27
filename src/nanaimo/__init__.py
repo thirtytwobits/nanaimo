@@ -8,7 +8,7 @@ import argparse
 import logging
 import asyncio
 import typing
-import sys
+import math
 
 
 class AssertionError(RuntimeError):
@@ -48,68 +48,47 @@ waiting for a result for this amount of time.''')
         self._logger = logging.getLogger(type(self).__name__)
         self._loop = (loop if loop is not None else asyncio.get_event_loop())
 
+    async def countdown_sleep(self, sleep_time_seconds: float) -> None:
+        """
+        Calls `asyncio.sleep` once per-second for :param:`sleep_time_seconds` info
+        logging a count-down. This can be used for long waits as an indication that
+        the process is not deadlocked.
+        """
+        count_down = sleep_time_seconds
+        while count_down >= 0:
+            self._logger.info('%d', math.ceil(count_down))
+            await asyncio.sleep(1)
+            count_down -= 1
 
-def _make_parser(loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> argparse.ArgumentParser:
-    """
-        Defines the command-line interface. Provided as a separate factory method to
-        support sphinx-argparse documentation.
-    """
+    async def observe_tasks(self,
+                            observer_co_or_f: typing.Union[typing.Coroutine, asyncio.Future],
+                            timeout_seconds: float,
+                            *args: typing.Union[typing.Coroutine, asyncio.Future]) -> typing.Set[asyncio.Future]:
+        """
+        Allows running a set of tasks but returning when an observer task completes. This allows a pattern where
+        a single task is evaluating the side-effects of other tasks as a gate to continuing the test.
+        """
 
-    epilog = '''**Example Usage**::
+        observing_my_future = asyncio.ensure_future(observer_co_or_f)
+        the_children_are_our_futures = [observing_my_future]
+        for co_or_f in args:
+            the_children_are_our_futures.append(asyncio.ensure_future(co_or_f))
 
-    python -m nanaimo -vv
+        start_time = self._loop.time()
+        wait_timeout = (timeout_seconds if timeout_seconds > 0 else None)
 
-----
-'''
+        while True:
+            done, pending = await asyncio.wait(
+                the_children_are_our_futures,
+                timeout=wait_timeout,
+                return_when=asyncio.FIRST_COMPLETED)
 
-    parser = argparse.ArgumentParser(
-        description='Run tests against hardware.',
-        epilog=epilog,
-        formatter_class=argparse.RawTextHelpFormatter)
+            if observing_my_future.done():
+                if len(done) > 1:
+                    raise AssertionError('Tasks under observation completed before the observation was complete.')
+                return pending
 
-    from nanaimo.version import __version__
+            if wait_timeout is not None and self._loop.time() - start_time > wait_timeout:
+                break
 
-    parser.add_argument('--version', action='version', version='.'.join(map(str, __version__)))
-
-    parser.add_argument('--verbose', '-v', action='count',
-                        help='verbosity level (-v, -vv)')
-
-    subparsers = parser.add_subparsers(help='sub-command help')
-
-    import nanaimo.builtin  # noqa: F401
-
-    for test in NanaimoTest.__subclasses__():
-        test.on_visit_argparse(subparsers, loop)
-
-    return parser
-
-
-def _setup_logging(args: argparse.Namespace) -> None:
-    fmt = '%(name)s : %(message)s'
-    level = {0: logging.WARNING, 1: logging.INFO,
-             2: logging.DEBUG}.get(args.verbose or 0, logging.DEBUG)
-    logging.basicConfig(stream=sys.stderr, level=level, format=fmt)
-
-
-def main() -> int:
-    """
-    CLI entrypoint for running Nanaimo tests.
-    """
-
-    loop = asyncio.get_event_loop()
-
-    parser = _make_parser(loop)
-    args = parser.parse_args()
-
-    _setup_logging(args)
-
-    if hasattr(args, 'func'):
-        result = loop.run_until_complete(args.func(args))
-        try:
-            return int(result)
-        except ValueError:
-            print('Nanaimo tests must return an int result!')
-            raise
-    else:
-        parser.print_usage()
-        return -1
+        raise asyncio.TimeoutError()

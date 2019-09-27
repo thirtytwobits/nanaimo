@@ -2,11 +2,12 @@
 # Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # This software is distributed under the terms of the MIT License.
 #
-
-import typing
-import subprocess
-import pathlib
+import argparse
 import os
+import pathlib
+import subprocess
+import typing
+import nanaimo
 
 FAKE_TEST_SUCCESS = '''[==========] Running 140 tests from 7 test suites.
 [----------] Global test environment set-up.
@@ -392,3 +393,12 @@ class Paths:
         if not path_dir.exists() or not path_dir.is_dir():
             raise RuntimeWarning('Test directory "{}" was not setup properly. Tests may fail.'.format(path_dir))
         return path_dir
+
+
+class DummyNanaimoTest(nanaimo.NanaimoTest):
+    @classmethod
+    def on_visit_argparse_subparser(cls, subparsers: argparse._SubParsersAction, subparser: argparse.ArgumentParser) -> None:
+        pass
+
+    async def __call__(self, args: argparse.Namespace) -> int:
+        return 0

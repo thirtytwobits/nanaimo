@@ -10,7 +10,6 @@ import logging
 import queue
 import re
 import threading
-import time
 import types
 import typing
 
@@ -61,7 +60,7 @@ class AbstractAsyncSerial(AbstractSerial):
         Get the current, monotonic time, in fractional seconds, using the same
         clock used for receive timestamps.
         """
-        return time.monotonic()
+        return self._loop.time()
 
     # +-----------------------------------------------------------------------+
     # | ASYNC OPERATIONS
@@ -172,7 +171,8 @@ class ConcurrentUart(AbstractAsyncSerial):
         self._s.cancel_read()
         self._write_buffer.put_nowait(self.WriteBufferEndOfTransmission)
         for serial_future in reversed(self._serial_futures):
-            serial_future.result(self._s.timeout)
+            if not serial_future.done():
+                serial_future.result((self._s.timeout if self._s.timeout > 0 else None))
         self._s.close()
         self._executor.shutdown(wait=True)
 

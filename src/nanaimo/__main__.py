@@ -5,6 +5,6 @@
 
 import sys
 
-import nanaimo
+import nanaimo.cli
 
-sys.exit(nanaimo.main())
+sys.exit(nanaimo.cli.main())

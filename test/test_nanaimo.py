@@ -3,15 +3,18 @@
 # This software is distributed under the terms of the MIT License.
 #
 
+import argparse
+import asyncio
+import os
+
+import pytest
+
 import fixtures
 import fixtures.simulators
 import nanaimo
-import nanaimo.serial
-import nanaimo.jlink
 import nanaimo.gtest
-import os
-import pytest
-import asyncio
+import nanaimo.jlink
+import nanaimo.serial
 
 
 @pytest.mark.timeout(10)
@@ -76,3 +79,91 @@ async def test_timeout_while_monitoring() -> None:
     serial = fixtures.simulators.Serial(['gibberish'], loop_fake_data=False)
     with nanaimo.serial.ConcurrentUart(serial) as monitor:
         assert 0 != await nanaimo.gtest.Parser(4.0).read_test(monitor)
+
+
+@pytest.mark.timeout(10)
+@pytest.mark.asyncio
+async def test_observe_tasks(event_loop: asyncio.AbstractEventLoop) -> None:
+    """
+    Test the observe_tasks method of NanaimoTest
+    """
+
+    subject = fixtures.DummyNanaimoTest(event_loop)
+
+    async def evaluating() -> int:
+        return 0
+
+    async def running() -> int:
+        waits = 2
+        while waits > 0:
+            await asyncio.sleep(.1)
+            waits -= 1
+        return 1
+
+    result = await subject.observe_tasks(evaluating(),
+                                        0,
+                                        running())
+    assert len(result) == 1
+    should_be_running = result.pop()
+
+    assert not should_be_running.done()
+
+    assert 1 == await should_be_running
+
+
+@pytest.mark.timeout(10)
+@pytest.mark.asyncio
+async def test_observe_tasks_failure(event_loop: asyncio.AbstractEventLoop) -> None:
+    """
+    Test the observe_tasks method of NanaimoTest where the running tasks exit.
+    """
+
+    subject = fixtures.DummyNanaimoTest(event_loop)
+
+    async def evaluating() -> int:
+        waits = 2
+        while waits > 0:
+            await asyncio.sleep(.1)
+            waits -= 1
+        return 1
+
+    async def running() -> int:
+        return 1
+
+    with pytest.raises(nanaimo.AssertionError):
+        await subject.observe_tasks(evaluating(),
+                                   0,
+                                   running())
+
+
+@pytest.mark.timeout(10)
+@pytest.mark.asyncio
+async def test_observe_tasks_timeout(event_loop: asyncio.AbstractEventLoop) -> None:
+    """
+    Test the observe_tasks method of NanaimoTest where the running tasks do not exit.
+    """
+
+    subject = fixtures.DummyNanaimoTest(event_loop)
+
+    async def evaluating() -> int:
+        while True:
+            await asyncio.sleep(1)
+
+    async def running() -> int:
+        while True:
+            await asyncio.sleep(1)
+
+    with pytest.raises(asyncio.TimeoutError):
+        await subject.observe_tasks(evaluating(),
+                                   1,
+                                   running())
+
+@pytest.mark.timeout(20)
+@pytest.mark.asyncio
+async def test_countdown_sleep(event_loop: asyncio.AbstractEventLoop) -> None:
+    """
+    Test the observe_tasks method of NanaimoTest where the running tasks do not exit.
+    """
+    subject = fixtures.DummyNanaimoTest(event_loop)
+
+    await subject.countdown_sleep(5.3)

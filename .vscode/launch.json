@@ -26,6 +26,15 @@
             "type": "python",
             "request": "launch",
             "module": "pytest",
+            "args": ["--log-cli-level=INFO"],
+            "console": "internalConsole",
+            "cwd": "${workspaceFolder}/test"
+        },
+        {
+            "name": "Pytest: all tests",
+            "type": "python",
+            "request": "launch",
+            "module": "pytest",
             "console": "internalConsole",
             "cwd": "${workspaceFolder}/test"
         },

@@ -44,12 +44,14 @@ class Series1900BUart:
 
     def __init__(self,
                  uart: nanaimo.serial.ConcurrentUart,
-                 command_timeout_seconds: float):
+                 command_timeout_seconds: float = 0,
+                 debug: bool = False):
         self._uart = uart
         self._uart.eol = '\r'
         self._command_timeout_seconds = command_timeout_seconds
         self._uart.timeout_seconds = command_timeout_seconds
         self._logger = logging.getLogger(type(self).__name__)
+        self._debug = debug
 
     async def send_command(self, command: str) -> typing.Optional[typing.Any]:
         if command == '1':
@@ -93,11 +95,13 @@ class Series1900BUart:
             start_time = self._uart.time()
             while True:
                 now = self._uart.time()
-                if now - start_time > self._command_timeout_seconds:
+                if self._command_timeout_seconds > 0 and now - start_time > self._command_timeout_seconds:
                     raise asyncio.TimeoutError()
-                self._logger.debug('Waiting for response to command %s put before time %f seconds', command, puttime_secs)
-                received_line = await self._uart.get_line(self._command_timeout_seconds - (now - start_time))
-                self._logger.debug('At %f Got line: %s', received_line.timestamp_seconds, received_line)
+                if self._debug:
+                    self._logger.debug('Waiting for response to command %s put before time %f seconds', command, puttime_secs)
+                received_line = await self._uart.get_line((self._command_timeout_seconds - (now - start_time) if self._command_timeout_seconds > 0 else 0))
+                if self._debug:
+                    self._logger.debug('At %f Got line: %s', received_line.timestamp_seconds, received_line)
                 # The result has to be from after the put or
                 # it's an old result from a buffer.
                 if received_line.timestamp_seconds > puttime_secs and received_line == self.ResultOk:
@@ -106,3 +110,15 @@ class Series1900BUart:
                 if len(received_line) > 0:
                     previous_line = received_line
         return previous_line
+
+    async def wait_for_voltage(self, is_min: bool, threshold_v: float) -> None:
+        while True:
+            display_tuple = await self.get_display()
+            voltage = display_tuple[0]
+            if (voltage >= threshold_v if is_min else voltage <= threshold_v):
+                if is_min:
+                    self._logger.debug('---------------POWER SUPPLY UP----------------')
+                else:
+                    self._logger.debug('--------------POWER SUPPLY DOWN---------------')
+                break
+            await asyncio.sleep(.1)
