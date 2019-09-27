@@ -15,7 +15,7 @@ class Series1900BUart:
     Control of a 1900B series BK Precision power supply via UART.
     """
 
-    DefaultCommandTimeoutSeconds = 2.0
+    DefaultCommandTimeoutSeconds = 6.0
 
     # cspell: disable
     CommandTurnOn = 'SOUT0'
@@ -87,7 +87,7 @@ class Series1900BUart:
             self._logger.debug('Sending characters %s', re.sub('\\r', '<cr>', command))
             is_command = False
 
-        puttime_secs = await self._uart.put_line((self._uart.eol * 2) + command + self._uart.eol)
+        puttime_secs = await self._uart.put_line(command + self._uart.eol)
         previous_line = None
         if is_command:
             start_time = self._uart.time()
