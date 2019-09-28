@@ -7,7 +7,7 @@
 def test_test_hardware_fixture(testdir) -> None:  # type: ignore
     testdir.makeconftest(
         """
-pytest_plugins = "nanaimo.pytest_plugin"
+# pytest_plugins = "nanaimo.pytest_plugin"
 """)
     testdir.makepyfile("""
 def test_hardware_fixture(hardware):
