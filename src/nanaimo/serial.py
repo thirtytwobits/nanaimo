@@ -2,7 +2,7 @@
 # Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # This software is distributed under the terms of the MIT License.
 #
-import argparse
+import nanaimo
 import asyncio
 import codecs
 import concurrent.futures
@@ -35,11 +35,11 @@ class TimestampedLine(str):
 class AbstractSerial:
 
     @classmethod
-    def on_visit_argparse_subparser(cls, subparsers: argparse._SubParsersAction, subparser: argparse.ArgumentParser) -> None:
-        subparser.add_argument('--port',
+    def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
+        arguments.add_argument('--port',
                                help='The port to monitor.')
 
-        subparser.add_argument('--port-speed', '-b', help='the speed of the port (e.g. baud rate for serial ports).')
+        arguments.add_argument('--port-speed', '-b', help='the speed of the port (e.g. baud rate for serial ports).')
 
 
 class AbstractAsyncSerial(AbstractSerial):

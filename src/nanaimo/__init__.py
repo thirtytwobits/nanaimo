@@ -4,7 +4,6 @@
 #
 
 import abc
-import argparse
 import logging
 import asyncio
 import typing
@@ -18,18 +17,34 @@ class AssertionError(RuntimeError):
     pass
 
 
-class NanaimoTest(metaclass=abc.ABCMeta):
+class Arguments(metaclass=abc.ABCMeta):
 
-    @classmethod
-    def on_visit_argparse(cls, subparsers: argparse._SubParsersAction, loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> None:
-        subparser = subparsers.add_parser(cls.__name__)  # type: 'argparse.ArgumentParser'
-        subparser.add_argument('--test-timeout-seconds',
-                               default='30',
-                               type=float,
-                               help='''Test will be killed and marked as a failure after
-waiting for a result for this amount of time.''')
-        cls.on_visit_argparse_subparser(subparsers, subparser)
-        subparser.set_defaults(func=cls(loop))
+    @abc.abstractmethod
+    def add_argument(self, *args: typing.Any, **kwargs: typing.Any) -> None:
+        ...
+
+    @abc.abstractmethod
+    def set_defaults(self, **kwargs: typing.Any) -> None:
+        ...
+
+
+class Namespace:
+
+    def __init__(self, parent: typing.Any):
+        for name in vars(parent):
+            setattr(self, name, getattr(parent, name))
+
+    def __getattr__(self, key: str) -> typing.Any:
+        return self.__dict__[key]
+
+    def __eq__(self, other: typing.Any) -> bool:
+        return vars(self) == vars(other)
+
+    def __contains__(self, key: str) -> typing.Any:
+        return key in self.__dict__
+
+
+class NanaimoTest(metaclass=abc.ABCMeta):
 
     @property
     def loop(self) -> asyncio.AbstractEventLoop:
@@ -37,11 +52,11 @@ waiting for a result for this amount of time.''')
 
     @classmethod
     @abc.abstractmethod
-    def on_visit_argparse_subparser(cls, subparsers: argparse._SubParsersAction, subparser: argparse.ArgumentParser) -> None:
+    def on_visit_test_arguments(cls, arguments: Arguments) -> None:
         ...
 
     @abc.abstractmethod
-    async def __call__(self, args: argparse.Namespace) -> int:
+    async def __call__(self, args: Namespace) -> int:
         ...
 
     def __init__(self, loop: typing.Optional[asyncio.AbstractEventLoop] = None):
@@ -60,15 +75,11 @@ waiting for a result for this amount of time.''')
             await asyncio.sleep(1)
             count_down -= 1
 
-    async def observe_tasks(self,
-                            observer_co_or_f: typing.Union[typing.Coroutine, asyncio.Future],
-                            timeout_seconds: float,
-                            assert_observed_arent_done: bool,
-                            *args: typing.Union[typing.Coroutine, asyncio.Future]) -> typing.Set[asyncio.Future]:
-        """
-        Allows running a set of tasks but returning when an observer task completes. This allows a pattern where
-        a single task is evaluating the side-effects of other tasks as a gate to continuing the test.
-        """
+    async def _observe_tasks(self,
+                             observer_co_or_f: typing.Union[typing.Coroutine, asyncio.Future],
+                             timeout_seconds: float,
+                             *args: typing.Union[typing.Coroutine, asyncio.Future]) -> \
+            typing.Tuple[typing.Set[asyncio.Future], typing.Set[asyncio.Future]]:
 
         observing_my_future = asyncio.ensure_future(observer_co_or_f)
         the_children_are_our_futures = [observing_my_future]
@@ -85,11 +96,34 @@ waiting for a result for this amount of time.''')
                 return_when=asyncio.FIRST_COMPLETED)
 
             if observing_my_future.done():
-                if assert_observed_arent_done and len(done) > 1:
-                    raise AssertionError('Tasks under observation completed before the observation was complete.')
-                return pending
+                return done, pending
 
             if wait_timeout is not None and self._loop.time() - start_time > wait_timeout:
                 break
 
         raise asyncio.TimeoutError()
+
+    async def observe_tasks_assert_not_done(self,
+                                            observer_co_or_f: typing.Union[typing.Coroutine, asyncio.Future],
+                                            timeout_seconds: float,
+                                            *args: typing.Union[typing.Coroutine, asyncio.Future]) -> typing.Set[asyncio.Future]:
+        """
+        Allows running a set of tasks but returning when an observer task completes. This allows a pattern where
+        a single task is evaluating the side-effects of other tasks as a gate to continuing the test.
+        """
+        done, pending = await self._observe_tasks(observer_co_or_f, timeout_seconds, *args)
+        if len(done) > 1:
+            raise AssertionError('Tasks under observation completed before the observation was complete.')
+        return pending
+
+    async def observe_tasks(self,
+                            observer_co_or_f: typing.Union[typing.Coroutine, asyncio.Future],
+                            timeout_seconds: float,
+                            *args: typing.Union[typing.Coroutine, asyncio.Future]) -> typing.Set[asyncio.Future]:
+        """
+        Allows running a set of tasks but returning when an observer task completes. This allows a pattern where
+        a single task is evaluating the side-effects of other tasks as a gate to continuing the test.
+        """
+
+        done, pending = await self._observe_tasks(observer_co_or_f, timeout_seconds, *args)
+        return pending

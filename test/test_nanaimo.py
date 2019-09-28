@@ -3,7 +3,6 @@
 # This software is distributed under the terms of the MIT License.
 #
 
-import argparse
 import asyncio
 import os
 
@@ -100,10 +99,9 @@ async def test_observe_tasks(event_loop: asyncio.AbstractEventLoop) -> None:
             waits -= 1
         return 1
 
-    result = await subject.observe_tasks(evaluating(),
-                                         0,
-                                         True,
-                                         running())
+    result = await subject.observe_tasks_assert_not_done(evaluating(),
+                                                         0,
+                                                         running())
     assert len(result) == 1
     should_be_running = result.pop()
 
@@ -132,10 +130,9 @@ async def test_observe_tasks_failure(event_loop: asyncio.AbstractEventLoop) -> N
         return 1
 
     with pytest.raises(nanaimo.AssertionError):
-        await subject.observe_tasks(evaluating(),
-                                    0,
-                                    True,
-                                    running())
+        await subject.observe_tasks_assert_not_done(evaluating(),
+                                                    0,
+                                                    running())
 
 
 @pytest.mark.timeout(10)
@@ -160,7 +157,6 @@ async def test_observe_tasks_failure_no_assert(event_loop: asyncio.AbstractEvent
 
     result = await subject.observe_tasks(evaluating(),
                                          0,
-                                         False,
                                          running())
 
     assert 0 == len(result)
@@ -184,10 +180,9 @@ async def test_observe_tasks_timeout(event_loop: asyncio.AbstractEventLoop) -> N
             await asyncio.sleep(1)
 
     with pytest.raises(asyncio.TimeoutError):
-        await subject.observe_tasks(evaluating(),
-                                    1,
-                                    True,
-                                    running())
+        await subject.observe_tasks_assert_not_done(evaluating(),
+                                                    1,
+                                                    running())
 
 
 @pytest.mark.timeout(20)

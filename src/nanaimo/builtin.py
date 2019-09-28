@@ -5,7 +5,6 @@
 """
 Built-in :class:`NanaimoTest` for common scenarios.
 """
-import argparse
 import asyncio
 import pathlib
 
@@ -17,11 +16,11 @@ import nanaimo.jlink
 class GTestOverJLink(nanaimo.NanaimoTest):
 
     @classmethod
-    def on_visit_argparse_subparser(cls, subparsers: argparse._SubParsersAction, subparser: argparse.ArgumentParser) -> None:
-        nanaimo.serial.AbstractSerial.on_visit_argparse_subparser(subparsers, subparser)
-        nanaimo.jlink.ProgramUploaderJLink.on_visit_argparse_subparser(subparsers, subparser)
+    def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
+        nanaimo.serial.AbstractSerial.on_visit_test_arguments(arguments)
+        nanaimo.jlink.ProgramUploaderJLink.on_visit_test_arguments(arguments)
 
-    async def __call__(self, args: argparse.Namespace) -> int:
+    async def __call__(self, args: nanaimo.Namespace) -> int:
         import nanaimo
         import nanaimo.serial
         import nanaimo.gtest

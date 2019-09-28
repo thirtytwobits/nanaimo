@@ -2,11 +2,39 @@
 # Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # This software is distributed under the terms of the MIT License.
 #
-import typing
 import argparse
 import asyncio
 import logging
 import sys
+import typing
+
+import nanaimo
+
+
+class _ArgparseSubparserArguments(nanaimo.Arguments):
+
+    @classmethod
+    def visit_argparse(cls,
+                       test_class: typing.Type['nanaimo.NanaimoTest'],
+                       subparsers: argparse._SubParsersAction,
+                       loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> None:
+        subparser = subparsers.add_parser(test_class.__name__)  # type: 'argparse.ArgumentParser'
+        subparser.add_argument('--test-timeout-seconds',
+                               default='30',
+                               type=float,
+                               help='''Test will be killed and marked as a failure after
+waiting for a result for this amount of time.''')
+        test_class.on_visit_test_arguments(cls(subparser))
+        subparser.set_defaults(func=test_class(loop))
+
+    def __init__(self, subparser: argparse.ArgumentParser):
+        self._subparser = subparser
+
+    def add_argument(self, *args: typing.Any, **kwargs: typing.Any) -> None:
+        self._subparser.add_argument(*args, **kwargs)
+
+    def set_defaults(self, **kwargs: typing.Any) -> None:
+        self._subparser.set_defaults(**kwargs)
 
 
 def _make_parser(loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> argparse.ArgumentParser:
@@ -39,7 +67,8 @@ def _make_parser(loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> arg
     import nanaimo.builtin  # noqa: F401
 
     for test in nanaimo.NanaimoTest.__subclasses__():
-        test.on_visit_argparse(subparsers, loop)
+        # https://github.com/python/mypy/issues/5374
+        _ArgparseSubparserArguments.visit_argparse(test, subparsers, loop)  # type: ignore
 
     return parser
 
@@ -66,7 +95,7 @@ def main() -> int:
     _setup_logging(args)
 
     if hasattr(args, 'func'):
-        result = loop.run_until_complete(args.func(args))
+        result = loop.run_until_complete(args.func(nanaimo.Namespace(args)))
         try:
             return int(result)
         except ValueError:

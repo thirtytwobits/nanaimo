@@ -2,7 +2,6 @@
 # Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # This software is distributed under the terms of the MIT License.
 #
-import argparse
 import os
 import pathlib
 import subprocess
@@ -397,8 +396,8 @@ class Paths:
 
 class DummyNanaimoTest(nanaimo.NanaimoTest):
     @classmethod
-    def on_visit_argparse_subparser(cls, subparsers: argparse._SubParsersAction, subparser: argparse.ArgumentParser) -> None:
+    def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
         pass
 
-    async def __call__(self, args: argparse.Namespace) -> int:
+    async def __call__(self, args: nanaimo.Namespace) -> int:
         return 0
