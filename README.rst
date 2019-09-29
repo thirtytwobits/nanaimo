@@ -1,67 +1,49 @@
 ############################################
-Nanaimo: Hardware-In-the-Loop CI Testing
+Nanaimo: Hardware-In-the-Loop Unit Testing
 ############################################
 
 |badge_docs|_ |badge_build|_ |badge_github_license|_
 
+.. Warning::
+    Nanaimo is evolving rapidly right now. It is undergoing a change to focus on pytest
+    integration and to introduce its own plugin architecture to allow test apparatuses
+    and instruments to be easily contributed.
+
 .. image:: docs/images/nanaimo.png
    :alt: A delicious Nanaimo bar
 
-*It's the delicious custard between your Continuous-Integration pipeline and your HIL test fixtures.*
+*It's the delicious custard between your unit test framework and your hardware test fixtures.*
+
+Nanaimo is a set of utilities and plugins designed to enable real hardware test apparatuses
+to be integrated with unit test frameworks like pytest. This can allow on-target tests to
+run as part of continuous integration pipelines like `buildkite`_ or `jenkins`_.
+
+.. image:: docs/images/pifarm.jpeg
+   :alt: S32K eval boards attached to Rasberry PIs.
+
+*Example of S32K dev boards attached to Raspberry PI CI workers running the `buildkite`_ agent
+and using Nanaimo.*
+
+Nanaimo is designed to enable testing of software-defined, physical components in isolation to
+provide pre-integration verification of software interfaces and behavioural contracts. It adapts
+asynchronous control and monitoring of these components to fit familiar testing idioms
+(e.g. x-unit testing) using the popular python test framework, `pytest`_.
+
+.. image:: docs/images/block.png
+   :alt: Block diagram of Nanaimo's relationship to other components of a typical software build and test pipeline.
+
+.. image:: docs/images/example.png
+   :alt: Example scenario using Nanaimo to test an I2C driver for a microcontroller.
 
 .. Note::
-    `Nanimo bars`_ are about the best things humans have ever invented. This
-    test runner isn't as wonderful as the dessert but we hope it does bring
+    `Nanaimo bars`_ are about the best things humans have ever invented. This
+    test framework isn't as wonderful as the dessert but we hope it does bring
     a small smile to your face.
 
-The :code:`nait` script is designed as a glue between CI automation like
-`buildkite`_ or `jenkins`_ and a micro-controller test fixture physically
-attached to a build host. This project may evolve over time to become more
-generalized but for now we're starting small.
-
-To use the current version of the :code:`nait` script simply produce `JLink Commander`_
-scripts and hex files in one stage of your CI pipeline and deliver these
-and nanaimo to a physical host your HIL rig is attached to.
-
-.. image:: docs/images/jlink_edu.jpeg
-   :alt: S32K144EVB attached to a JLink EDU.
-
-*Example of a Segger* `JLink EDU`_ *attached to an NXP S32K144EVB being used by nanaimo*
-
-Example::
-
-    nait -vv \
-     --port \
-     /dev/serial/by-id/usb-Signoid_Kft._USB-UART_adapter_MACX98-if00-port0 \
-     --port-speed 115200 \
-     *.jlink
-
-***********************************
-JLink
-***********************************
-
-This version of nanaimo does require a segger JLink and the Segger JLinkExe tool. Nanaimo
-uses JLinkExe to upload binaries and to reset the test target.
-
-.. Note::
-    There is no plan to support OpenSDA as its mass storage upload solution
-    does not have a portable API for resetting the target.
-
-In the future we plan on adding support for `OpenOCD`_ and `pyOCD`_ both of which provide a
-portable API to a large set of micro-controllers but JLink is the industry standard and the
-`JLink EDU Mini`_ is an inexpensive probe (about $20 USD) with free software available for
-linux, mac, and Windows that can be used for non-commercial purposes. For open source projects
-this seems like an ideal solution.
-
-.. _`Nanimo bars`: https://en.wikipedia.org/wiki/Nanaimo_bar
+.. _`Nanaimo bars`: https://en.wikipedia.org/wiki/Nanaimo_bar
 .. _`buildkite`: https://buildkite.com
 .. _`jenkins`: https://jenkins.io/
-.. _`JLink Commander`: https://wiki.segger.com/J-Link_Commander
-.. _`JLink EDU Mini`: https://www.segger.com/products/debug-probes/j-link/models/j-link-edu-mini/
-.. _`JLink EDU`: https://www.segger.com/products/debug-probes/j-link/models/j-link-edu/
-.. _`pyOCD`: https://github.com/mbedmicro/pyOCD
-.. _`OpenOCD`: http://openocd.org/
-
+.. _`pytest`: https://docs.pytest.org/en/latest/
 
 .. |badge_docs| image:: https://readthedocs.org/projects/nanaimo/badge/?version=latest
     :alt: Documentation Status

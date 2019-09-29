@@ -24,6 +24,7 @@ _build
 dist
 .clear*
 .ropeproject
+.DS_Store
 
 # Eclipse
 .metadata

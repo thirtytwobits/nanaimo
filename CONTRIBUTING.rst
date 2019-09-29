@@ -57,8 +57,11 @@ And to run a single test for a single version of python do::
     tox -e py36-test -- -k test_program_uploader_failure
 
 ************************************************
-Building The Docs
+Running Reports and Generating Docs
 ************************************************
+
+Documentation
+================================================
 
 We rely on `read the docs`_ to build our documentation from github but we also verify this build
 as part of our tox build. This means you can view a local copy after completing a full, successful

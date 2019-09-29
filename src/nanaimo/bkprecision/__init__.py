@@ -2,12 +2,14 @@
 # Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # This software is distributed under the terms of the MIT License.
 #
-import nanaimo.serial
 import asyncio
-import typing
-import logging
-import re
 import contextlib
+import logging
+import pathlib
+import re
+import typing
+
+import nanaimo.serial
 
 
 class Series1900BUart:
@@ -37,8 +39,8 @@ class Series1900BUart:
 
     @classmethod
     @contextlib.contextmanager
-    def default_configuration(cls, port: str) -> typing.Generator['Series1900BUart', None, None]:
-        with nanaimo.serial.ConcurrentUart.new_default(port, 9600) as bkserial:
+    def default_configuration(cls, port: typing.Union[str, pathlib.Path]) -> typing.Generator['Series1900BUart', None, None]:
+        with nanaimo.serial.ConcurrentUart.new_default(str(port), 9600) as bkserial:
             bk = cls(bkserial, cls.DefaultCommandTimeoutSeconds)
             yield bk
 

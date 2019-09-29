@@ -10,13 +10,13 @@
 
 
 *************************************
-nait
+CLI
 *************************************
 
 .. argparse::
-   :filename: src/nait
+   :filename: src/nanaimo/cli.py
    :func: _make_parser
-   :prog: nait
+   :prog: python -m nanaimo
 
 *************************************
 License
