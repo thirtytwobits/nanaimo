@@ -2,7 +2,7 @@
 Nanaimo: Hardware-In-the-Loop Unit Testing
 ############################################
 
-|badge_docs|_ |badge_build|_ |badge_github_license|_
+|badge_docs|_ |badge_build|_ |badge_github_license|_ |badge_pypi_support|_ |badge_pypi_version|_
 
 .. Warning::
     Nanaimo is evolving rapidly right now. It is undergoing a change to focus on pytest
@@ -56,3 +56,11 @@ asynchronous control and monitoring of these components to fit familiar testing 
 .. |badge_github_license| image:: https://img.shields.io/badge/license-MIT-blue.svg
     :alt: MIT license
 .. _badge_github_license: https://github.com/thirtytwobits/nanaimo/blob/master/LICENSE.rst
+
+.. |badge_pypi_support| image:: https://img.shields.io/pypi/pyversions/nanaimo.svg
+    :alt: Supported Python Versions
+.. _badge_pypi_support: https://pypi.org/project/nanaimo/
+
+.. |badge_pypi_version| image:: https://img.shields.io/pypi/v/nanaimo.svg
+    :alt: Pypi Release Version
+.. _badge_pypi_version: https://pypi.org/project/nanaimo/
