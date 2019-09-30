@@ -5,12 +5,11 @@
 import nanaimo
 import typing
 import pytest
-import _pytest
 
 
 class _PyTestArguments(nanaimo.Arguments):
 
-    def __init__(self, testparser: _pytest.config.argparsing.Parser):
+    def __init__(self, testparser):  # type: ignore
         self._testparser = testparser
 
     def add_argument(self, *args: typing.Any, **kwargs: typing.Any) -> None:
@@ -20,7 +19,7 @@ class _PyTestArguments(nanaimo.Arguments):
         raise NotImplementedError('pytest plugin does not support setting defaults.')
 
 
-def pytest_addoption(parser: _pytest.config.argparsing.Parser) -> None:
+def pytest_addoption(parser) -> None:  # type: ignore
     # import nanaimo.builtin  # noqa: F401
 
     # args = _PyTestArguments(parser)
@@ -32,7 +31,7 @@ def pytest_addoption(parser: _pytest.config.argparsing.Parser) -> None:
 
 
 @pytest.fixture
-def hardware(request: _pytest.fixtures.FixtureRequest) -> typing.Callable[[], str]:
+def hardware(request) -> typing.Callable[[], str]:  # type: ignore
     # TODO: this is just a placeholder
     def _hello() -> str:
         return "Hello Pytest"
