@@ -12,6 +12,9 @@ steps:
           workdir: /repo
           image: "uavcan/toxic:py35-py38"
           propagate-environment: true
+          environment:
+            - "COVERALLS_TOKEN"
+            - "PYPI_PASSWORD"
     env:
       VERBOSE: 1
     agents:
