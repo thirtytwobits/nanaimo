@@ -8,7 +8,7 @@ import fixtures.simulators
 import pytest
 import asyncio
 import nanaimo.serial
-import nanaimo.bkprecision
+import nanaimo.instruments.bkprecision
 
 
 @pytest.fixture
@@ -20,7 +20,7 @@ def paths_for_test():  # type: ignore
 async def test_turn_off(paths_for_test: fixtures.Paths, event_loop: asyncio.AbstractEventLoop) -> None:
     fake_serial = fixtures.simulators.Serial(['OK'], '\r')
     with nanaimo.serial.ConcurrentUart(fake_serial, eol='\r') as serial_sim:
-        bk = nanaimo.bkprecision.Series1900BUart(serial_sim)
+        bk = nanaimo.instruments.bkprecision.Series1900BUart(serial_sim)
         await bk.turn_off()
 
 
@@ -28,7 +28,7 @@ async def test_turn_off(paths_for_test: fixtures.Paths, event_loop: asyncio.Abst
 async def test_turn_on(paths_for_test: fixtures.Paths, event_loop: asyncio.AbstractEventLoop) -> None:
     fake_serial = fixtures.simulators.Serial(['OK'], '\r')
     with nanaimo.serial.ConcurrentUart(fake_serial, eol='\r') as serial_sim:
-        bk = nanaimo.bkprecision.Series1900BUart(serial_sim)
+        bk = nanaimo.instruments.bkprecision.Series1900BUart(serial_sim)
         await bk.turn_on()
 
 
@@ -37,7 +37,7 @@ async def test_turn_on(paths_for_test: fixtures.Paths, event_loop: asyncio.Abstr
 async def test_turn_on_timeout(paths_for_test: fixtures.Paths, event_loop: asyncio.AbstractEventLoop) -> None:
     fake_serial = fixtures.simulators.Serial(['NOPE'], '\r', loop_fake_data=False)
     with nanaimo.serial.ConcurrentUart(fake_serial, eol='\r') as serial_sim:
-        bk = nanaimo.bkprecision.Series1900BUart(serial_sim, 1)
+        bk = nanaimo.instruments.bkprecision.Series1900BUart(serial_sim, 1)
         with pytest.raises(asyncio.TimeoutError):
             await bk.turn_on()
 
@@ -46,8 +46,8 @@ async def test_turn_on_timeout(paths_for_test: fixtures.Paths, event_loop: async
 async def test_get_display(paths_for_test: fixtures.Paths, event_loop: asyncio.AbstractEventLoop) -> None:
     fake_serial = fixtures.simulators.Serial(['030201451', 'OK'], '\r', loop_fake_data=True)
     with nanaimo.serial.ConcurrentUart(fake_serial, eol='\r') as serial_sim:
-        bk = nanaimo.bkprecision.Series1900BUart(serial_sim)
+        bk = nanaimo.instruments.bkprecision.Series1900BUart(serial_sim)
         display = await bk.get_display()
         assert 3.02 == display[0]
         assert 1.45 == display[1]
-        assert nanaimo.bkprecision.Series1900BUart.StatusCC == display[2]
+        assert nanaimo.instruments.bkprecision.Series1900BUart.StatusCC == display[2]

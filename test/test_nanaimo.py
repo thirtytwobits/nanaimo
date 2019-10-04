@@ -11,8 +11,8 @@ import pytest
 import fixtures
 import fixtures.simulators
 import nanaimo
-import nanaimo.gtest
-import nanaimo.jlink
+import nanaimo.parsers.gtest
+import nanaimo.instruments.jlink
 import nanaimo.serial
 
 
@@ -35,27 +35,27 @@ def test_uart_monitor() -> None:
 
 @pytest.mark.asyncio
 async def test_program_uploader() -> None:
-    uploader = nanaimo.jlink.ProgramUploaderJLink(fixtures.get_mock_JLinkExe())
+    uploader = nanaimo.instruments.jlink.ProgramUploaderJLink(fixtures.get_mock_JLinkExe())
     assert 0 == await uploader.upload(fixtures.get_s32K144_jlink_script())
 
 
 @pytest.mark.asyncio
 async def test_program_uploader_failure() -> None:
-    uploader = nanaimo.jlink.ProgramUploaderJLink(fixtures.get_mock_JLinkExe(), ['--simulate-error'])
+    uploader = nanaimo.instruments.jlink.ProgramUploaderJLink(fixtures.get_mock_JLinkExe(), ['--simulate-error'])
     assert 0 != await uploader.upload(fixtures.get_s32K144_jlink_script())
 
 
 @pytest.mark.asyncio
 async def test_program_while_monitoring() -> None:
     scripts = fixtures.get_s32K144_jlink_scripts()
-    uploader = nanaimo.jlink.ProgramUploaderJLink(fixtures.get_mock_JLinkExe())
+    uploader = nanaimo.instruments.jlink.ProgramUploaderJLink(fixtures.get_mock_JLinkExe())
     serial = fixtures.simulators.Serial(fixtures.FAKE_TEST_SUCCESS)
     uploads = 0
     with nanaimo.serial.ConcurrentUart(serial) as monitor:
         for script in scripts:
             serial.reset_fake_input()
             results = await asyncio.gather(
-                nanaimo.gtest.Parser(10).read_test(monitor),
+                nanaimo.parsers.gtest.Parser(10).read_test(monitor),
                 uploader.upload(script)
             )
             assert 2 == len(results)
@@ -70,14 +70,14 @@ async def test_program_while_monitoring() -> None:
 async def test_failed_test() -> None:
     serial = fixtures.simulators.Serial(fixtures.FAKE_TEST_FAILURE)
     with nanaimo.serial.ConcurrentUart(serial) as monitor:
-        assert 1 == await nanaimo.gtest.Parser(10).read_test(monitor)
+        assert 1 == await nanaimo.parsers.gtest.Parser(10).read_test(monitor)
 
 
 @pytest.mark.asyncio
 async def test_timeout_while_monitoring() -> None:
     serial = fixtures.simulators.Serial(['gibberish'], loop_fake_data=False)
     with nanaimo.serial.ConcurrentUart(serial) as monitor:
-        assert 0 != await nanaimo.gtest.Parser(4.0).read_test(monitor)
+        assert 0 != await nanaimo.parsers.gtest.Parser(4.0).read_test(monitor)
 
 
 @pytest.mark.timeout(10)

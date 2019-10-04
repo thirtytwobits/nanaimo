@@ -4,7 +4,7 @@
 #
 import nanaimo.version
 import nanaimo.serial
-import nanaimo.bkprecision
+import nanaimo.instruments.bkprecision
 import asyncio
 import argparse
 import sys
@@ -14,7 +14,7 @@ import logging
 def _make_parser() -> argparse.ArgumentParser:
     epilog = '''**Example Usage**::
 
-    python -m nanaimo.bkprecision \\
+    python -m nanaimo.instruments.bkprecision \\
         --port /dev/serial/by-id/usb_TTL232R_BLAH_port0 \\
         on
 
@@ -61,7 +61,7 @@ loop = asyncio.get_event_loop()
 
 with nanaimo.serial.ConcurrentUart.new_default(args.port, 9600, loop) as serial:
     serial.echo = args.local_echo
-    bk = nanaimo.bkprecision.Series1900BUart(serial, args.timeout_seconds)
+    bk = nanaimo.instruments.bkprecision.Series1900BUart(serial, args.timeout_seconds)
     result = loop.run_until_complete(bk.send_command(args.command))
 
 sys.exit(result)

@@ -56,6 +56,22 @@ class Series1900BUart:
         self._debug = debug
 
     async def send_command(self, command: str) -> typing.Optional[typing.Any]:
+        """
+        Send a command to the instrument and return the result.
+        :param str command: Send one of the following commands:
+
+            +---------+----------------------------------+--------------------------------------------------+
+            | Command | Action                           | Returns                                          |
+            +=========+==================================+==================================================+
+            | '1'     | Turn on output voltage           | 'OK' or error text.                              |
+            +---------+----------------------------------+--------------------------------------------------+
+            | '2''    | Turn off output voltage          | 'OK' or error text                               |
+            +---------+----------------------------------+--------------------------------------------------+
+            | 'r'     | Send a stream of <cr> characters | (NA)                                             |
+            +---------+----------------------------------+--------------------------------------------------+
+            | '?'     | Read the front panel display     | Display voltage, current, and status (ON or OFF) |
+            +---------+----------------------------------+--------------------------------------------------+
+        """
         if command == '1':
             return await self._do_command(self.CommandTurnOn)
         elif command == '0':
@@ -63,7 +79,8 @@ class Series1900BUart:
         elif command == 'r':
             return await self._do_command('\r\r\r\r')
         elif command == '?':
-            return await self._do_command(self.CommandGetDisplay)
+            voltage, current, status = await self.get_display()
+            return '{},{},{}'.format(voltage, current, ('ON' if status else 'OFF'))
         else:
             raise ValueError('command {} is not a valid Series1900BUart command.'.format(command))
 

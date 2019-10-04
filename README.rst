@@ -9,41 +9,58 @@ Nanaimo: Hardware-In-the-Loop Unit Testing
     integration and to introduce its own plugin architecture to allow test apparatuses
     and instruments to be easily contributed.
 
-.. image:: docs/images/nanaimo.png
+.. figure:: https://thirtytwobits.github.io/nanaimo/images/nanaimo.png
    :alt: A delicious Nanaimo bar
 
-*It's the delicious custard between your unit test framework and your hardware test fixtures.*
+   A delicious Python treat that makes on-target testing sweet and satisfying.
 
 Nanaimo is a set of utilities and plugins designed to enable real hardware test apparatuses
 to be integrated with unit test frameworks like pytest. This can allow on-target tests to
-run as part of continuous integration pipelines like `buildkite`_ or `jenkins`_.
+run as part of continuous integration pipelines like `Buildkite`_, `Bamboo`_, or `Jenkins`_.
 
-.. image:: docs/images/pifarm.jpeg
+.. figure:: https://thirtytwobits.github.io/nanaimo/images/pifarm.jpeg
    :alt: S32K eval boards attached to Rasberry PIs.
 
-*Example of S32K dev boards attached to Raspberry PI CI workers running the `buildkite`_ agent
-and using Nanaimo.*
+   Figure 1.0: Example of S32K dev boards attached to Raspberry PI CI workers running the `Buildkite`_ agent and using Nanaimo.
 
 Nanaimo is designed to enable testing of software-defined, physical components in isolation to
-provide pre-integration verification of software interfaces and behavioural contracts. It adapts
+provide pre-integration verification of software interfaces and behavioral contracts. It adapts
 asynchronous control and monitoring of these components to fit familiar testing idioms
 (e.g. x-unit testing) using the popular python test framework, `pytest`_.
 
-.. image:: docs/images/block.png
+.. figure:: https://thirtytwobits.github.io/nanaimo/images/block.png
    :alt: Block diagram of Nanaimo's relationship to other components of a typical software build and test pipeline.
 
-.. image:: docs/images/example.png
+   Figure 1.1: Block diagram of Nanaimo's relationship to other components of a typical software build and test pipeline.
+
+Nanaimo is *not* a simulation framework and is not designed to support the complexity of a full a hardware-in-the-loop
+platform. Instead it's focused on testing small integrations with one or two hardware components and instruments.
+Examples of this might include verifying a SPI driver for a microcontroller or ensuring a serial bootloader's
+upload performance meets expected KPIs. To do this Nanaimo abstractions of instruments provide async interfaces
+to hardware either directly using communication busses like serial or ethernet or by invoking a CLI provided by the
+instrument vendor. Because of this, some instruments will require additional programs be installed on a system to
+work.
+
+.. figure:: https://thirtytwobits.github.io/nanaimo/images/example.png
    :alt: Example scenario using Nanaimo to test an I2C driver for a microcontroller.
 
+   Figure 1.2: Example scenario using Nanaimo to test an I2C driver for a microcontroller.
+
+This design is an amalgam of the `TLYF`_ (Test Like You Fly) methodology and the `Swiss cheese`_ model of
+failure analysis. Specifically; the goal is to encourage testing on actual or representative hardware
+early in the testing process of a system to make the cheese loaf less hole-y.
+
 .. Note::
-    `Nanaimo bars`_ are about the best things humans have ever invented. This
-    test framework isn't as wonderful as the dessert but we hope it does bring
-    a small smile to your face.
+    Nanaimo is named after `Nanaimo bars`_ which are about the best things humans have ever invented.
 
 .. _`Nanaimo bars`: https://en.wikipedia.org/wiki/Nanaimo_bar
-.. _`buildkite`: https://buildkite.com
-.. _`jenkins`: https://jenkins.io/
+.. _`Buildkite`: https://buildkite.com
+.. _`Bamboo`: https://www.atlassian.com/software/bamboo
+.. _`Jenkins`: https://jenkins.io/
 .. _`pytest`: https://docs.pytest.org/en/latest/
+.. _`TLYF`: https://www.youtube.com/watch?v=0BSaI117ITI
+.. _`Swiss cheese`: https://en.wikipedia.org/wiki/Swiss_cheese_model
+
 
 .. |badge_docs| image:: https://readthedocs.org/projects/nanaimo/badge/?version=latest
     :alt: Documentation Status

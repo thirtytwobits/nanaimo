@@ -10,7 +10,8 @@ import pathlib
 
 import nanaimo
 import nanaimo.serial
-import nanaimo.jlink
+import nanaimo.instruments
+import nanaimo.instruments.jlink
 
 
 class GTestOverJLink(nanaimo.NanaimoTest):
@@ -18,17 +19,17 @@ class GTestOverJLink(nanaimo.NanaimoTest):
     @classmethod
     def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
         nanaimo.serial.AbstractSerial.on_visit_test_arguments(arguments)
-        nanaimo.jlink.ProgramUploaderJLink.on_visit_test_arguments(arguments)
+        nanaimo.instruments.jlink.ProgramUploaderJLink.on_visit_test_arguments(arguments)
 
     async def __call__(self, args: nanaimo.Namespace) -> int:
         import nanaimo
         import nanaimo.serial
-        import nanaimo.gtest
-        import nanaimo.jlink
+        import nanaimo.parsers.gtest
+        import nanaimo.instruments.jlink
 
-        uploader = nanaimo.jlink.ProgramUploaderJLink()
+        uploader = nanaimo.instruments.jlink.ProgramUploaderJLink()
         jlink_scripts = pathlib.Path(args.base_path).glob(args.jlink_scripts)
-        parser = nanaimo.gtest.Parser(args.test_timeout_seconds)
+        parser = nanaimo.parsers.gtest.Parser(args.test_timeout_seconds)
 
         result = 0
         with nanaimo.serial.ConcurrentUart.new_default(args.port, args.port_speed) as monitor:
