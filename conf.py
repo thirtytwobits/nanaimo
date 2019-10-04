@@ -79,6 +79,8 @@ autodoc_inherit_docstrings = True
 # the documentation (as opposed to alphabetical).
 autodoc_member_order = 'bysource'
 
+numfig = True
+
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for

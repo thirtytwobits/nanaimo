@@ -22,7 +22,6 @@ hours of lost productivity the first time it keeps you from pulling in an unexpe
 from your global python environment. You can install virtualenv from brew on osx or apt-get on
 linux. I'd recommend the following environment for vscode::
 
-    git submodule update --init --recursive
     virtualenv -p python3.7 .pyenv
     source .pyenv/bin/activate
     pip install -r requirements.txt
@@ -43,7 +42,6 @@ Running The Tests
 To run the full suite of `tox`_ tests locally you'll need docker. Once you have docker installed
 and running do::
 
-    git submodule update --init --recursive
     docker pull uavcan/toxic:py35-py38
     docker run --rm -it -v $PWD:/repo uavcan/toxic:py35-py38
     tox

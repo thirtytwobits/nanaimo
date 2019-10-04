@@ -1,6 +1,6 @@
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
    :hidden:
 
    src/nanaimo/lib
