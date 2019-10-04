@@ -66,9 +66,9 @@ early in the testing process of a system to make the cheese loaf less hole-y.
     :alt: Documentation Status
 .. _badge_docs: https://nanaimo.readthedocs.io/en/latest/?badge=latest
 
-.. |badge_build| image:: https://badge.buildkite.com/0cf50056296ba113958b93f9058aad4cfffb8018062c044bf7.svg
+.. |badge_build| image:: https://badge.buildkite.com/80558e71a357a16151e4b537bfc19527c9b1ac543975b92ed7.svg
     :alt: Build status
-.. _badge_build: https://buildkite.com/friends-of-scott/nanaimo
+.. _badge_build: https://buildkite.com/friends-of-scott/nanaimo-release
 
 .. |badge_github_license| image:: https://img.shields.io/badge/license-MIT-blue.svg
     :alt: MIT license
