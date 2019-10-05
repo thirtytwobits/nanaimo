@@ -1,7 +1,20 @@
 steps:
-  - label: ':hammer: tox build and test'
-    id: toxic-docker
+  - label: ':hammer: build for pull-request'
+    if: build.branch != "master"
+    id: toxic-docker-pr
     command: "tox"
+    plugins:
+      - docker#v3.3.0:
+          workdir: /repo
+          image: "uavcan/toxic:py35-py38-sq"
+          propagate-environment: true
+    agents:
+      queue: 'default'
+    timeout_in_minutes: 15
+  - label: ':hammer: tox build, test, and release'
+    if: build.branch == "master"
+    id: toxic-docker-release
+    command: "tox && tox -e sonar && tox -e upload"
     artifact_paths: 
       - ".tox/report/tmp/*"
       - ".tox/mypy/tmp/*"
@@ -10,13 +23,11 @@ steps:
     plugins:
       - docker#v3.3.0:
           workdir: /repo
-          image: "uavcan/toxic:py35-py38"
+          image: "uavcan/toxic:py35-py38-sq"
           propagate-environment: true
           environment:
-            - "COVERALLS_TOKEN"
+            - "SONARQUBE_TOKEN"
             - "PYPI_PASSWORD"
-    env:
-      VERBOSE: 1
     agents:
       queue: 'default'
     timeout_in_minutes: 15
