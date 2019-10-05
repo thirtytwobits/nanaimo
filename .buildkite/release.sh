@@ -24,7 +24,7 @@ set -o pipefail
 
 # +----------------------------------------------------------+
 
-export NANAIMO_VERSION=`cat src/nanaimo/version.py | grep __version__ | awk '{print $3 $4 $5}'`
+export NANAIMO_VERSION=`cat src/nanaimo/version.py | grep __version__ | awk '{print $3 $4 $5}' | sed 's/,/./g'`
 tox
 tox -e sonar | grep -v "sonar.login"
 tox -e upload | grep -v "twine upload"
