@@ -2,7 +2,7 @@
 Nanaimo: Hardware-In-the-Loop Unit Testing
 ############################################
 
-|badge_docs|_ |badge_build|_ |badge_github_license|_ |badge_pypi_support|_ |badge_pypi_version|_
+|badge_docs|_ |badge_build|_ |badge_github_license|_ |badge_pypi_support|_ |badge_pypi_version|_ |badge_sonarcloud_quality|_ |badge_sonarcloud_coverage|_ |badge_sonarcloud_bugs|_
 
 .. Warning::
     Nanaimo is evolving rapidly right now. It is undergoing a change to focus on pytest
@@ -33,13 +33,13 @@ asynchronous control and monitoring of these components to fit familiar testing 
 
    Figure 1.1: Block diagram of Nanaimo's relationship to other components of a typical software build and test pipeline.
 
-Nanaimo is *not* a simulation framework and is not designed to support the complexity of a full a hardware-in-the-loop
-platform. Instead it's focused on testing small integrations with one or two hardware components and instruments.
-Examples of this might include verifying a SPI driver for a microcontroller or ensuring a serial bootloader's
-upload performance meets expected KPIs. To do this Nanaimo abstractions of instruments provide async interfaces
-to hardware either directly using communication busses like serial or ethernet or by invoking a CLI provided by the
-instrument vendor. Because of this, some instruments will require additional programs be installed on a system to
-work.
+Nanaimo is *not* a simulation framework and is not designed to support the complexity of a full hardware-in-the-loop
+platform. Instead it's focused on testing small integrations with one or two hardware components and instruments using
+concepts, syntax, and frameworks familiar to software engineers. Examples of these small integrations might include
+verifying a SPI driver for a microcontroller or ensuring a serial bootloader's upload performance meets expected KPIs.
+To do this Nanaimo abstractions of instruments provide async interfaces to hardware either directly using available
+communication busses (e.g. serial or IP network) or by invoking a CLI provided by the instrument vendor. Because of
+this latter use case some instruments will require additional programs be installed on a system.
 
 .. figure:: https://thirtytwobits.github.io/nanaimo/images/example.png
    :alt: Example scenario using Nanaimo to test an I2C driver for a microcontroller.
@@ -81,3 +81,15 @@ early in the testing process of a system to make the cheese loaf less hole-y.
 .. |badge_pypi_version| image:: https://img.shields.io/pypi/v/nanaimo.svg
     :alt: Pypi Release Version
 .. _badge_pypi_version: https://pypi.org/project/nanaimo/
+
+.. |badge_sonarcloud_quality| image:: https://sonarcloud.io/api/project_badges/measure?project=thirtytwobits_nanaimo&metric=alert_status
+    :alt: Sonarcloud Quality Gate
+.. _badge_sonarcloud_quality: https://sonarcloud.io/dashboard?id=thirtytwobits_nanaimo
+
+.. |badge_sonarcloud_coverage| image:: https://sonarcloud.io/api/project_badges/measure?project=thirtytwobits_nanaimo&metric=coverage
+    :alt: Sonarcloud coverage
+.. _badge_sonarcloud_coverage: https://sonarcloud.io/dashboard?id=thirtytwobits_nanaimo
+
+.. |badge_sonarcloud_bugs| image:: https://sonarcloud.io/api/project_badges/measure?project=thirtytwobits_nanaimo&metric=bugs
+    :alt: Sonarcloud bugs
+.. _badge_sonarcloud_bugs: https://sonarcloud.io/dashboard?id=thirtytwobits_nanaimo
