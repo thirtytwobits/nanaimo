@@ -3,7 +3,7 @@
 # This software is distributed under the terms of the MIT License.
 #
 import nanaimo.version
-import nanaimo.serial
+import nanaimo.connections
 import nanaimo.instruments.bkprecision
 import asyncio
 import argparse
@@ -26,7 +26,7 @@ def _make_parser() -> argparse.ArgumentParser:
         epilog=epilog,
         formatter_class=argparse.RawTextHelpFormatter)
 
-    parser.add_argument('--version', action='version', version='.'.join(map(str, nanaimo.version.__version__)))
+    parser.add_argument('--version', action='version', version=nanaimo.version.__version__)
 
     parser.add_argument('--verbose', '-v', action='count',
                         help='verbosity level (-v, -vv)')
@@ -59,7 +59,7 @@ logging.basicConfig(stream=sys.stderr, level=level, format=fmt)
 #
 loop = asyncio.get_event_loop()
 
-with nanaimo.serial.ConcurrentUart.new_default(args.port, 9600, loop) as serial:
+with nanaimo.connections.uart.ConcurrentUart.new_default(args.port, 9600, loop) as serial:
     serial.echo = args.local_echo
     bk = nanaimo.instruments.bkprecision.Series1900BUart(serial, args.timeout_seconds)
     result = loop.run_until_complete(bk.send_command(args.command))

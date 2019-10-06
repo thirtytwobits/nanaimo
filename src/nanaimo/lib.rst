@@ -19,10 +19,10 @@ nanaimo (library)
    :members:
 
 *************************************
-:mod:`nanaimo.serial`
+:mod:`nanaimo.connections`
 *************************************
 
-.. automodule:: nanaimo.serial
+.. automodule:: nanaimo.connections
    :members:
 
 *************************************

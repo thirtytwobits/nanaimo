@@ -11,9 +11,10 @@ import pytest
 import fixtures
 import fixtures.simulators
 import nanaimo
-import nanaimo.parsers.gtest
+import nanaimo.connections
+import nanaimo.connections.uart
 import nanaimo.instruments.jlink
-import nanaimo.serial
+import nanaimo.parsers.gtest
 
 
 @pytest.mark.timeout(10)
@@ -23,7 +24,7 @@ def test_uart_monitor() -> None:
     """
     serial = fixtures.simulators.Serial(fixtures.FAKE_TEST_SUCCESS)
     last_line = fixtures.FAKE_TEST_SUCCESS[-1]
-    with nanaimo.serial.ConcurrentUart(serial) as monitor:
+    with nanaimo.connections.uart.ConcurrentUart(serial) as monitor:
         while True:
             line = monitor.readline()
             if line is None:
@@ -51,7 +52,7 @@ async def test_program_while_monitoring() -> None:
     uploader = nanaimo.instruments.jlink.ProgramUploaderJLink(fixtures.get_mock_JLinkExe())
     serial = fixtures.simulators.Serial(fixtures.FAKE_TEST_SUCCESS)
     uploads = 0
-    with nanaimo.serial.ConcurrentUart(serial) as monitor:
+    with nanaimo.connections.uart.ConcurrentUart(serial) as monitor:
         for script in scripts:
             serial.reset_fake_input()
             results = await asyncio.gather(
@@ -69,14 +70,14 @@ async def test_program_while_monitoring() -> None:
 @pytest.mark.asyncio
 async def test_failed_test() -> None:
     serial = fixtures.simulators.Serial(fixtures.FAKE_TEST_FAILURE)
-    with nanaimo.serial.ConcurrentUart(serial) as monitor:
+    with nanaimo.connections.uart.ConcurrentUart(serial) as monitor:
         assert 1 == await nanaimo.parsers.gtest.Parser(10).read_test(monitor)
 
 
 @pytest.mark.asyncio
 async def test_timeout_while_monitoring() -> None:
     serial = fixtures.simulators.Serial(['gibberish'], loop_fake_data=False)
-    with nanaimo.serial.ConcurrentUart(serial) as monitor:
+    with nanaimo.connections.uart.ConcurrentUart(serial) as monitor:
         assert 0 != await nanaimo.parsers.gtest.Parser(4.0).read_test(monitor)
 
 
@@ -84,10 +85,10 @@ async def test_timeout_while_monitoring() -> None:
 @pytest.mark.asyncio
 async def test_observe_tasks(event_loop: asyncio.AbstractEventLoop) -> None:
     """
-    Test the observe_tasks method of NanaimoTest
+    Test the observe_tasks method of Fixture
     """
 
-    subject = fixtures.DummyNanaimoTest(event_loop)
+    subject = fixtures.DummyFixture(event_loop)
 
     async def evaluating() -> int:
         return 0
@@ -114,10 +115,10 @@ async def test_observe_tasks(event_loop: asyncio.AbstractEventLoop) -> None:
 @pytest.mark.asyncio
 async def test_observe_tasks_failure(event_loop: asyncio.AbstractEventLoop) -> None:
     """
-    Test the observe_tasks method of NanaimoTest where the running tasks exit.
+    Test the observe_tasks method of Fixture where the running tasks exit.
     """
 
-    subject = fixtures.DummyNanaimoTest(event_loop)
+    subject = fixtures.DummyFixture(event_loop)
 
     async def evaluating() -> int:
         waits = 2
@@ -139,11 +140,11 @@ async def test_observe_tasks_failure(event_loop: asyncio.AbstractEventLoop) -> N
 @pytest.mark.asyncio
 async def test_observe_tasks_failure_no_assert(event_loop: asyncio.AbstractEventLoop) -> None:
     """
-    Test the observe_tasks method of NanaimoTest where the running tasks exit but without throwing
+    Test the observe_tasks method of Fixture where the running tasks exit but without throwing
     an assertion error.
     """
 
-    subject = fixtures.DummyNanaimoTest(event_loop)
+    subject = fixtures.DummyFixture(event_loop)
 
     async def evaluating() -> int:
         waits = 2
@@ -166,10 +167,10 @@ async def test_observe_tasks_failure_no_assert(event_loop: asyncio.AbstractEvent
 @pytest.mark.asyncio
 async def test_observe_tasks_timeout(event_loop: asyncio.AbstractEventLoop) -> None:
     """
-    Test the observe_tasks method of NanaimoTest where the running tasks do not exit.
+    Test the observe_tasks method of Fixture where the running tasks do not exit.
     """
 
-    subject = fixtures.DummyNanaimoTest(event_loop)
+    subject = fixtures.DummyFixture(event_loop)
 
     async def evaluating() -> int:
         while True:
@@ -189,8 +190,8 @@ async def test_observe_tasks_timeout(event_loop: asyncio.AbstractEventLoop) -> N
 @pytest.mark.asyncio
 async def test_countdown_sleep(event_loop: asyncio.AbstractEventLoop) -> None:
     """
-    Test the observe_tasks method of NanaimoTest where the running tasks do not exit.
+    Test the observe_tasks method of Fixture where the running tasks do not exit.
     """
-    subject = fixtures.DummyNanaimoTest(event_loop)
+    subject = fixtures.DummyFixture(event_loop)
 
     await subject.countdown_sleep(5.3)

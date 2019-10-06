@@ -5,6 +5,7 @@
         "ms-azuretools.vscode-docker",
         "streetsidesoftware.code-spell-checker",
         "ms-python.python",
-        "lextudio.restructuredtext"
+        "lextudio.restructuredtext",
+        "troelsdamgaard.reflow-paragraph"
     ]
 }

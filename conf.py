@@ -20,10 +20,11 @@ project = 'nanaimo'
 copyright = '2019 Amazon.com, Inc. or its affiliates. All Rights Reserved. 2019'
 author = 'Amazon.com'
 
+_version_tuple = __version__.split('.')
 # The short X.Y version
-version = "{}.{}".format(__version__[0], __version__[1])
+version = "{}.{}".format(_version_tuple[0], _version_tuple[1])
 # The full version, including alpha/beta/rc tags
-release = str(__version__)
+release = __version__
 
 
 # -- General configuration ---------------------------------------------------
@@ -42,7 +43,8 @@ extensions = [
     'sphinx.ext.imgmath',
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
-    'sphinxarg.ext'
+    'sphinxarg.ext',
+    'sphinx.ext.intersphinx'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -182,7 +184,11 @@ epub_exclude_files = ['search.html']
 # -- Options for intersphinx extension ---------------------------------------
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'https://docs.python.org/': None}
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3', None),
+    'pytest': ('https://pytest.readthedocs.io/en/stable/', None),
+    'pyserial': ('https://pyserial.readthedocs.io/en/latest/', None)
+}
 
 # -- Options for todo extension ----------------------------------------------
 

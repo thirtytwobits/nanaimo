@@ -12,10 +12,14 @@ import nanaimo
 
 
 class _ArgparseSubparserArguments(nanaimo.Arguments):
+    """
+    Nanaimo :class:`Arguments` that delegates to a wrapped
+    :class:`argparse.ArgumentParser` instance.
+    """
 
     @classmethod
     def visit_argparse(cls,
-                       test_class: typing.Type['nanaimo.NanaimoTest'],
+                       test_class: typing.Type['nanaimo.Fixture'],
                        subparsers: argparse._SubParsersAction,
                        loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> None:
         subparser = subparsers.add_parser(test_class.__name__)  # type: 'argparse.ArgumentParser'
@@ -39,8 +43,8 @@ waiting for a result for this amount of time.''')
 
 def _make_parser(loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> argparse.ArgumentParser:
     """
-        Defines the command-line interface. Provided as a separate factory method to
-        support sphinx-argparse documentation.
+    Defines the command-line interface. Provided as a separate factory method to
+    support sphinx-argparse documentation.
     """
 
     epilog = '''**Example Usage**::
@@ -57,7 +61,7 @@ def _make_parser(loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> arg
 
     from nanaimo.version import __version__
 
-    parser.add_argument('--version', action='version', version='.'.join(map(str, __version__)))
+    parser.add_argument('--version', action='version', version=__version__)
 
     parser.add_argument('--verbose', '-v', action='count',
                         help='verbosity level (-v, -vv)')
@@ -66,7 +70,7 @@ def _make_parser(loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> arg
 
     import nanaimo.builtin  # noqa: F401
 
-    for test in nanaimo.NanaimoTest.__subclasses__():
+    for test in nanaimo.Fixture.__subclasses__():
         # https://github.com/python/mypy/issues/5374
         _ArgparseSubparserArguments.visit_argparse(test, subparsers, loop)  # type: ignore
 
