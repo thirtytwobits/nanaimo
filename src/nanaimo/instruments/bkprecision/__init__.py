@@ -9,7 +9,7 @@ import pathlib
 import re
 import typing
 
-import nanaimo.serial
+from nanaimo.connections.uart import ConcurrentUart as Uart
 
 
 class Series1900BUart:
@@ -40,12 +40,12 @@ class Series1900BUart:
     @classmethod
     @contextlib.contextmanager
     def default_configuration(cls, port: typing.Union[str, pathlib.Path]) -> typing.Generator['Series1900BUart', None, None]:
-        with nanaimo.serial.ConcurrentUart.new_default(str(port), 9600) as bkserial:
-            bk = cls(bkserial, cls.DefaultCommandTimeoutSeconds)
+        with Uart.new_default(str(port), 9600) as bk_uart:
+            bk = cls(bk_uart, cls.DefaultCommandTimeoutSeconds)
             yield bk
 
     def __init__(self,
-                 uart: nanaimo.serial.ConcurrentUart,
+                 uart: Uart,
                  command_timeout_seconds: float = 0,
                  debug: bool = False):
         self._uart = uart

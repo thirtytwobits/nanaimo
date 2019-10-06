@@ -23,7 +23,7 @@ def pytest_addoption(parser) -> None:  # type: ignore
     # import nanaimo.builtin  # noqa: F401
 
     # args = _PyTestArguments(parser)
-    # for test in nanaimo.NanaimoTest.__subclasses__():
+    # for test in nanaimo.Fixture.__subclasses__():
     #     # https://github.com/python/mypy/issues/5374
     #     group = parser.getgroup(type(test).__name__)
     #     test.on_visit_test_arguments(args)

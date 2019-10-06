@@ -29,6 +29,7 @@ flake8
 coverage
 mypy
 tox
+Sybil
 
 # +---------------------------------------------------------------------------+
 # | DOCUMENTATION AND REPORTING DEPENDENCIES

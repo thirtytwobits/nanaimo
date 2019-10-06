@@ -394,7 +394,7 @@ class Paths:
         return path_dir
 
 
-class DummyNanaimoTest(nanaimo.NanaimoTest):
+class DummyFixture(nanaimo.Fixture):
     @classmethod
     def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
         pass

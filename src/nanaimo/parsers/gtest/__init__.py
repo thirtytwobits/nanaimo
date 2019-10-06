@@ -7,7 +7,7 @@ import logging
 import re
 import typing
 
-import nanaimo.serial
+import nanaimo.connections
 
 
 class Parser:
@@ -21,7 +21,7 @@ class Parser:
         self._timeout_seconds = timeout_seconds
         self._completion_pattern = re.compile(r'\[\s*(PASSED|FAILED)\s*\]\s*(\d+)\s+tests?\.')
 
-    async def read_test(self, uart: nanaimo.serial.ConcurrentUart) -> int:
+    async def read_test(self, uart: nanaimo.connections.AbstractAsyncSerial) -> int:
         start_time = self._loop.time()
         result = 1
         line_count = 0
@@ -45,5 +45,5 @@ class Parser:
             self._logger.info('Detected successful test after %f seconds.', self._loop.time() - start_time)
         elif 2 == result:
             self._logger.warning('gtest.Parser timeout after %f seconds', self._loop.time() - start_time)
-        self._logger.debug('Processed %d lines. There were %d buffer full events reported.', line_count, uart.buffer_full_events)
+        self._logger.debug('Processed %d lines. There were %d buffer full events reported.', line_count, uart.rx_buffer_overflows)
         return result

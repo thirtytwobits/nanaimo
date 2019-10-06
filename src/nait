@@ -4,7 +4,7 @@
 # This software is distributed under the terms of the MIT License.
 #
 """
-    The Nanaimo CLI.
+The Nanaimo CLI.
 """
 
 import sys
