@@ -6,16 +6,15 @@
 Enable pytest integration of doctests in source and/or in documentation.
 """
 
-# TODO: fix Issue #10 and re-enable this.
-# from sybil import Sybil
-# from sybil.parsers.codeblock import CodeBlockParser
-# from sybil.parsers.doctest import DocTestParser
+from sybil import Sybil
+from sybil.parsers.codeblock import CodeBlockParser
+from sybil.parsers.doctest import DocTestParser
 
-# pytest_collect_file = Sybil(
-#     parsers=[
-#         DocTestParser(),
-#         CodeBlockParser(),
-#     ],
-#     pattern='*.py',
-#     excludes=['test/fixtues/*']
-# ).pytest()
+pytest_collect_file = Sybil(
+    parsers=[
+        DocTestParser(),
+        CodeBlockParser(),
+    ],
+    pattern='*.py',
+    excludes=['test/fixtues/*']
+).pytest()

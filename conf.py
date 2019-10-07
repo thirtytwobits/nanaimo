@@ -121,7 +121,7 @@ html_static_path = ['docs']
 #
 # html_sidebars = {}
 
-html_logo = 'docs/images/nanaimo_logo.svg'
+# html_logo = 'docs/images/nanaimo_logo.svg'
 
 html_favicon = 'docs/images/32bit_logo.png'
 

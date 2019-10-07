@@ -24,7 +24,8 @@ set -o pipefail
 
 # +----------------------------------------------------------+
 
-export NANAIMO_VERSION=`cat src/nanaimo/version.py | grep __version__ | awk '{print $3}' | sed "s/'//g"`
+export NANAIMO_FULL_VERSION=`cat src/nanaimo/version.py | grep __version__ | awk '{print $3}' | sed -E "s/'([0-9]+\.[0-9]+\.[0-9]+)'/\1/g"`
+export NANAIMO_MAJOR_MINOR_VERSION=`echo $NANAIMO_FULL_VERSION | sed -E "s/([0-9]+\.[0-9]+)\.[0-9]+/\1/g"`
 tox
 tox -e sonar | grep -v "sonar.login"
 tox -e upload | grep -v "twine upload"
