@@ -12,6 +12,13 @@ nanaimo (library)
    :members:
 
 *************************************
+:mod:`nanaimo.pytest_plugin`
+*************************************
+
+.. automodule:: nanaimo.pytest_plugin
+   :members:
+
+*************************************
 :mod:`nanaimo.builtin`
 *************************************
 

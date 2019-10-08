@@ -14,3 +14,20 @@ def test_arg_version() -> None:
     """
     expected = nanaimo.version.__version__
     assert fixtures.run_nait(['--version']).stdout.decode('utf-8').startswith(expected)
+
+
+def test_help() -> None:
+    """
+    Verify --help doesn't explode.
+    """
+    result = fixtures.run_nait(['gtest_over_jlink', '--help']).stdout.decode('utf-8')
+    assert len(result) > 4
+    print(result)
+
+
+def test_nanaimo_bar() -> None:
+    """
+    Eat your dessert!
+    """
+    result = fixtures.run_nait(['-vv', 'nanaimo_bar']).stdout.decode('utf-8')
+    print(result)

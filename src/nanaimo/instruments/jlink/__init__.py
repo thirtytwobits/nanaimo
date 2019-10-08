@@ -19,7 +19,7 @@ class ProgramUploaderJLink:
         arguments.add_argument('--base_path',
                                default=str(pathlib.Path().cwd()),
                                help='The folder under which to search for jlink scripts.')
-        arguments.add_argument('jlink-scripts',
+        arguments.add_argument('--jlink-scripts',
                                help='A globbing pattern to collect jlink scripts for flashing tests.')
         arguments.add_argument('--upload-timeout-seconds',
                                default='20',

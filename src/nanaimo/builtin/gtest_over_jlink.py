@@ -3,10 +3,13 @@
 # This software is distributed under the terms of the MIT License.
 #
 """
-Built-in :class:`Fixture` for common scenarios.
+Built-in :class:`Fixture` objects for common scenarios. See individual fixture documentation for use.
 """
 import asyncio
 import pathlib
+import typing
+
+import pytest
 
 import nanaimo
 import nanaimo.connections
@@ -15,16 +18,19 @@ import nanaimo.instruments
 import nanaimo.instruments.jlink
 import nanaimo.parsers
 import nanaimo.parsers.gtest
+import nanaimo.pytest_plugin
 
 
-class GTestOverJLink(nanaimo.Fixture):
+class Fixture(nanaimo.Fixture):
+
+    fixture_name = 'gtest_over_jlink'
 
     @classmethod
     def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
         nanaimo.connections.uart.ConcurrentUart.on_visit_test_arguments(arguments)
         nanaimo.instruments.jlink.ProgramUploaderJLink.on_visit_test_arguments(arguments)
 
-    async def __call__(self, args: nanaimo.Namespace) -> int:
+    async def gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
 
         uploader = nanaimo.instruments.jlink.ProgramUploaderJLink()
         jlink_scripts = pathlib.Path(args.base_path).glob(args.jlink_scripts)
@@ -40,4 +46,14 @@ class GTestOverJLink(nanaimo.Fixture):
                     break
                 result = await parser.read_test(monitor)
 
-        return result
+        return nanaimo.Artifacts(result)
+
+
+@nanaimo.FixtureManager.type_factory
+def get_fixture_type() -> typing.Type['nanaimo.Fixture']:
+    return Fixture
+
+
+@pytest.fixture
+def gtest_over_jlink(request: typing.Any) -> nanaimo.Fixture:
+    return nanaimo.pytest_plugin.create_pytest_fixture(request, Fixture)
