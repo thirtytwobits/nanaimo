@@ -4,7 +4,7 @@
 #
 import nanaimo
 import typing
-import pytest
+import pluggy
 
 
 class _PyTestArguments(nanaimo.Arguments):
@@ -20,20 +20,10 @@ class _PyTestArguments(nanaimo.Arguments):
 
 
 def pytest_addoption(parser) -> None:  # type: ignore
-    # import nanaimo.builtin  # noqa: F401
-
-    # args = _PyTestArguments(parser)
-    # for test in nanaimo.Fixture.__subclasses__():
-    #     # https://github.com/python/mypy/issues/5374
-    #     group = parser.getgroup(type(test).__name__)
-    #     test.on_visit_test_arguments(args)
-    pass
-
-
-@pytest.fixture
-def hardware(request) -> typing.Callable[[], str]:  # type: ignore
-    # TODO: this is just a placeholder
-    def _hello() -> str:
-        return "Hello Pytest"
-
-    return _hello
+    pytest_pm = pluggy.PluginManager('pytest')
+    fixture_types = nanaimo.Fixture.get_plugin_manager().hook.get_fixture_type()
+    for fixture_type in fixture_types:
+        group = parser.getgroup(fixture_type.__name__)
+        args = _PyTestArguments(group)
+        fixture_type.on_visit_test_arguments(args)
+        pytest_pm.register(fixture_type, type(fixture_type).__name__)

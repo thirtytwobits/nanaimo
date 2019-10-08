@@ -1,16 +1,4 @@
 steps:
-  - label: ':hammer: build for pull-request'
-    if: build.branch != "master"
-    id: toxic-docker-pr
-    command: "tox -p auto"
-    plugins:
-      - docker#v3.3.0:
-          workdir: /repo
-          image: "uavcan/toxic:py35-py38-sq"
-          propagate-environment: true
-    agents:
-      queue: 'default'
-    timeout_in_minutes: 15
   - label: ':hammer: tox build, test, and release'
     if: build.branch == "master"
     id: toxic-docker-release
@@ -20,6 +8,7 @@ steps:
       - ".tox/mypy/tmp/*"
       - ".tox/flake8/tmp/*"
       - ".tox/dist/*.zip"
+      - ".tox/py*-test/tmp/xunit-result.xml"
     plugins:
       - docker#v3.3.0:
           workdir: /repo
@@ -31,3 +20,4 @@ steps:
     agents:
       queue: 'default'
     timeout_in_minutes: 15
+

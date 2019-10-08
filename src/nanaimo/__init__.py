@@ -21,10 +21,14 @@ Nanaimo is composed of three primary object types:
 
 """
 import abc
-import logging
 import asyncio
-import typing
+import logging
 import math
+import typing
+
+import pluggy
+
+PLUGIN_NAME = 'nanaimo'
 
 
 class AssertionError(RuntimeError):
@@ -62,6 +66,7 @@ class Namespace:
     Generic object that acts like :class:`argparse.Namespace` but can be created using pytest
     plugin arguments as well.
     """
+
     def __init__(self, parent: typing.Any):
         for name in vars(parent):
             setattr(self, name, getattr(parent, name))
@@ -74,6 +79,10 @@ class Namespace:
 
     def __contains__(self, key: str) -> typing.Any:
         return key in self.__dict__
+
+
+class Artifacts(Namespace):
+    ...
 
 
 class Fixture(metaclass=abc.ABCMeta):
@@ -100,6 +109,28 @@ class Fixture(metaclass=abc.ABCMeta):
 
     """
 
+    nanaimo_fixture_type_spec = pluggy.HookspecMarker(PLUGIN_NAME)
+
+    _pm = None
+
+    @classmethod
+    def get_plugin_manager(cls) -> pluggy.PluginManager:
+        if cls._pm is None:
+            import nanaimo.builtin
+
+            pm = pluggy.PluginManager(PLUGIN_NAME)
+            pm.add_hookspecs(cls.nanaimo_fixture_type_spec)
+            pm.load_setuptools_entrypoints(PLUGIN_NAME)
+            pm.register(nanaimo.builtin)
+            cls._pm = pm
+        return cls._pm
+
+    @classmethod
+    @abc.abstractclassmethod
+    @nanaimo_fixture_type_spec
+    def get_fixture_type(cls) -> typing.Type['Fixture']:
+        ...
+
     @property
     def loop(self) -> asyncio.AbstractEventLoop:
         """
@@ -108,12 +139,12 @@ class Fixture(metaclass=abc.ABCMeta):
         return self._loop
 
     @classmethod
-    @abc.abstractmethod
-    def on_visit_test_arguments(cls, arguments: Arguments) -> None:
+    @abc.abstractclassmethod
+    def on_visit_test_arguments(cls, arguments: Arguments, loop: asyncio.AbstractEventLoop) -> None:
         ...
 
     @abc.abstractmethod
-    async def __call__(self, args: Namespace) -> int:
+    async def __call__(self, args: Namespace) -> Artifacts:
         ...
 
     def __init__(self, loop: typing.Optional[asyncio.AbstractEventLoop] = None):

@@ -5,13 +5,13 @@
 """
 This module contains control and communication objects for popular instruments
 useful to the type of testing Nanaimo is focused on. Where possible these async
-interfaces will use pure-python to communication directly with an instrument
+interfaces will use pure-python to communicate directly with an instrument
 using known protocols and well supported communicastion busses (e.g. ethernet
-or serial), however, some instruments will require the installation of a vendor
+or uart), however, some instruments will require the installation of a vendor
 CLI for the Nanaimo automation to use.
 
 .. Warning::
-    Do not merge third-party sdks into the Nanaimo repo or provide Nanaimo abstractions
+    Do not merge third-party code into the Nanaimo repo or provide Nanaimo abstractions
     that are incompatible with the licensing of this software.
 
 .. _jlink-example:

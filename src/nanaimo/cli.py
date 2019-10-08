@@ -19,17 +19,18 @@ class _ArgparseSubparserArguments(nanaimo.Arguments):
 
     @classmethod
     def visit_argparse(cls,
-                       test_class: typing.Type['nanaimo.Fixture'],
                        subparsers: argparse._SubParsersAction,
-                       loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> None:
-        subparser = subparsers.add_parser(test_class.__name__)  # type: 'argparse.ArgumentParser'
-        subparser.add_argument('--test-timeout-seconds',
-                               default='30',
-                               type=float,
-                               help='''Test will be killed and marked as a failure after
+                       loop: asyncio.AbstractEventLoop) -> None:
+        fixture_types = nanaimo.Fixture.get_plugin_manager().hook.get_fixture_type()
+        for fixture_type in fixture_types:
+            subparser = subparsers.add_parser(fixture_type.__name__)  # type: 'argparse.ArgumentParser'
+            subparser.add_argument('--test-timeout-seconds',
+                                   default='30',
+                                   type=float,
+                                   help='''Test will be killed and marked as a failure after
 waiting for a result for this amount of time.''')
-        test_class.on_visit_test_arguments(cls(subparser))
-        subparser.set_defaults(func=test_class(loop))
+            fixture_type.on_visit_test_arguments(cls(subparser))
+            subparser.set_defaults(func=fixture_type)
 
     def __init__(self, subparser: argparse.ArgumentParser):
         self._subparser = subparser
@@ -68,11 +69,7 @@ def _make_parser(loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> arg
 
     subparsers = parser.add_subparsers(help='sub-command help')
 
-    import nanaimo.builtin  # noqa: F401
-
-    for test in nanaimo.Fixture.__subclasses__():
-        # https://github.com/python/mypy/issues/5374
-        _ArgparseSubparserArguments.visit_argparse(test, subparsers, loop)  # type: ignore
+    _ArgparseSubparserArguments.visit_argparse(subparsers, loop)  # type: ignore
 
     return parser
 
