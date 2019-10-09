@@ -2,6 +2,21 @@
 # Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # This software is distributed under the terms of the MIT License.
 #
+#                                       (@@@@%%%%%%%%%&@@&.
+#                              /%&&%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%&@@(
+#                              *@&%%%%%%%%%&&%%%%%%%%%%%%%%%%%%&&&%%%%%%%
+#                               @   @@@(@@@@%%%%%%%%%%%%%%%%&@@&* @@@   .
+#                               ,   .        .  .@@@&                   /
+#                                .       .                              *
+#                               @@              .                       @
+#                              @&&&&&&@. .    .                     *@%&@
+#                              &&&&&&&&&&&&&&&&@@        *@@############@
+#                     *&/ @@ #&&&&&&&&&&&&&&&&&&&&@  ###################*
+#                              @&&&&&&&&&&&&&&&&&&##################@
+#                                 %@&&&&&&&&&&&&&&################@
+#                                        @&&&&&&&&&&%#######&@%
+#  nanaimo                                   (@&&&&####@@*
+#
 """
 Connections are built-in async abstractions using standard communication
 protocols like UART, I2C, CAN, TCP/IP, etc. :class:`Instrument` and :class:`Fixture`

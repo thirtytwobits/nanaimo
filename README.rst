@@ -2,7 +2,8 @@
 Nanaimo: Hardware-In-the-Loop Unit Testing
 ############################################
 
-|badge_docs|_ |badge_build|_ |badge_github_license|_ |badge_pypi_support|_ |badge_pypi_version|_ |badge_sonarcloud_quality|_ |badge_sonarcloud_coverage|_ |badge_sonarcloud_bugs|_
+|badge_docs|_ |badge_build|_ |badge_github_license|_ |badge_pypi_support|_ |badge_pypi_version|_ \
+|badge_sonarcloud_quality|_ |badge_sonarcloud_coverage|_ |badge_sonarcloud_bugs|_
 
 .. Warning::
     Nanaimo is evolving rapidly right now. We will signal its readiness for alpha integrations by
@@ -50,9 +51,8 @@ This design is an amalgam of the `TLYF`_ (Test Like You Fly) methodology and the
 failure analysis. Specifically; Nanaimo facilitates testing on actual or representative hardware
 for the first integration of software into a part or subassembly. Traditionally software engineers were
 responsible only for unit-testing and Software-In-the-Loop (SIL) simulation of their code. Nanaimo encourages
-software engineers to also provide hardware integration tests ahead of release to upstream integrations in
-their system and does so by enabling Hardware-In-the-Loop `continuous-integration <https://en.wikipedia.org/wiki/Continuous_integration>`_
-(HIL-CI) by allowing software engineers to write Hardware-In-the-Loop unit-tests (HIL-UT).
+software engineers to also provide hardware integration tests by enabling Hardware-In-the-Loop
+`continuous-integration <https://en.wikipedia.org/wiki/Continuous_integration>`_ (HIL-CI, perhaps?).
 
 .. figure:: https://thirtytwobits.github.io/nanaimo/images/test_triangle.png
    :alt: Hierarchy of system testing.

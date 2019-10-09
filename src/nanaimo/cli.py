@@ -2,12 +2,44 @@
 # Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # This software is distributed under the terms of the MIT License.
 #
+#                                       (@@@@%%%%%%%%%&@@&.
+#                              /%&&%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%&@@(
+#                              *@&%%%%%%%%%&&%%%%%%%%%%%%%%%%%%&&&%%%%%%%
+#                               @   @@@(@@@@%%%%%%%%%%%%%%%%&@@&* @@@   .
+#                               ,   .        .  .@@@&                   /
+#                                .       .                              *
+#                               @@              .                       @
+#                              @&&&&&&@. .    .                     *@%&@
+#                              &&&&&&&&&&&&&&&&@@        *@@############@
+#                     *&/ @@ #&&&&&&&&&&&&&&&&&&&&@  ###################*
+#                              @&&&&&&&&&&&&&&&&&&##################@
+#                                 %@&&&&&&&&&&&&&&################@
+#                                        @&&&&&&&&&&%#######&@%
+#  nanaimo                                   (@&&&&####@@*
+#
 import argparse
 import asyncio
 import logging
 import sys
 import typing
 import nanaimo
+
+
+class CreateAndGatherFunctor:
+    """
+    Stores the type, manager, and loop then uses these to instantiate
+    and invoke a Fixture if the given default is selected.
+    Returns the result-code of the artifacts.
+    """
+
+    def __init__(self, fixture_type: typing.Type['nanaimo.Fixture'], manager: nanaimo.FixtureManager, loop: asyncio.AbstractEventLoop):
+        self._fixture_type = fixture_type
+        self._manager = manager
+        self._loop = loop
+
+    async def __call__(self, args: nanaimo.Namespace) -> int:
+        fixture = self._fixture_type(self._manager, self._loop)
+        return int(await fixture.gather(args))
 
 
 class _ArgparseSubparserArguments(nanaimo.Arguments):
@@ -29,18 +61,7 @@ class _ArgparseSubparserArguments(nanaimo.Arguments):
                                    help='''Test will be killed and marked as a failure after
 waiting for a result for this amount of time.''')
             fixture_type.on_visit_test_arguments(cls(subparser))
-
-            async def create_and_gather_on_default(args: nanaimo.Namespace) -> int:
-                """
-                Stores the type, manager, and loop then uses these to instantiate
-                and invoke a Fixture if the given default is selected.
-                Returns the result-code of the artifacts.
-                """
-                nonlocal manager, loop
-                fixture = fixture_type(manager, loop)
-                return int(await fixture.gather(args))
-
-            subparser.set_defaults(func=create_and_gather_on_default)
+            subparser.set_defaults(func=CreateAndGatherFunctor(fixture_type, manager, loop))
 
     def __init__(self, subparser: argparse.ArgumentParser):
         self._subparser = subparser

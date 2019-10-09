@@ -40,8 +40,5 @@ dist
 # Log files
 *.log
 
-# Coveralls local config
-.coveralls.yml
-
 # sonarqube
 .scannerwork

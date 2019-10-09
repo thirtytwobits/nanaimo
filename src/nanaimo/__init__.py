@@ -2,22 +2,25 @@
 # Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # This software is distributed under the terms of the MIT License.
 #
+#                                       (@@@@%%%%%%%%%&@@&.
+#                              /%&&%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%&@@(
+#                              *@&%%%%%%%%%&&%%%%%%%%%%%%%%%%%%&&&%%%%%%%
+#                               @   @@@(@@@@%%%%%%%%%%%%%%%%&@@&* @@@   .
+#                               ,   .        .  .@@@&                   /
+#                                .       .                              *
+#                               @@              .                       @
+#                              @&&&&&&@. .    .                     *@%&@
+#                              &&&&&&&&&&&&&&&&@@        *@@############@
+#                     *&/ @@ #&&&&&&&&&&&&&&&&&&&&@  ###################*
+#                              @&&&&&&&&&&&&&&&&&&##################@
+#                                 %@&&&&&&&&&&&&&&################@
+#                                        @&&&&&&&&&&%#######&@%
+#  nanaimo                                   (@&&&&####@@*
+#
 """
-Nanaimo is composed of three primary object types:
-
-    1. :class:`Fixture` – A fixture
-    2. :class:`Instrument` – An Instrument
-    3. :class:`Activity` – An activity
-
-.. figure:: https://thirtytwobits.github.io/nanaimo/images/static_state_1.png
-   :alt: Static-state diagram of Nanaimo's primary types.
-
-   Static-state diagram of Nanaimo's primary types.
-
-.. figure:: https://thirtytwobits.github.io/nanaimo/images/object_1.png
-   :alt: Object example of Nanaimo's primary types in use.
-
-   Object example of Nanaimo's primary types in use.
+Almost everything in Nanaimo is a :class:`Fixture`. Fixtures can be pytest fixtures, instrument
+abstractions, aggregates of other fixtures, or anything else that makes sense. The important thing
+is that any fixture can be a pytest fixture or can be awaited directly using :ref:`nait`.
 
 """
 import abc
@@ -93,6 +96,7 @@ class Artifacts(Namespace):
     :param result_code: The value to report as the status of the activity that gathered the artifacts.
     :param parent: A parent namespace to lookup in if the current namespace doesn't have a value.
     """
+
     def __init__(self, result_code: int = 0, parent: typing.Optional[typing.Any] = None):
         super().__init__(parent)
         self._result_code = result_code
@@ -161,19 +165,23 @@ class Fixture(metaclass=abc.ABCMeta):
     def get_canonical_name(cls) -> str:
         """
         The name to use as a key for this :class:`Fixture` type.
-        """
-        return str(getattr(cls, 'fixture_name', cls.__name__))
+        If a class defines a string `fixture_name` this will be used
+        as the canonical name otherwise it will be the name of the
+        fixture class itself.
 
-    @classmethod
-    @abc.abstractmethod
-    def on_visit_test_arguments(cls, arguments: Arguments) -> None:
+        .. invisible-code-block: python
+            import nanaimo
+
+        .. code-block:: python
+
+            class MyFixture(nanaimo.Fixture):
+
+                fixture_name = 'my_fixture'
+
+            assert 'my_fixture' == MyFixture.get_canonical_name()
+
         """
-        Called by the environment before instantiating any :class:`Fixture` instances to register
-        arguments supported by each type. These arguments should be portable between both :mod:`argparse`
-        and :mod:`pytest`. The fixture is registered for this callback by returning a reference to its
-        type from a :attr:`Fixture.Manager.type_factory` annotated function registered as an entrypoint in the Python application.
-        """
-        ...
+        return str(getattr(cls, 'fixture_name', '.'.join([cls.__module__, cls.__qualname__])))
 
     def __init__(self, manager: 'FixtureManager', loop: typing.Optional[asyncio.AbstractEventLoop] = None):
         self._manager = manager
@@ -181,6 +189,9 @@ class Fixture(metaclass=abc.ABCMeta):
         self._logger = logging.getLogger(self._name)
         self._loop = loop
 
+    # +-----------------------------------------------------------------------+
+    # | PROPERTIES
+    # +-----------------------------------------------------------------------+
     @property
     def name(self) -> str:
         """
@@ -216,17 +227,34 @@ class Fixture(metaclass=abc.ABCMeta):
         """
         return self._logger
 
+    # +-----------------------------------------------------------------------+
+    # | ABSTRACT METHODS
+    # +-----------------------------------------------------------------------+
+    @classmethod
+    @abc.abstractmethod
+    def on_visit_test_arguments(cls, arguments: Arguments) -> None:
+        """
+        Called by the environment before instantiating any :class:`Fixture` instances to register
+        arguments supported by each type. These arguments should be portable between both :mod:`argparse`
+        and :mod:`pytest`. The fixture is registered for this callback by returning a reference to its
+        type from a :attr:`Fixture.Manager.type_factory` annotated function registered as an entrypoint in the Python application.
+        """
+        ...
+
     @abc.abstractmethod
     async def gather(self, args: Namespace) -> Artifacts:
         """
         Coroutine awaited to gather fixture artifacts. The fixture should always retrieve new artifacts when invoked
         leaving caching to the caller.
-        :param args:    The arguments provided for the fixture instance.
+        :param args: The arguments provided for the fixture instance.
         :type args: Namespace
-        :return: A set of artifacts with the :attr:`Artifacts.result_code` set to indicate the success or failure
-            of the fixture's artifact gathering activies.
+        :return: A set of artifacts with the :attr:`Artifacts.result_code` set to indicate the success or failure of the fixture's artifact gathering activies.
         """
         ...
+
+    # +-----------------------------------------------------------------------+
+    # | ASYNC HELPERS
+    # +-----------------------------------------------------------------------+
 
     async def countdown_sleep(self, sleep_time_seconds: float) -> None:
         """

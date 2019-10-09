@@ -2,12 +2,27 @@
 # Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # This software is distributed under the terms of the MIT License.
 #
+#                                       (@@@@%%%%%%%%%&@@&.
+#                              /%&&%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%&@@(
+#                              *@&%%%%%%%%%&&%%%%%%%%%%%%%%%%%%&&&%%%%%%%
+#                               @   @@@(@@@@%%%%%%%%%%%%%%%%&@@&* @@@   .
+#                               ,   .        .  .@@@&                   /
+#                                .       .                              *
+#                               @@              .                       @
+#                              @&&&&&&@. .    .                     *@%&@
+#                              &&&&&&&&&&&&&&&&@@        *@@############@
+#                     *&/ @@ #&&&&&&&&&&&&&&&&&&&&@  ###################*
+#                              @&&&&&&&&&&&&&&&&&&##################@
+#                                 %@&&&&&&&&&&&&&&################@
+#                                        @&&&&&&&&&&%#######&@%
+#  nanaimo                                   (@&&&&####@@*
+#
 """
 This module contains control and communication objects for popular instruments
 useful to the type of testing Nanaimo is focused on. Where possible these async
 interfaces will use pure-python to communicate directly with an instrument
-using known protocols and well supported communicastion busses (e.g. ethernet
-or uart), however, some instruments will require the installation of a vendor
+using known protocols and well supported communication busses (e.g. ethernet, uart, or CAN),
+however, some instruments will require the installation of a vendor
 CLI for the Nanaimo automation to use.
 
 .. Warning::

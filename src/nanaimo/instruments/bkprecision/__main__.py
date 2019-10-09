@@ -2,6 +2,21 @@
 # Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # This software is distributed under the terms of the MIT License.
 #
+#                                       (@@@@%%%%%%%%%&@@&.
+#                              /%&&%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%&@@(
+#                              *@&%%%%%%%%%&&%%%%%%%%%%%%%%%%%%&&&%%%%%%%
+#                               @   @@@(@@@@%%%%%%%%%%%%%%%%&@@&* @@@   .
+#                               ,   .        .  .@@@&                   /
+#                                .       .                              *
+#                               @@              .                       @
+#                              @&&&&&&@. .    .                     *@%&@
+#                              &&&&&&&&&&&&&&&&@@        *@@############@
+#                     *&/ @@ #&&&&&&&&&&&&&&&&&&&&@  ###################*
+#                              @&&&&&&&&&&&&&&&&&&##################@
+#                                 %@&&&&&&&&&&&&&&################@
+#                                        @&&&&&&&&&&%#######&@%
+#  nanaimo                                   (@&&&&####@@*
+#
 import nanaimo.version
 import nanaimo.connections
 import nanaimo.instruments.bkprecision
