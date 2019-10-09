@@ -3,14 +3,17 @@
    :maxdepth: 3
    :hidden:
 
+   guide
    src/nanaimo/lib
    CONTRIBUTING
 
 .. include:: README.rst
 
 
+.. _nait:
+
 *************************************
-CLI
+nait (NanAimo Interactive Terminal)
 *************************************
 
 .. argparse::

@@ -53,6 +53,13 @@ nanaimo (library)
 .. automodule:: nanaimo.instruments.bkprecision
    :members:
 
+**************************************
+:mod:`nanaimo.instruments.saleae`
+**************************************
+
+.. automodule:: nanaimo.instruments.saleae
+   :members:
+
 *************************************
 :mod:`nanaimo.parsers`
 *************************************
