@@ -7,7 +7,6 @@ import asyncio
 import logging
 import sys
 import typing
-
 import nanaimo
 
 
@@ -19,17 +18,29 @@ class _ArgparseSubparserArguments(nanaimo.Arguments):
 
     @classmethod
     def visit_argparse(cls,
-                       test_class: typing.Type['nanaimo.Fixture'],
+                       manager: nanaimo.FixtureManager,
                        subparsers: argparse._SubParsersAction,
-                       loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> None:
-        subparser = subparsers.add_parser(test_class.__name__)  # type: 'argparse.ArgumentParser'
-        subparser.add_argument('--test-timeout-seconds',
-                               default='30',
-                               type=float,
-                               help='''Test will be killed and marked as a failure after
+                       loop: asyncio.AbstractEventLoop) -> None:
+        for fixture_type in manager.fixture_types():
+            subparser = subparsers.add_parser(fixture_type.get_canonical_name())  # type: 'argparse.ArgumentParser'
+            subparser.add_argument('--test-timeout-seconds',
+                                   default='30',
+                                   type=float,
+                                   help='''Test will be killed and marked as a failure after
 waiting for a result for this amount of time.''')
-        test_class.on_visit_test_arguments(cls(subparser))
-        subparser.set_defaults(func=test_class(loop))
+            fixture_type.on_visit_test_arguments(cls(subparser))
+
+            async def create_and_gather_on_default(args: nanaimo.Namespace) -> int:
+                """
+                Stores the type, manager, and loop then uses these to instantiate
+                and invoke a Fixture if the given default is selected.
+                Returns the result-code of the artifacts.
+                """
+                nonlocal manager, loop
+                fixture = fixture_type(manager, loop)
+                return int(await fixture.gather(args))
+
+            subparser.set_defaults(func=create_and_gather_on_default)
 
     def __init__(self, subparser: argparse.ArgumentParser):
         self._subparser = subparser
@@ -49,7 +60,7 @@ def _make_parser(loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> arg
 
     epilog = '''**Example Usage**::
 
-    python -m nanaimo -vv
+    python -m nanaimo -vv nanaimo_bar
 
 ----
 '''
@@ -68,11 +79,9 @@ def _make_parser(loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> arg
 
     subparsers = parser.add_subparsers(help='sub-command help')
 
-    import nanaimo.builtin  # noqa: F401
+    pm = nanaimo.FixtureManager()
 
-    for test in nanaimo.Fixture.__subclasses__():
-        # https://github.com/python/mypy/issues/5374
-        _ArgparseSubparserArguments.visit_argparse(test, subparsers, loop)  # type: ignore
+    _ArgparseSubparserArguments.visit_argparse(pm, subparsers, loop)  # type: ignore
 
     return parser
 

@@ -14,6 +14,8 @@
 #
 from nanaimo.version import __version__  # noqa: E402
 
+# cspell: disable
+
 # -- Project information -----------------------------------------------------
 
 project = 'nanaimo'
@@ -81,6 +83,7 @@ autodoc_inherit_docstrings = True
 # the documentation (as opposed to alphabetical).
 autodoc_member_order = 'bysource'
 
+# Enable automatic numbering of figures in the documents.
 numfig = True
 
 # -- Options for HTML output -------------------------------------------------
@@ -187,10 +190,13 @@ epub_exclude_files = ['search.html']
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
     'pytest': ('https://pytest.readthedocs.io/en/stable/', None),
-    'pyserial': ('https://pyserial.readthedocs.io/en/latest/', None)
+    'pyserial': ('https://pyserial.readthedocs.io/en/latest/', None),
+    'pluggy': ('https://pluggy.readthedocs.io/en/latest/', None)
 }
 
 # -- Options for todo extension ----------------------------------------------
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = True
+
+# cspell: enable

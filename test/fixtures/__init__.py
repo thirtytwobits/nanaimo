@@ -2,10 +2,12 @@
 # Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # This software is distributed under the terms of the MIT License.
 #
+import asyncio
 import os
 import pathlib
 import subprocess
 import typing
+
 import nanaimo
 
 FAKE_TEST_SUCCESS = '''[==========] Running 140 tests from 7 test suites.
@@ -399,5 +401,12 @@ class DummyFixture(nanaimo.Fixture):
     def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
         pass
 
-    async def __call__(self, args: nanaimo.Namespace) -> int:
-        return 0
+    async def gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
+        return nanaimo.Artifacts(0)
+
+
+class DummyFixtureManager:
+
+    @classmethod
+    def create_dummy_fixture(cls, event_loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> nanaimo.Fixture:
+        return DummyFixture(cls, event_loop)  # type: ignore

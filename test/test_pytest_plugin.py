@@ -3,19 +3,51 @@
 # This software is distributed under the terms of the MIT License.
 #
 
+import nanaimo
+import pytest
 
-def test_test_hardware_fixture(testdir) -> None:  # type: ignore
-    testdir.makeconftest(
-        """
-# pytest_plugins = "nanaimo.pytest_plugin"
-""")
-    testdir.makepyfile("""
-def test_hardware_fixture(hardware):
-    assert hardware() == "Hello Pytest"
-""")
 
-    # run all tests with pytest
-    result = testdir.runpytest()
+def test_nanaimo_fixture_manager(nanaimo_fixture_manager: nanaimo.FixtureManager) -> None:
+    """
+    Ensure the fixture manager ... er; fixture works as expected.
+    """
+    assert type(nanaimo_fixture_manager) == nanaimo.FixtureManager
+    gtest_fixture = nanaimo_fixture_manager.get_fixture('gtest_over_jlink')
+    assert isinstance(gtest_fixture, nanaimo.Fixture)
 
-    # check that all 4 tests passed
-    result.assert_outcomes(passed=1)
+
+@pytest.mark.asyncio
+async def test_gtest_over_jlink_plugin(gtest_over_jlink: nanaimo.Fixture) -> None:
+    """
+    Make sure we've properly exported gtest_over_jlink as a pytest plugin.
+    """
+    assert isinstance(gtest_over_jlink, nanaimo.Fixture)
+
+
+@pytest.mark.asyncio
+async def test_nanaimo_bar(nanaimo_bar: nanaimo.Fixture) -> None:
+    """
+    Test eating a Nanaimo bar (exercises directly exposing a plugin to pytest.)
+    """
+    assert nanaimo_bar is not None
+    assert 'nanaimo_bar' == nanaimo_bar.name
+    faux_args = nanaimo.Namespace()
+    artifacts = await nanaimo_bar.gather(faux_args)
+    assert artifacts is not None
+    artifacts.eat()
+    assert nanaimo_bar.loop.is_running()
+
+
+@pytest.mark.asyncio
+async def test_another_nanaimo_bar(nanaimo_fixture_manager: nanaimo.FixtureManager) -> None:
+    """
+    Test eating another Nanaimo bar (exercises using fixtures across multiple tests)
+    """
+    nanaimo_bar = nanaimo_fixture_manager.get_fixture('nanaimo_bar')
+    assert nanaimo_bar is not None
+    assert 'nanaimo_bar' == nanaimo_bar.name
+    faux_args = nanaimo.Namespace()
+    artifacts = await nanaimo_bar.gather(faux_args)
+    assert artifacts is not None
+    artifacts.eat()
+    assert nanaimo_bar.loop.is_running()
