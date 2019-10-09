@@ -28,7 +28,7 @@ import nanaimo.pytest_plugin
 
 class Fixture(nanaimo.Fixture):
     """
-    A trivial plugin. Returns an artifact named "eat" that will log a yummy info message.
+    A trivial plugin. Returns an callable artifact named "eat" that logs a yummy info message when invoked.
     """
 
     fixture_name = 'nanaimo_bar'

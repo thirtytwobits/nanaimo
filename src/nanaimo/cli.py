@@ -47,6 +47,15 @@ class _ArgparseSubparserArguments(nanaimo.Arguments):
     Nanaimo :class:`Arguments` that delegates to a wrapped
     :class:`argparse.ArgumentParser` instance.
     """
+    @classmethod
+    def _auto_brief(cls, documented: typing.Any, default_brief: str = '') -> str:
+        if documented is None or documented.__doc__ is None:
+            return default_brief
+        lines = documented.__doc__.strip().split('\n')  # type: typing.List[str]
+        if len(lines) > 1:
+            return '{}…'.format(lines[0])
+        else:
+            return lines[0]
 
     @classmethod
     def visit_argparse(cls,
@@ -54,7 +63,8 @@ class _ArgparseSubparserArguments(nanaimo.Arguments):
                        subparsers: argparse._SubParsersAction,
                        loop: asyncio.AbstractEventLoop) -> None:
         for fixture_type in manager.fixture_types():
-            subparser = subparsers.add_parser(fixture_type.get_canonical_name())  # type: 'argparse.ArgumentParser'
+            subparser = subparsers.add_parser(fixture_type.get_canonical_name(),
+                                              help=cls._auto_brief(fixture_type))  # type: 'argparse.ArgumentParser'
             subparser.add_argument('--test-timeout-seconds',
                                    default='30',
                                    type=float,
@@ -98,7 +108,7 @@ def _make_parser(loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> arg
     parser.add_argument('--verbose', '-v', action='count',
                         help='verbosity level (-v, -vv)')
 
-    subparsers = parser.add_subparsers(help='sub-command help')
+    subparsers = parser.add_subparsers(help='Available fixtures.')
 
     pm = nanaimo.FixtureManager()
 

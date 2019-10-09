@@ -25,12 +25,32 @@ nanaimo (library)
 .. automodule:: nanaimo.builtin
    :members:
 
+***************************************
+:mod:`nanaimo.builtin.gtest_over_jlink`
+***************************************
+
+.. automodule:: nanaimo.builtin.gtest_over_jlink
+   :members:
+
+***************************************
+:mod:`nanaimo.builtin.nanaimo_bar`
+***************************************
+
+.. automodule:: nanaimo.builtin.nanaimo_bar
+   :members:
+
 *************************************
 :mod:`nanaimo.connections`
 *************************************
 
 .. automodule:: nanaimo.connections
    :members:
+
+*************************************
+:mod:`nanaimo.connections.uart`
+*************************************
+
+.. automodule:: nanaimo.connections.uart
 
 *************************************
 :mod:`nanaimo.instruments`
