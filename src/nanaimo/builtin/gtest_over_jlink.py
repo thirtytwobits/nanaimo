@@ -37,7 +37,10 @@ import nanaimo.pytest_plugin
 
 
 class Fixture(nanaimo.Fixture):
-
+    """
+    Uploads a firmware using JLink and monitors a UART expected gtest output. Returns 0 if all
+    gtest tests pass else returns non-zero.
+    """
     fixture_name = 'gtest_over_jlink'
 
     @classmethod
