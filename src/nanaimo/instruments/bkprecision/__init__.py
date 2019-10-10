@@ -56,14 +56,14 @@ class Series1900BUart(nanaimo.Fixture):
 
     _debug = False
 
-    UartFactoryType = typing.Callable[[typing.Union[str, pathlib.Path]], 'contextlib.GeneratorContextManager']
+    UartFactoryType = typing.Callable[[typing.Union[str, pathlib.Path]], typing.Any]
     """
     The serial port factory type for this instrument.
     """
 
-    @staticmethod
+    @classmethod
     @contextlib.contextmanager
-    def default_serial_port(port: typing.Union[str, pathlib.Path]) -> typing.Generator[AbstractAsyncSerial, None, None]:
+    def default_serial_port(cls, port: typing.Union[str, pathlib.Path]) -> typing.Generator[AbstractAsyncSerial, None, None]:
         """
         Creates a serial connection to the given port using the default settings for a BK Precision Series 1900B
         power supply.
@@ -75,9 +75,9 @@ class Series1900BUart(nanaimo.Fixture):
     def __init__(self,
                  manager: 'nanaimo.FixtureManager',
                  loop: typing.Optional[asyncio.AbstractEventLoop] = None,
-                 uart_factory: UartFactoryType = default_serial_port):
+                 uart_factory: typing.Optional[UartFactoryType] = None):
         super().__init__(manager, loop)
-        self._uart_factory = uart_factory
+        self._uart_factory = (uart_factory if uart_factory is not None else self.default_serial_port)
 
     @classmethod
     def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
@@ -125,7 +125,7 @@ class Series1900BUart(nanaimo.Fixture):
                 display, artifacts.result_code = await self._get_display(bk_uart, args.bk_command_timeout)
                 if artifacts.result_code == 0:
                     setattr(artifacts, 'display', display)
-                    setattr(artifacts, 'display_text', '{},{},{}'.format(display[0], display[1], ('CV' if display[1] == self.StatusCV else 'CC')))
+                    setattr(artifacts, 'display_text', '{},{},{}'.format(display[0], display[1], ('CV' if display[2] == self.StatusCV else 'CC')))
             else:
                 self.logger.warn('command {} is not a valid Series1900BUart command.'.format(args.bk_command))
 
