@@ -105,24 +105,11 @@ def create_pytest_fixture(pytest_request: typing.Any, fixture_type: typing.Type[
     return _get_default_fixture_manager().get_fixture(fixture_type.get_canonical_name())
 
 
-class _PyTestArguments(nanaimo.Arguments):
-
-    def __init__(self, testparser):  # type: ignore
-        self._testparser = testparser
-
-    def add_argument(self, *args: typing.Any, **kwargs: typing.Any) -> None:
-        self._testparser.addoption(*args, **kwargs)
-
-    def set_defaults(self, **kwargs: typing.Any) -> None:
-        raise NotImplementedError('pytest plugin does not support setting defaults.')
-
-
 def pytest_addoption(parser) -> None:  # type: ignore
     manager = _get_default_fixture_manager()
     for fixture_type in manager.fixture_types():
         group = parser.getgroup(fixture_type.get_canonical_name())
-        args = _PyTestArguments(group)
-        fixture_type.on_visit_test_arguments(args)
+        fixture_type.on_visit_test_arguments(nanaimo.Arguments(group))
 
 
 @pytest.fixture

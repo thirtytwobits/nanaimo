@@ -44,22 +44,19 @@ class AssertionError(RuntimeError):
     pass
 
 
-class Arguments(metaclass=abc.ABCMeta):
+class Arguments:
     """
-    Protocol for argument type that supports both argparse and pytest arguments concepts.
+    Adapter for pytest and argparse parser arguments.
+    """
 
-    .. Note::
-        This will go away at some disant point in the future where Nanaimo supports only
-        Python 3.8 and newer since `PEP-544 protocols <https://www.python.org/dev/peps/pep-0544/>`_
-        can be used.
-    """
-    @abc.abstractmethod
+    def __init__(self, inner_arguments: typing.Any):
+        self._inner = inner_arguments
+
     def add_argument(self, *args: typing.Any, **kwargs: typing.Any) -> None:
-        ...
-
-    @abc.abstractmethod
-    def set_defaults(self, **kwargs: typing.Any) -> None:
-        ...
+        try:
+            self._inner.add_argument(*args, **kwargs)
+        except AttributeError:
+            self._inner.addoption(*args, **kwargs)
 
 
 class Namespace:
@@ -120,14 +117,8 @@ class Artifacts(Namespace):
         :param logger:  The logger to use.
         :param log_level: The log level to dump the object as.
         """
-        import json
-        logger.log(log_level, json.dumps(self.to_json()))
-
-    def to_json(self) -> typing.Dict:
-        """
-        Get a view of the namespace as a JSON serializeable dict.
-        """
-        return vars(self)
+        import yaml
+        logger.log(log_level, yaml.dump(vars(self)))
 
     def __int__(self) -> int:
         """

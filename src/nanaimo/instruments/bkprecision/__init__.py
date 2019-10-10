@@ -18,11 +18,13 @@
 #  nanaimo                                   (@&&&&####@@*
 #
 import asyncio
+import contextlib
+import pathlib
 import re
 import typing
 
 import nanaimo
-from nanaimo.connections.uart import ConcurrentUart as Uart
+from nanaimo.connections.uart import AbstractAsyncSerial, ConcurrentUart
 
 
 class Series1900BUart(nanaimo.Fixture):
@@ -54,11 +56,34 @@ class Series1900BUart(nanaimo.Fixture):
 
     _debug = False
 
+    UartFactoryType = typing.Callable[[typing.Union[str, pathlib.Path]], 'contextlib.GeneratorContextManager']
+    """
+    The serial port factory type for this instrument.
+    """
+
+    @staticmethod
+    @contextlib.contextmanager
+    def default_serial_port(port: typing.Union[str, pathlib.Path]) -> typing.Generator[AbstractAsyncSerial, None, None]:
+        """
+        Creates a serial connection to the given port using the default settings for a BK Precision Series 1900B
+        power supply.
+        """
+        with ConcurrentUart.new_default(str(port), 9600) as bk_uart:
+            bk_uart.eol = '\r'
+            yield bk_uart
+
+    def __init__(self,
+                 manager: 'nanaimo.FixtureManager',
+                 loop: typing.Optional[asyncio.AbstractEventLoop] = None,
+                 uart_factory: UartFactoryType = default_serial_port):
+        super().__init__(manager, loop)
+        self._uart_factory = uart_factory
+
     @classmethod
     def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
         arguments.add_argument('--bk-port',
                                help='The port the BK Precision power supply is connected to.')
-        arguments.add_argument('--bk-command', '-BC',
+        arguments.add_argument('--bk-command', '--BC',
                                help='command', default='?')
         arguments.add_argument('--bk-command-timeout',
                                help='time out for individual commands.', default=4.0)
@@ -85,8 +110,7 @@ class Series1900BUart(nanaimo.Fixture):
 
         artifacts = nanaimo.Artifacts(-1)
 
-        with Uart.new_default(str(args.bk_port), 9600) as bk_uart:
-            bk_uart.eol = '\r'
+        with self._uart_factory(str(args.bk_port)) as bk_uart:
             if args.bk_command == '1':
                 _, artifacts.result_code = await self._do_command(bk_uart, self.CommandTurnOn, args.bk_command_timeout)
                 if artifacts.result_code == 0 and args.bk_target_voltage is not None:
@@ -98,15 +122,16 @@ class Series1900BUart(nanaimo.Fixture):
             elif args.bk_command == 'r':
                 _, artifacts.result_code = await self._do_command(bk_uart, '\r\r\r\r', args.bk_command_timeout)
             elif args.bk_command == '?':
-                (voltage, current, mode), artifacts.result_code = await self._get_display(bk_uart, args.bk_command_timeout)
+                display, artifacts.result_code = await self._get_display(bk_uart, args.bk_command_timeout)
                 if artifacts.result_code == 0:
-                    setattr(artifacts, 'display', '{},{},{}'.format(voltage, current, ('CV' if mode == 0 else 'CC')))
+                    setattr(artifacts, 'display', display)
+                    setattr(artifacts, 'display_text', '{},{},{}'.format(display[0], display[1], ('CV' if display[1] == self.StatusCV else 'CC')))
             else:
                 self.logger.warn('command {} is not a valid Series1900BUart command.'.format(args.bk_command))
 
         return artifacts
 
-    async def _get_display(self, uart: Uart, command_timeout: float) -> typing.Tuple[typing.Tuple[float, float, int], int]:
+    async def _get_display(self, uart: AbstractAsyncSerial, command_timeout: float) -> typing.Tuple[typing.Tuple[float, float, int], int]:
         display, status = await self._do_command(uart, self.CommandGetDisplay, command_timeout)
         if display is None or len(display) < 8:
             return ((0, 0, 0), -1)
@@ -116,7 +141,7 @@ class Series1900BUart(nanaimo.Fixture):
             status = int(display[8])
             return ((voltage, current, status), 0)
 
-    async def _do_command(self, uart: Uart, command: str, command_timeout: float) -> typing.Tuple[str, int]:
+    async def _do_command(self, uart: AbstractAsyncSerial, command: str, command_timeout: float) -> typing.Tuple[str, int]:
         try:
             command_help = self.CommandHelp[command]
             is_command = True
@@ -125,7 +150,7 @@ class Series1900BUart(nanaimo.Fixture):
             self.logger.debug('Sending characters %s', re.sub('\\r', '<cr>', command))
             is_command = False
 
-        puttime_secs = await uart.put_line(command + uart.eol)
+        puttime_secs = await uart.put_line(command + '\r')
         previous_line = None
         status = 1
         if is_command:
@@ -149,7 +174,7 @@ class Series1900BUart(nanaimo.Fixture):
                     previous_line = received_line
         return (str(previous_line), status)
 
-    async def _wait_for_voltage(self, uart: Uart, command_timeout: float, is_min: bool, threshold_v: float) -> int:
+    async def _wait_for_voltage(self, uart: AbstractAsyncSerial, command_timeout: float, is_min: bool, threshold_v: float) -> int:
         while True:
             # TODO: timeout
             display_tuple, result = await self._get_display(uart, command_timeout)
