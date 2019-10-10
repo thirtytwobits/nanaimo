@@ -36,10 +36,13 @@ class CreateAndGatherFunctor:
         self._fixture_type = fixture_type
         self._manager = manager
         self._loop = loop
+        self._logger = logging.getLogger(fixture_type.get_canonical_name())
 
     async def __call__(self, args: nanaimo.Namespace) -> int:
         fixture = self._fixture_type(self._manager, self._loop)
-        return int(await fixture.gather(args))
+        artifacts = await fixture.gather(args)
+        artifacts.dump(self._logger)
+        return int(artifacts)
 
 
 class _ArgparseSubparserArguments(nanaimo.Arguments):

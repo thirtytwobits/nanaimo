@@ -104,8 +104,9 @@ class Artifacts(Namespace):
     @property
     def result_code(self) -> int:
         """
-        The overall status of the fixture activities. 0 is successful all other values are
-        errors.
+        0 if the artifacts were retrieved without error. Non-zero if some error
+        occurred. The contents of this :class:`Namespace` is undefined for non-zero
+        result codes.
         """
         return self._result_code
 
@@ -113,7 +114,25 @@ class Artifacts(Namespace):
     def result_code(self, new_result: int) -> None:
         self._result_code = new_result
 
+    def dump(self, logger: logging.Logger, log_level: int = logging.DEBUG) -> None:
+        """
+        Dump a human readable representation of this object to the given logger.
+        :param logger:  The logger to use.
+        :param log_level: The log level to dump the object as.
+        """
+        import json
+        logger.log(log_level, json.dumps(self.to_json()))
+
+    def to_json(self) -> typing.Dict:
+        """
+        Get a view of the namespace as a JSON serializeable dict.
+        """
+        return vars(self)
+
     def __int__(self) -> int:
+        """
+        Converts a reference to this object into its `result_code`.
+        """
         return self._result_code
 
 
