@@ -48,7 +48,7 @@ class Fixture(nanaimo.Fixture):
         nanaimo.connections.uart.ConcurrentUart.on_visit_test_arguments(arguments)
         nanaimo.instruments.jlink.ProgramUploaderJLink.on_visit_test_arguments(arguments)
 
-    async def gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
+    async def on_gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
 
         uploader = nanaimo.instruments.jlink.ProgramUploaderJLink()
         jlink_scripts = pathlib.Path(args.base_path).glob(args.jlink_scripts)
@@ -67,7 +67,7 @@ class Fixture(nanaimo.Fixture):
         return nanaimo.Artifacts(result)
 
 
-@nanaimo.FixtureManager.type_factory
+@nanaimo.PluggyFixtureManager.type_factory
 def get_fixture_type() -> typing.Type['nanaimo.Fixture']:
     return Fixture
 

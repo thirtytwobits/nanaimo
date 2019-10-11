@@ -41,7 +41,7 @@ class Fixture(nanaimo.Fixture):
         arguments.add_argument('--saleae-port', default='10429', help='TCP port for the logic socket server.')
         arguments.add_argument('--saleae-host', default='localhost', help='hostname for the logic socket server.')
 
-    async def gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
+    async def on_gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
         self.logger.info('about to connect to {}:{}'.format(args.saleae_host, args.saleae_port))
         reader, writer = await asyncio.open_connection(host=args.saleae_host, port=args.saleae_port, loop=self.loop)
 
@@ -64,6 +64,6 @@ class Fixture(nanaimo.Fixture):
         return nanaimo.Artifacts()
 
 
-@nanaimo.FixtureManager.type_factory
+@nanaimo.PluggyFixtureManager.type_factory
 def get_fixture_type() -> typing.Type['nanaimo.Fixture']:
     return Fixture

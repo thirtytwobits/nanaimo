@@ -32,15 +32,18 @@ class CreateAndGatherFunctor:
     Returns the result-code of the artifacts.
     """
 
-    def __init__(self, fixture_type: typing.Type['nanaimo.Fixture'], manager: nanaimo.FixtureManager, loop: asyncio.AbstractEventLoop):
+    def __init__(self,
+                 fixture_type: typing.Type['nanaimo.Fixture'],
+                 manager: nanaimo.FixtureManager,
+                 loop: asyncio.AbstractEventLoop):
         self._fixture_type = fixture_type
         self._manager = manager
         self._loop = loop
         self._logger = logging.getLogger(fixture_type.get_canonical_name())
 
     async def __call__(self, args: nanaimo.Namespace) -> int:
-        fixture = self._fixture_type(self._manager, self._loop)
-        artifacts = await fixture.gather(args)
+        fixture = self._fixture_type(self._manager, args, self._loop)
+        artifacts = await fixture.gather()
         artifacts.dump(self._logger)
         return int(artifacts)
 
@@ -97,7 +100,7 @@ def _make_parser(loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> arg
 
     subparsers = parser.add_subparsers(help='Available fixtures.')
 
-    pm = nanaimo.FixtureManager()
+    pm = nanaimo.PluggyFixtureManager()
 
     _visit_argparse(pm, subparsers, loop)  # type: ignore
 

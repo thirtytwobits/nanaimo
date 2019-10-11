@@ -1,5 +1,4 @@
 {
-    "reflow.preferredLineLength": 130,
     "python.pythonPath": ".pyenv/bin/python",
     "restructuredtext.sphinxBuildPath": "sphinx-build",
     "restructuredtext.confPath": "${workspaceFolder}",
@@ -71,6 +70,7 @@
         "pytest",
         "pytester",
         "rcfile",
+        "reparent",
         "rmtree",
         "saleae",
         "sched",

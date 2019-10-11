@@ -88,7 +88,7 @@ async def test_observe_tasks(event_loop: asyncio.AbstractEventLoop) -> None:
     Test the observe_tasks method of Fixture
     """
 
-    subject = fixtures.DummyFixtureManager.create_dummy_fixture(event_loop)
+    subject = fixtures.DummyFixture()
 
     async def evaluating() -> int:
         return 0
@@ -118,7 +118,7 @@ async def test_observe_tasks_failure(event_loop: asyncio.AbstractEventLoop) -> N
     Test the observe_tasks method of Fixture where the running tasks exit.
     """
 
-    subject = fixtures.DummyFixtureManager.create_dummy_fixture(event_loop)
+    subject = fixtures.DummyFixture(loop=event_loop)
 
     async def evaluating() -> int:
         waits = 2
@@ -144,7 +144,7 @@ async def test_observe_tasks_failure_no_assert(event_loop: asyncio.AbstractEvent
     an assertion error.
     """
 
-    subject = fixtures.DummyFixtureManager.create_dummy_fixture(event_loop)
+    subject = fixtures.DummyFixture(loop=event_loop)
 
     async def evaluating() -> int:
         waits = 2
@@ -170,7 +170,7 @@ async def test_observe_tasks_timeout(event_loop: asyncio.AbstractEventLoop) -> N
     Test the observe_tasks method of Fixture where the running tasks do not exit.
     """
 
-    subject = fixtures.DummyFixtureManager.create_dummy_fixture(event_loop)
+    subject = fixtures.DummyFixture(loop=event_loop)
 
     async def evaluating() -> int:
         while True:
@@ -192,6 +192,6 @@ async def test_countdown_sleep(event_loop: asyncio.AbstractEventLoop) -> None:
     """
     Test the observe_tasks method of Fixture where the running tasks do not exit.
     """
-    subject = fixtures.DummyFixtureManager.create_dummy_fixture(event_loop)
+    subject = fixtures.DummyFixture(loop=event_loop)
 
     await subject.countdown_sleep(5.3)

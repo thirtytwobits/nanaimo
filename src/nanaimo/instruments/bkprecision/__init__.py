@@ -74,9 +74,10 @@ class Series1900BUart(nanaimo.Fixture):
 
     def __init__(self,
                  manager: 'nanaimo.FixtureManager',
+                 args: nanaimo.Namespace,
                  loop: typing.Optional[asyncio.AbstractEventLoop] = None,
                  uart_factory: typing.Optional[UartFactoryType] = None):
-        super().__init__(manager, loop)
+        super().__init__(manager, args, loop)
         self._uart_factory = (uart_factory if uart_factory is not None else self.default_serial_port)
 
     @classmethod
@@ -90,7 +91,7 @@ class Series1900BUart(nanaimo.Fixture):
         arguments.add_argument('--bk-target-voltage',
                                help='The target voltage')
 
-    async def gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
+    async def on_gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
         """
         Send a command to the instrument and return the result.
         :param str command: Send one of the following commands:
@@ -189,6 +190,6 @@ class Series1900BUart(nanaimo.Fixture):
         return result
 
 
-@nanaimo.FixtureManager.type_factory
+@nanaimo.PluggyFixtureManager.type_factory
 def get_fixture_type() -> typing.Type['nanaimo.Fixture']:
     return Series1900BUart
