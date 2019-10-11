@@ -6,8 +6,8 @@
 """
     Fake jlink commander for unit testing.
 """
-import sys
 import argparse
+import sys
 import time
 
 

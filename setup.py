@@ -5,9 +5,9 @@
 #
 
 import sys
-import setuptools
-
 from typing import Dict
+
+import setuptools
 
 if int(setuptools.__version__.split('.')[0]) < 30:
     print('A newer version of setuptools is required. The current version does not support declarative config.',

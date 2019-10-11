@@ -51,6 +51,7 @@
         "globbing",
         "gtest",
         "imgmath",
+        "inout",
         "jlink",
         "maxdepth",
         "mkdir",

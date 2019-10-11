@@ -3,19 +3,20 @@
 # This software is distributed under the terms of the MIT License.
 #
 
+import argparse
 import asyncio
 import contextlib
 import pathlib
 import typing
-import nanaimo
+from unittest.mock import patch
+
 import pytest
-import argparse
 
 import fixtures
 import fixtures.simulators
-from nanaimo.instruments.bkprecision import Series1900BUart
+import nanaimo
 from nanaimo.connections.uart import ConcurrentUart
-from unittest.mock import patch
+from nanaimo.instruments.bkprecision import Series1900BUart
 
 
 @pytest.fixture
@@ -57,7 +58,10 @@ async def test_turn_off(MockFixtureManager: typing.Any,
 
 
 @pytest.mark.asyncio
-async def test_turn_on(paths_for_test: fixtures.Paths, event_loop: asyncio.AbstractEventLoop) -> None:
+@patch('nanaimo.FixtureManager')
+async def test_turn_on(MockFixtureManager: typing.Any,
+                       paths_for_test: fixtures.Paths,
+                       event_loop: asyncio.AbstractEventLoop) -> None:
     dummy_serial_port_factory = create_dummy_serial_port_factory(['OK'], event_loop)
     args = to_namespace(Series1900BUart, '1')
     bk = Series1900BUart(nanaimo.FixtureManager(), args, event_loop, uart_factory=dummy_serial_port_factory)
@@ -66,7 +70,10 @@ async def test_turn_on(paths_for_test: fixtures.Paths, event_loop: asyncio.Abstr
 
 @pytest.mark.asyncio
 @pytest.mark.timeout(10)
-async def test_turn_on_timeout(paths_for_test: fixtures.Paths, event_loop: asyncio.AbstractEventLoop) -> None:
+@patch('nanaimo.FixtureManager')
+async def test_turn_on_timeout(MockFixtureManager: typing.Any,
+                               paths_for_test: fixtures.Paths,
+                               event_loop: asyncio.AbstractEventLoop) -> None:
     args = to_namespace(Series1900BUart, '1')
     dummy_serial_port_factory = create_dummy_serial_port_factory(['NOPE'], event_loop, loop_fake_data=False)
     bk = Series1900BUart(nanaimo.FixtureManager(), args, event_loop, uart_factory=dummy_serial_port_factory)
@@ -75,7 +82,45 @@ async def test_turn_on_timeout(paths_for_test: fixtures.Paths, event_loop: async
 
 
 @pytest.mark.asyncio
-async def test_get_display(paths_for_test: fixtures.Paths, event_loop: asyncio.AbstractEventLoop) -> None:
+@pytest.mark.timeout(10)
+@patch('nanaimo.FixtureManager')
+async def test_turn_on_wait_for_voltage(MockFixtureManager: typing.Any,
+                                        paths_for_test: fixtures.Paths,
+                                        event_loop: asyncio.AbstractEventLoop) -> None:
+    args = to_namespace(Series1900BUart, '1')
+    mock_session = ['OK',
+                    '000000000', 'OK',
+                    '000100000', 'OK',
+                    '001000000', 'OK',
+                    '010000000', 'OK',
+                    '010000000', 'OK',
+                    '010000000', 'ERROR']
+    dummy_serial_port_factory = create_dummy_serial_port_factory(mock_session, event_loop, loop_fake_data=False)
+    bk = Series1900BUart(nanaimo.FixtureManager(), args, event_loop, uart_factory=dummy_serial_port_factory)
+    assert 0 == int(await bk.gather(bk_target_voltage=1))
+
+
+@pytest.mark.asyncio
+@pytest.mark.timeout(10)
+@patch('nanaimo.FixtureManager')
+async def test_turn_on_wait_for_voltage_timeout(MockFixtureManager: typing.Any,
+                                                paths_for_test: fixtures.Paths,
+                                                event_loop: asyncio.AbstractEventLoop) -> None:
+    args = to_namespace(Series1900BUart, '1')
+    mock_session = ['OK',
+                    '000000000', 'OK',
+                    '090000000', 'OK']
+    dummy_serial_port_factory = create_dummy_serial_port_factory(mock_session, event_loop, loop_fake_data=True)
+    bk = Series1900BUart(nanaimo.FixtureManager(), args, event_loop, uart_factory=dummy_serial_port_factory)
+    with pytest.raises(asyncio.TimeoutError):
+        await bk.gather(bk_target_voltage=10, bk_target_voltage_threshold_rising=.5)
+
+
+@pytest.mark.asyncio
+@patch('nanaimo.FixtureManager')
+async def test_get_display(MockFixtureManager: typing.Any,
+                           paths_for_test: fixtures.Paths,
+                           event_loop: asyncio.AbstractEventLoop) -> None:
     dummy_serial_port_factory = create_dummy_serial_port_factory(['030201451', 'OK'], event_loop)
     args = to_namespace(Series1900BUart, '?')
     bk = Series1900BUart(nanaimo.FixtureManager(), args, event_loop, uart_factory=dummy_serial_port_factory)
@@ -83,4 +128,4 @@ async def test_get_display(paths_for_test: fixtures.Paths, event_loop: asyncio.A
     display = artifacts.display
     assert 3.02 == display[0]
     assert 1.45 == display[1]
-    assert Series1900BUart.StatusCC == display[2]
+    assert Series1900BUart.ModeCC == display[2]

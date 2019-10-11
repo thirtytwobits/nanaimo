@@ -5,6 +5,8 @@
 
 import asyncio
 import os
+import typing
+from unittest.mock import patch
 
 import pytest
 
@@ -83,12 +85,14 @@ async def test_timeout_while_monitoring() -> None:
 
 @pytest.mark.timeout(10)
 @pytest.mark.asyncio
-async def test_observe_tasks(event_loop: asyncio.AbstractEventLoop) -> None:
+@patch('nanaimo.FixtureManager')
+async def test_observe_tasks(MockFixtureManager: typing.Any,
+                             event_loop: asyncio.AbstractEventLoop) -> None:
     """
     Test the observe_tasks method of Fixture
     """
 
-    subject = fixtures.DummyFixture()
+    subject = fixtures.DummyFixture(nanaimo.FixtureManager())
 
     async def evaluating() -> int:
         return 0
@@ -113,12 +117,13 @@ async def test_observe_tasks(event_loop: asyncio.AbstractEventLoop) -> None:
 
 @pytest.mark.timeout(10)
 @pytest.mark.asyncio
-async def test_observe_tasks_failure(event_loop: asyncio.AbstractEventLoop) -> None:
+@patch('nanaimo.FixtureManager')
+async def test_observe_tasks_failure(MockFixtureManager: typing.Any, event_loop: asyncio.AbstractEventLoop) -> None:
     """
     Test the observe_tasks method of Fixture where the running tasks exit.
     """
 
-    subject = fixtures.DummyFixture(loop=event_loop)
+    subject = fixtures.DummyFixture(nanaimo.FixtureManager(), loop=event_loop)
 
     async def evaluating() -> int:
         waits = 2
@@ -138,13 +143,15 @@ async def test_observe_tasks_failure(event_loop: asyncio.AbstractEventLoop) -> N
 
 @pytest.mark.timeout(10)
 @pytest.mark.asyncio
-async def test_observe_tasks_failure_no_assert(event_loop: asyncio.AbstractEventLoop) -> None:
+@patch('nanaimo.FixtureManager')
+async def test_observe_tasks_failure_no_assert(MockFixtureManager: typing.Any,
+                                               event_loop: asyncio.AbstractEventLoop) -> None:
     """
     Test the observe_tasks method of Fixture where the running tasks exit but without throwing
     an assertion error.
     """
 
-    subject = fixtures.DummyFixture(loop=event_loop)
+    subject = fixtures.DummyFixture(nanaimo.FixtureManager(), loop=event_loop)
 
     async def evaluating() -> int:
         waits = 2
@@ -165,12 +172,13 @@ async def test_observe_tasks_failure_no_assert(event_loop: asyncio.AbstractEvent
 
 @pytest.mark.timeout(10)
 @pytest.mark.asyncio
-async def test_observe_tasks_timeout(event_loop: asyncio.AbstractEventLoop) -> None:
+@patch('nanaimo.FixtureManager')
+async def test_observe_tasks_timeout(MockFixtureManager: typing.Any, event_loop: asyncio.AbstractEventLoop) -> None:
     """
     Test the observe_tasks method of Fixture where the running tasks do not exit.
     """
 
-    subject = fixtures.DummyFixture(loop=event_loop)
+    subject = fixtures.DummyFixture(nanaimo.FixtureManager(), loop=event_loop)
 
     async def evaluating() -> int:
         while True:
@@ -188,10 +196,11 @@ async def test_observe_tasks_timeout(event_loop: asyncio.AbstractEventLoop) -> N
 
 @pytest.mark.timeout(20)
 @pytest.mark.asyncio
-async def test_countdown_sleep(event_loop: asyncio.AbstractEventLoop) -> None:
+@patch('nanaimo.FixtureManager')
+async def test_countdown_sleep(MockFixtureManager: typing.Any, event_loop: asyncio.AbstractEventLoop) -> None:
     """
     Test the observe_tasks method of Fixture where the running tasks do not exit.
     """
-    subject = fixtures.DummyFixture(loop=event_loop)
+    subject = fixtures.DummyFixture(nanaimo.FixtureManager(), loop=event_loop)
 
     await subject.countdown_sleep(5.3)

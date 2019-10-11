@@ -2,11 +2,11 @@
 # Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # This software is distributed under the terms of the MIT License.
 #
+import asyncio
 import os
 import pathlib
 import subprocess
 import typing
-import asyncio
 
 import nanaimo
 
@@ -399,7 +399,7 @@ class Paths:
 class DummyFixture(nanaimo.Fixture):
 
     def __init__(self,
-                 manager: nanaimo.FixtureManager = nanaimo.FixtureManager(),
+                 manager: nanaimo.FixtureManager,
                  args: nanaimo.Namespace = nanaimo.Namespace(),
                  loop: typing.Optional[asyncio.AbstractEventLoop] = None):
         super().__init__(manager, args, loop)

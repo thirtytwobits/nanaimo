@@ -43,8 +43,21 @@ class Series1900BUart(nanaimo.Fixture):
 
     ResultOk = 'OK'
 
-    StatusCV = 0
-    StatusCC = 1
+    ModeCV = 0
+    ModeCC = 1
+    ModeInvalid = -1
+
+    @classmethod
+    def mode_to_text(cls, mode: int) -> str:
+        """
+        Get a two-character textual representation for a given power supply mode.
+        """
+        if mode == cls.ModeCV:
+            return 'CV'
+        elif mode == cls.ModeCC:
+            return 'CC'
+        else:
+            return 'EE'
 
     CommandHelp = {
         'SOUT0': 'Switch on supply output.',
@@ -54,8 +67,6 @@ class Series1900BUart(nanaimo.Fixture):
 
     # cspell: enable
 
-    _debug = False
-
     UartFactoryType = typing.Callable[[typing.Union[str, pathlib.Path]], typing.Any]
     """
     The serial port factory type for this instrument.
@@ -63,7 +74,9 @@ class Series1900BUart(nanaimo.Fixture):
 
     @classmethod
     @contextlib.contextmanager
-    def default_serial_port(cls, port: typing.Union[str, pathlib.Path]) -> typing.Generator[AbstractAsyncSerial, None, None]:
+    def default_serial_port(cls,
+                            port: typing.Union[str, pathlib.Path]) \
+            -> typing.Generator[AbstractAsyncSerial, None, None]:
         """
         Creates a serial connection to the given port using the default settings for a BK Precision Series 1900B
         power supply.
@@ -78,6 +91,7 @@ class Series1900BUart(nanaimo.Fixture):
                  loop: typing.Optional[asyncio.AbstractEventLoop] = None,
                  uart_factory: typing.Optional[UartFactoryType] = None):
         super().__init__(manager, args, loop)
+        self._debug = False
         self._uart_factory = (uart_factory if uart_factory is not None else self.default_serial_port)
 
     @classmethod
@@ -89,7 +103,16 @@ class Series1900BUart(nanaimo.Fixture):
         arguments.add_argument('--bk-command-timeout',
                                help='time out for individual commands.', default=4.0)
         arguments.add_argument('--bk-target-voltage',
+                               type=float,
                                help='The target voltage')
+        arguments.add_argument('--bk-target-voltage-threshold-rising',
+                               type=float,
+                               default=0.2,
+                               help='Voltage offset from the target voltage to trigger on when the voltage is rising.')
+        arguments.add_argument('--bk-target-voltage-threshold-falling',
+                               type=float,
+                               default=0.01,
+                               help='Voltage offset from the target voltage to trigger on when the voltage is falling.')
 
     async def on_gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
         """
@@ -109,40 +132,76 @@ class Series1900BUart(nanaimo.Fixture):
             +---------+----------------------------------+--------------------------------------------------+
         """
 
-        artifacts = nanaimo.Artifacts(-1)
-
         with self._uart_factory(str(args.bk_port)) as bk_uart:
-            if args.bk_command == '1':
-                _, artifacts.result_code = await self._do_command(bk_uart, self.CommandTurnOn, args.bk_command_timeout)
-                if artifacts.result_code == 0 and args.bk_target_voltage is not None:
-                    artifacts.result_code = await self._wait_for_voltage(bk_uart, args.bk_command_timeout, True, float(args.bk_target_voltage) - .2)
-            elif args.bk_command == '0':
-                _, artifacts.result_code = await self._do_command(bk_uart, self.CommandTurnOff, args.bk_command_timeout)
-                if artifacts.result_code == 0 and args.bk_target_voltage is not None:
-                    artifacts.result_code = await self._wait_for_voltage(bk_uart, args.bk_command_timeout, False, 1)
-            elif args.bk_command == 'r':
-                _, artifacts.result_code = await self._do_command(bk_uart, '\r\r\r\r', args.bk_command_timeout)
-            elif args.bk_command == '?':
-                display, artifacts.result_code = await self._get_display(bk_uart, args.bk_command_timeout)
-                if artifacts.result_code == 0:
-                    setattr(artifacts, 'display', display)
-                    setattr(artifacts, 'display_text', '{},{},{}'.format(display[0], display[1], ('CV' if display[2] == self.StatusCV else 'CC')))
-            else:
-                self.logger.warn('command {} is not a valid Series1900BUart command.'.format(args.bk_command))
+            artifacts = await self._do_command_from_args(bk_uart, args)
 
         return artifacts
 
-    async def _get_display(self, uart: AbstractAsyncSerial, command_timeout: float) -> typing.Tuple[typing.Tuple[float, float, int], int]:
+    async def _get_display(self,
+                           uart: AbstractAsyncSerial,
+                           command_timeout: float) -> typing.Tuple[typing.Tuple[float, float, int], int]:
         display, status = await self._do_command(uart, self.CommandGetDisplay, command_timeout)
-        if display is None or len(display) < 8:
-            return ((0, 0, 0), -1)
+        if status != 0 or display is None or len(display) < 8:
+            return ((0, 0, self.ModeInvalid), status)
         else:
-            voltage = int(display[0:4]) / 100.0
-            current = int(display[4:8]) / 100.0
-            status = int(display[8])
-            return ((voltage, current, status), 0)
+            try:
+                voltage = int(display[0:4]) / 100.0
+                current = int(display[4:8]) / 100.0
+                mode = int(display[8])
+                if mode != self.ModeCC and mode != self.ModeCV:
+                    mode = self.ModeInvalid
+                    status = -1
 
-    async def _do_command(self, uart: AbstractAsyncSerial, command: str, command_timeout: float) -> typing.Tuple[str, int]:
+            except ValueError:
+                mode = self.ModeInvalid
+                voltage = 0
+                current = 0
+            return ((voltage, current, mode), status)
+
+    async def _up_or_down(self, is_up: bool,
+                          uart: AbstractAsyncSerial,
+                          args: nanaimo.Namespace,
+                          inout_artifacts: nanaimo.Artifacts) -> None:
+        start_time = uart.time()
+        _, inout_artifacts.result_code = await self._do_command(uart,
+                                                                (self.CommandTurnOn if is_up else self.CommandTurnOff),
+                                                                args.bk_command_timeout)
+        if inout_artifacts.result_code == 0 and args.bk_target_voltage is not None:
+            target_voltage = (args.bk_target_voltage - args.bk_target_voltage_threshold_rising
+                              if is_up
+                              else args.bk_target_voltage_threshold_falling)
+            wait_timeout = max(0, args.bk_command_timeout - (uart.time() - start_time))
+            inout_artifacts.result_code = await self._wait_for_voltage(uart,
+                                                                       wait_timeout,
+                                                                       is_up,
+                                                                       target_voltage)
+
+    async def _do_command_from_args(self,
+                                    uart: AbstractAsyncSerial,
+                                    args: nanaimo.Namespace) -> nanaimo.Artifacts:
+        artifacts = nanaimo.Artifacts(-1)
+
+        if args.bk_command == '1':
+            await self._up_or_down(True, uart, args, artifacts)
+        elif args.bk_command == '0':
+            await self._up_or_down(True, uart, args, artifacts)
+        elif args.bk_command == 'r':
+            _, artifacts.result_code = await self._do_command(uart, '\r\r\r\r', args.bk_command_timeout)
+        elif args.bk_command == '?':
+            display, artifacts.result_code = await self._get_display(uart, args.bk_command_timeout)
+            if artifacts.result_code == 0:
+                setattr(artifacts, 'display', display)
+                setattr(artifacts, 'display_text', '{},{},{}'.format(
+                    display[0], display[1], self.mode_to_text(int(display[1]))))
+        else:
+            self.logger.warn('command {} is not a valid Series1900BUart command.'.format(args.bk_command))
+
+        return artifacts
+
+    async def _do_command(self,
+                          uart: AbstractAsyncSerial,
+                          command: str,
+                          command_timeout: float) -> typing.Tuple[str, int]:
         try:
             command_help = self.CommandHelp[command]
             is_command = True
@@ -161,8 +220,10 @@ class Series1900BUart(nanaimo.Fixture):
                 if command_timeout > 0 and now - start_time > command_timeout:
                     raise asyncio.TimeoutError()
                 if self._debug:
-                    self.logger.debug('Waiting for response to command %s put before time %f seconds', command, puttime_secs)
-                received_line = await uart.get_line((command_timeout - (now - start_time) if command_timeout > 0 else 0))
+                    self.logger.debug('Waiting for response to command %s put before time %f seconds',
+                                      command, puttime_secs)
+                get_line_timeout_seconds = (command_timeout - (now - start_time) if command_timeout > 0 else 0)
+                received_line = await uart.get_line(get_line_timeout_seconds)
                 if self._debug:
                     self.logger.debug('At %f Got line: %s', received_line.timestamp_seconds, received_line)
                 # The result has to be from after the put or
@@ -175,18 +236,24 @@ class Series1900BUart(nanaimo.Fixture):
                     previous_line = received_line
         return (str(previous_line), status)
 
-    async def _wait_for_voltage(self, uart: AbstractAsyncSerial, command_timeout: float, is_min: bool, threshold_v: float) -> int:
+    async def _wait_for_voltage(self,
+                                uart: AbstractAsyncSerial,
+                                command_timeout: float,
+                                is_min: bool,
+                                threshold_v: float) -> int:
+        start_time = uart.time()
         while True:
-            # TODO: timeout
+            if uart.time() - start_time > command_timeout:
+                raise asyncio.TimeoutError()
             display_tuple, result = await self._get_display(uart, command_timeout)
             voltage = display_tuple[0]
-            if (voltage >= threshold_v if is_min else voltage <= threshold_v):
+            if result == 0 and (voltage >= threshold_v if is_min else voltage <= threshold_v):
                 if is_min:
                     self.logger.debug('---------------POWER SUPPLY UP----------------')
                 else:
                     self.logger.debug('--------------POWER SUPPLY DOWN---------------')
                 break
-            await asyncio.sleep(.1)
+            await asyncio.sleep(.01)
         return result
 
 

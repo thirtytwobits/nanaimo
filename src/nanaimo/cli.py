@@ -22,6 +22,7 @@ import asyncio
 import logging
 import sys
 import typing
+
 import nanaimo
 
 
@@ -64,11 +65,6 @@ def _visit_argparse(manager: nanaimo.FixtureManager,
     for fixture_type in manager.fixture_types():
         subparser = subparsers.add_parser(fixture_type.get_canonical_name(),
                                           help=_auto_brief(fixture_type))  # type: 'argparse.ArgumentParser'
-        subparser.add_argument('--test-timeout-seconds',
-                               default='30',
-                               type=float,
-                               help='''Test will be killed and marked as a failure after
-waiting for a result for this amount of time.''')
         fixture_type.on_visit_test_arguments(nanaimo.Arguments(subparser))
         subparser.set_defaults(func=CreateAndGatherFunctor(fixture_type, manager, loop))
 

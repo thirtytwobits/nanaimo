@@ -48,8 +48,9 @@ class AssertionError(RuntimeError):
 class Arguments:
     """
     Adapter for pytest and argparse parser arguments.
+
     :param inner_arguments: Either a pytest group (unpublished type returned from :meth:`pytest.Parser.getgroup`)
-            or a :class:`argparse.ArgumentParser`
+        or a :class:`argparse.ArgumentParser`
     """
 
     def __init__(self, inner_arguments: typing.Any):
@@ -147,7 +148,10 @@ class Artifacts(Namespace):
         :param log_level: The log level to dump the object as.
         """
         import yaml
-        logger.log(log_level, yaml.dump(vars(self)))
+        try:
+            logger.log(log_level, yaml.dump(vars(self)))
+        except TypeError:
+            logger.log(log_level, '(failed to serialize Artifacts)')
 
     def __int__(self) -> int:
         """
@@ -234,10 +238,11 @@ class Fixture(metaclass=abc.ABCMeta):
     async def gather(self, **kwargs: typing.Any) -> Artifacts:
         """
         Coroutine awaited to gather a new set of fixture artifacts.
+
         :param kwargs: Optional arguments to override or augment the arguments provided to the :class:`Fixture`
-            constructor
+                       constructor
         :return: A set of artifacts with the :attr:`Artifacts.result_code` set to indicate the success or failure of the
-            fixture's artifact gathering activies.
+                 fixture's artifact gathering activies.
         """
         return await self.on_gather(self._args.merge(**kwargs))
 
@@ -280,9 +285,9 @@ class Fixture(metaclass=abc.ABCMeta):
         return self._logger
 
     @property
-    def args(self) -> Namespace:
+    def fixture_arguments(self) -> Namespace:
         """
-        The Fixture-wide arguments. Can be overridden by kwargs for each :method:`gather` invocation.
+        The Fixture-wide arguments. Can be overridden by kwargs for each :meth:`gather` invocation.
         """
         return self._args
 
@@ -306,6 +311,7 @@ class Fixture(metaclass=abc.ABCMeta):
         """
         Coroutine awaited by a call to :meth:`gather`. The fixture should always retrieve new artifacts when invoked
         leaving caching to the caller.
+
         :param args: The arguments provided for the fixture instance merged with kwargs provided to the :meth:`gather`
             method.
         :type args: Namespace
@@ -431,7 +437,8 @@ class FixtureManager:
 
 class PluggyFixtureManager(FixtureManager):
     """
-    Object that scopes a set of :class:`Fixture` object discovered using pluggy.
+    Object that scopes a set of :class:`Fixture` objects discovered using
+    `pluggy <https://pluggy.readthedocs.io/en/latest/>`_.
     """
 
     plugin_name = 'nanaimo'

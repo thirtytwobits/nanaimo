@@ -7,8 +7,8 @@
 The Nanaimo CLI.
 """
 
-import sys
 import argparse
+import sys
 
 
 def _make_parser() -> argparse.ArgumentParser:

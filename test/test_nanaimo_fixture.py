@@ -3,8 +3,8 @@
 # This software is distributed under the terms of the MIT License.
 #
 
-import nanaimo
 import fixtures
+import nanaimo
 
 
 class CanonicallyNamed(nanaimo.Fixture):

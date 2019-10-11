@@ -22,9 +22,10 @@ TODO: See https://github.com/ppannuto/python-saleae/blob/master/saleae/saleae.py
 strings. They don't seem to be documented anywhere else.
 """
 
-import nanaimo
-import typing
 import asyncio
+import typing
+
+import nanaimo
 
 
 class Fixture(nanaimo.Fixture):
