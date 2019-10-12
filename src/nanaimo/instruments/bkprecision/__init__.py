@@ -198,6 +198,35 @@ class Series1900BUart(nanaimo.Fixture):
 
         return artifacts
 
+    async def _wait_for_response(self,
+                                 uart: AbstractAsyncSerial,
+                                 command: str,
+                                 puttime_secs: float,
+                                 command_timeout: float) -> typing.Tuple[str, int]:
+        start_time = uart.time()
+        previous_line = None
+        status = 1
+        while True:
+            now = uart.time()
+            if command_timeout > 0 and now - start_time > command_timeout:
+                raise asyncio.TimeoutError()
+            if self._debug:
+                self.logger.debug('Waiting for response to command %s put before time %f seconds',
+                                  command, puttime_secs)
+            get_line_timeout_seconds = (command_timeout - (now - start_time) if command_timeout > 0 else 0)
+            received_line = await uart.get_line(get_line_timeout_seconds)
+            if self._debug:
+                self.logger.debug('At %f Got line: %s', received_line.timestamp_seconds, received_line)
+            # The result has to be from after the put or
+            # it's an old result from a buffer.
+            if received_line.timestamp_seconds > puttime_secs and received_line == self.ResultOk:
+                status = 0
+                break
+            # Skip any empty lines the device sends back.
+            if len(received_line) > 0:
+                previous_line = received_line
+        return (str(previous_line), status)
+
     async def _do_command(self,
                           uart: AbstractAsyncSerial,
                           command: str,
@@ -211,30 +240,10 @@ class Series1900BUart(nanaimo.Fixture):
             is_command = False
 
         puttime_secs = await uart.put_line(command + '\r')
-        previous_line = None
-        status = 1
         if is_command:
-            start_time = uart.time()
-            while True:
-                now = uart.time()
-                if command_timeout > 0 and now - start_time > command_timeout:
-                    raise asyncio.TimeoutError()
-                if self._debug:
-                    self.logger.debug('Waiting for response to command %s put before time %f seconds',
-                                      command, puttime_secs)
-                get_line_timeout_seconds = (command_timeout - (now - start_time) if command_timeout > 0 else 0)
-                received_line = await uart.get_line(get_line_timeout_seconds)
-                if self._debug:
-                    self.logger.debug('At %f Got line: %s', received_line.timestamp_seconds, received_line)
-                # The result has to be from after the put or
-                # it's an old result from a buffer.
-                if received_line.timestamp_seconds > puttime_secs and received_line == self.ResultOk:
-                    status = 0
-                    break
-                # Skip any empty lines the device sends back.
-                if len(received_line) > 0:
-                    previous_line = received_line
-        return (str(previous_line), status)
+            return await self._wait_for_response(uart, command, puttime_secs, command_timeout)
+        else:
+            return ('', 1)
 
     async def _wait_for_voltage(self,
                                 uart: AbstractAsyncSerial,
