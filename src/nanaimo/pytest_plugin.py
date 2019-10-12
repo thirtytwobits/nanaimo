@@ -20,7 +20,7 @@
 """
 Nanaimo presents itself as a single pytest fixture called `nanaimo_fixture_manager`
 which allows tests to access or control test hardware fixtures. To register your
-test fixture with the Nanaimo fixture manager use the `nanaimo.FixtureManager.type_factory`
+test fixture with the Nanaimo fixture manager use the `nanaimo.PluggyFixtureManager.type_factory`
 :class:`pluggy.HookimplMarker` to register your :class:`nanaimo.Fixture`.
 
 .. invisible-code-block: python
@@ -38,13 +38,13 @@ test fixture with the Nanaimo fixture manager use the `nanaimo.FixtureManager.ty
         def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
             pass
 
-        async def gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
+        async def on_gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
             artifacts = nanaimo.Artifacts()
             # Do your on-target testing here and store results in nanaimo.Artifacts.
             return artifacts
 
 
-    @nanaimo.FixtureManager.type_factory
+    @nanaimo.PluggyFixtureManager.type_factory
     def get_fixture_type() -> typing.Type['nanaimo.Fixture']:
         return MyTestFixture
 
@@ -88,7 +88,7 @@ we populate to provide a peristent store of Nanaimo fixtures and artifacts.
 def _get_default_fixture_manager() -> nanaimo.FixtureManager:
     global _fixture_manager
     if _fixture_manager is None:
-        _fixture_manager = nanaimo.FixtureManager()
+        _fixture_manager = nanaimo.PluggyFixtureManager()
     return _fixture_manager
 
 
@@ -102,27 +102,15 @@ def create_pytest_fixture(pytest_request: typing.Any, fixture_type: typing.Type[
     :return: Either a new fixture or a fixture of the same name that was already created for the default
         :class:`FixtureManager`.
     """
-    return _get_default_fixture_manager().get_fixture(fixture_type.get_canonical_name())
-
-
-class _PyTestArguments(nanaimo.Arguments):
-
-    def __init__(self, testparser):  # type: ignore
-        self._testparser = testparser
-
-    def add_argument(self, *args: typing.Any, **kwargs: typing.Any) -> None:
-        self._testparser.addoption(*args, **kwargs)
-
-    def set_defaults(self, **kwargs: typing.Any) -> None:
-        raise NotImplementedError('pytest plugin does not support setting defaults.')
+    fm = _get_default_fixture_manager()
+    return fm.create_fixture(fixture_type.get_canonical_name(), nanaimo.Namespace(pytest_request.config.option))
 
 
 def pytest_addoption(parser) -> None:  # type: ignore
     manager = _get_default_fixture_manager()
     for fixture_type in manager.fixture_types():
         group = parser.getgroup(fixture_type.get_canonical_name())
-        args = _PyTestArguments(group)
-        fixture_type.on_visit_test_arguments(args)
+        fixture_type.on_visit_test_arguments(nanaimo.Arguments(group))
 
 
 @pytest.fixture

@@ -24,7 +24,7 @@ class DummyProtocol(asyncio.SubprocessProtocol):
         self._count = 0
 
     def pipe_data_received(self, fd: int, data: typing.Union[bytes, str]) -> None:
-        print(data.decode('utf-8'))
+        print(typing.cast(bytes, data).decode('utf-8'))
         self._count += 1
 
     def process_exited(self) -> None:

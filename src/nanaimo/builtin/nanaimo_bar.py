@@ -37,7 +37,7 @@ class Fixture(nanaimo.Fixture):
     def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
         pass
 
-    async def gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
+    async def on_gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
         """
         Create a delicious function in the artifacts to eat.
         """
@@ -47,7 +47,7 @@ class Fixture(nanaimo.Fixture):
         return artifacts
 
 
-@nanaimo.FixtureManager.type_factory
+@nanaimo.PluggyFixtureManager.type_factory
 def get_fixture_type() -> typing.Type['nanaimo.Fixture']:
     return Fixture
 

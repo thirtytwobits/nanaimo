@@ -3,16 +3,17 @@
 # This software is distributed under the terms of the MIT License.
 #
 
-import nanaimo
 import pytest
+
+import nanaimo
 
 
 def test_nanaimo_fixture_manager(nanaimo_fixture_manager: nanaimo.FixtureManager) -> None:
     """
     Ensure the fixture manager ... er; fixture works as expected.
     """
-    assert type(nanaimo_fixture_manager) == nanaimo.FixtureManager
-    gtest_fixture = nanaimo_fixture_manager.get_fixture('gtest_over_jlink')
+    assert type(nanaimo_fixture_manager) == nanaimo.PluggyFixtureManager
+    gtest_fixture = nanaimo_fixture_manager.create_fixture('gtest_over_jlink')
     assert isinstance(gtest_fixture, nanaimo.Fixture)
 
 
@@ -31,8 +32,7 @@ async def test_nanaimo_bar(nanaimo_bar: nanaimo.Fixture) -> None:
     """
     assert nanaimo_bar is not None
     assert 'nanaimo_bar' == nanaimo_bar.name
-    faux_args = nanaimo.Namespace()
-    artifacts = await nanaimo_bar.gather(faux_args)
+    artifacts = await nanaimo_bar.gather()
     assert artifacts is not None
     artifacts.eat()
     assert nanaimo_bar.loop.is_running()
@@ -46,8 +46,7 @@ async def test_another_nanaimo_bar(nanaimo_fixture_manager: nanaimo.FixtureManag
     nanaimo_bar = nanaimo_fixture_manager.get_fixture('nanaimo_bar')
     assert nanaimo_bar is not None
     assert 'nanaimo_bar' == nanaimo_bar.name
-    faux_args = nanaimo.Namespace()
-    artifacts = await nanaimo_bar.gather(faux_args)
+    artifacts = await nanaimo_bar.gather()
     assert artifacts is not None
     artifacts.eat()
     assert nanaimo_bar.loop.is_running()

@@ -40,10 +40,17 @@ class ConcurrentUart(AbstractAsyncSerial):
     WriteBufferEndOfTransmission = '\4'
 
     @classmethod
-    def new_default(cls, port: str, baudrate: int, loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> 'ConcurrentUart':
+    def new_default(cls,
+                    port: str,
+                    baudrate: int,
+                    loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> 'ConcurrentUart':
         return cls(serial.Serial(port=port, baudrate=baudrate, timeout=cls.DefaultSerialTimeoutSeconds), loop)
 
-    def __init__(self, serial_port: serial.Serial, loop: typing.Optional[asyncio.AbstractEventLoop] = None, eol: str = '\r\n', echo: bool = False) -> None:
+    def __init__(self,
+                 serial_port: serial.Serial,
+                 loop: typing.Optional[asyncio.AbstractEventLoop] = None,
+                 eol: str = '\r\n',
+                 echo: bool = False) -> None:
         super().__init__(loop)
         self._s = serial_port
         self._echo = echo
@@ -94,7 +101,7 @@ class ConcurrentUart(AbstractAsyncSerial):
         return self
 
     def __exit__(self,
-                 exception_type: typing.Optional[typing.Any],  # for python3.6+ this should be typing.Optional[typing.Type]
+                 exception_type: typing.Optional[typing.Any],
                  exception_value: typing.Optional[typing.Any],
                  traceback: typing.Optional[types.TracebackType]) -> None:
         self.stop()

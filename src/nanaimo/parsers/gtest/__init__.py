@@ -60,5 +60,7 @@ class Parser:
             self._logger.info('Detected successful test after %f seconds.', self._loop.time() - start_time)
         elif 2 == result:
             self._logger.warning('gtest.Parser timeout after %f seconds', self._loop.time() - start_time)
-        self._logger.debug('Processed %d lines. There were %d buffer full events reported.', line_count, uart.rx_buffer_overflows)
+        self._logger.debug('Processed %d lines. There were %d buffer full events reported.',
+                           line_count,
+                           uart.rx_buffer_overflows)
         return result

@@ -22,6 +22,7 @@ import asyncio
 import logging
 import sys
 import typing
+
 import nanaimo
 
 
@@ -32,55 +33,40 @@ class CreateAndGatherFunctor:
     Returns the result-code of the artifacts.
     """
 
-    def __init__(self, fixture_type: typing.Type['nanaimo.Fixture'], manager: nanaimo.FixtureManager, loop: asyncio.AbstractEventLoop):
+    def __init__(self,
+                 fixture_type: typing.Type['nanaimo.Fixture'],
+                 manager: nanaimo.FixtureManager,
+                 loop: asyncio.AbstractEventLoop):
         self._fixture_type = fixture_type
         self._manager = manager
         self._loop = loop
+        self._logger = logging.getLogger(fixture_type.get_canonical_name())
 
     async def __call__(self, args: nanaimo.Namespace) -> int:
-        fixture = self._fixture_type(self._manager, self._loop)
-        return int(await fixture.gather(args))
+        fixture = self._fixture_type(self._manager, args, self._loop)
+        artifacts = await fixture.gather()
+        artifacts.dump(self._logger)
+        return int(artifacts)
 
 
-class _ArgparseSubparserArguments(nanaimo.Arguments):
-    """
-    Nanaimo :class:`Arguments` that delegates to a wrapped
-    :class:`argparse.ArgumentParser` instance.
-    """
-    @classmethod
-    def _auto_brief(cls, documented: typing.Any, default_brief: str = '') -> str:
-        if documented is None or documented.__doc__ is None:
-            return default_brief
-        lines = documented.__doc__.strip().split('\n')  # type: typing.List[str]
-        if len(lines) > 1:
-            return '{}…'.format(lines[0])
-        else:
-            return lines[0]
+def _auto_brief(documented: typing.Any, default_brief: str = '') -> str:
+    if documented is None or documented.__doc__ is None:
+        return default_brief
+    lines = documented.__doc__.strip().split('\n')  # type: typing.List[str]
+    if len(lines) > 1:
+        return '{}…'.format(lines[0])
+    else:
+        return lines[0]
 
-    @classmethod
-    def visit_argparse(cls,
-                       manager: nanaimo.FixtureManager,
-                       subparsers: argparse._SubParsersAction,
-                       loop: asyncio.AbstractEventLoop) -> None:
-        for fixture_type in manager.fixture_types():
-            subparser = subparsers.add_parser(fixture_type.get_canonical_name(),
-                                              help=cls._auto_brief(fixture_type))  # type: 'argparse.ArgumentParser'
-            subparser.add_argument('--test-timeout-seconds',
-                                   default='30',
-                                   type=float,
-                                   help='''Test will be killed and marked as a failure after
-waiting for a result for this amount of time.''')
-            fixture_type.on_visit_test_arguments(cls(subparser))
-            subparser.set_defaults(func=CreateAndGatherFunctor(fixture_type, manager, loop))
 
-    def __init__(self, subparser: argparse.ArgumentParser):
-        self._subparser = subparser
-
-    def add_argument(self, *args: typing.Any, **kwargs: typing.Any) -> None:
-        self._subparser.add_argument(*args, **kwargs)
-
-    def set_defaults(self, **kwargs: typing.Any) -> None:
-        self._subparser.set_defaults(**kwargs)
+def _visit_argparse(manager: nanaimo.FixtureManager,
+                    subparsers: argparse._SubParsersAction,
+                    loop: asyncio.AbstractEventLoop) -> None:
+    for fixture_type in manager.fixture_types():
+        subparser = subparsers.add_parser(fixture_type.get_canonical_name(),
+                                          help=_auto_brief(fixture_type))  # type: 'argparse.ArgumentParser'
+        fixture_type.on_visit_test_arguments(nanaimo.Arguments(subparser))
+        subparser.set_defaults(func=CreateAndGatherFunctor(fixture_type, manager, loop))
 
 
 def _make_parser(loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> argparse.ArgumentParser:
@@ -110,9 +96,9 @@ def _make_parser(loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> arg
 
     subparsers = parser.add_subparsers(help='Available fixtures.')
 
-    pm = nanaimo.FixtureManager()
+    pm = nanaimo.PluggyFixtureManager()
 
-    _ArgparseSubparserArguments.visit_argparse(pm, subparsers, loop)  # type: ignore
+    _visit_argparse(pm, subparsers, loop)  # type: ignore
 
     return parser
 

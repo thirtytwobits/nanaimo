@@ -47,12 +47,16 @@ class Fixture(nanaimo.Fixture):
     def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
         nanaimo.connections.uart.ConcurrentUart.on_visit_test_arguments(arguments)
         nanaimo.instruments.jlink.ProgramUploaderJLink.on_visit_test_arguments(arguments)
+        arguments.add_argument('--gtest-timeout',
+                               default=30.0,
+                               type=float,
+                               help='Time to wait for the gtest to complete in seconds.')
 
-    async def gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
+    async def on_gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
 
         uploader = nanaimo.instruments.jlink.ProgramUploaderJLink()
         jlink_scripts = pathlib.Path(args.base_path).glob(args.jlink_scripts)
-        parser = nanaimo.parsers.gtest.Parser(args.test_timeout_seconds)
+        parser = nanaimo.parsers.gtest.Parser(args.gtest_timeout)
 
         result = 0
         with nanaimo.connections.uart.ConcurrentUart.new_default(args.port, args.port_speed) as monitor:
@@ -67,7 +71,7 @@ class Fixture(nanaimo.Fixture):
         return nanaimo.Artifacts(result)
 
 
-@nanaimo.FixtureManager.type_factory
+@nanaimo.PluggyFixtureManager.type_factory
 def get_fixture_type() -> typing.Type['nanaimo.Fixture']:
     return Fixture
 

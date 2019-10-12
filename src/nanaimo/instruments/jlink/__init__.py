@@ -17,11 +17,12 @@
 #                                        @&&&&&&&&&&%#######&@%
 #  nanaimo                                   (@&&&&####@@*
 #
-import nanaimo
 import asyncio
 import logging
 import pathlib
 import typing
+
+import nanaimo
 
 
 class ProgramUploaderJLink:

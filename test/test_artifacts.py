@@ -3,8 +3,9 @@
 # This software is distributed under the terms of the MIT License.
 #
 
-import nanaimo
 import pytest
+
+import nanaimo
 
 
 def test_create_artifacts() -> None:

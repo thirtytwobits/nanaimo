@@ -3,14 +3,14 @@
 # This software is distributed under the terms of the MIT License.
 #
 
-import typing
+import asyncio
+import ctypes
+import multiprocessing
+import os
 import pathlib
 import threading
 import types
-import multiprocessing
-import ctypes
-import os
-import asyncio
+import typing
 
 
 class Serial:
@@ -48,12 +48,14 @@ class Serial:
         self._fake_data_offset = 0
         self._loop_fake_data = loop_fake_data
         self._read_condition = threading.Condition()
+        self._lines_written = 0
+        self._lines_received = 0
 
     def reset_fake_input(self) -> None:
         self._fake_data_index = 0
         self._fake_data_offset = 0
 
-    def read(self) -> typing.ByteString:
+    def read(self) -> bytes:
         while True:
             if self._fake_data_index >= len(self._fake_data):
                 if self._loop_fake_data:
@@ -70,12 +72,20 @@ class Serial:
             else:
                 break
 
-        return_bytes = fake_line[self._fake_data_offset].encode('utf-8')
+        return_char = fake_line[self._fake_data_offset]
+        if return_char == self._eol:
+            self._lines_received += 1
+            with self._read_condition:
+                # Put a little speed bump for each line.
+                self._read_condition.wait(timeout=.01)
+
+        return_bytes = return_char.encode('utf-8')
         self._fake_data_offset += 1
         return return_bytes
 
-    def write(self, data: typing.ByteString) -> None:
-        pass
+    def write(self, data: bytes) -> None:
+        text = data.decode('utf-8')
+        self._lines_written += text.count(self._eol)
 
 
 class FileLogger:
@@ -97,7 +107,8 @@ class FileLogger:
         self._run = multiprocessing.Value('i', 1)
         args = multiprocessing.Array(self.LogSpec,
                                      [(str(dummy_source), str(log_file), cadence_seconds, echo)])
-        self._write_process = multiprocessing.Process(target=self._write_log, args=(self._write_condition, self._run, args))
+        self._write_process = multiprocessing.Process(target=self._write_log,
+                                                      args=(self._write_condition, self._run, args))
 
     async def wait_for_file(self) -> None:
         while not self._log_file.exists():
@@ -108,7 +119,8 @@ class FileLogger:
         return self
 
     def __exit__(self,
-                 exception_type: typing.Optional[typing.Any],  # for python3.6+ this should be typing.Optional[typing.Type]
+                 # for python3.6+ this should be typing.Optional[typing.Type]
+                 exception_type: typing.Optional[typing.Any],
                  exception_value: typing.Optional[typing.Any],
                  traceback: typing.Optional[types.TracebackType]) -> None:
         self._run.value = 0
