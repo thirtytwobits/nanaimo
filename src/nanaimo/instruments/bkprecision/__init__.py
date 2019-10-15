@@ -124,7 +124,7 @@ class Series1900BUart(nanaimo.Fixture):
             +=========+==================================+==================================================+
             | '1'     | Turn on output voltage           | 'OK' or error text.                              |
             +---------+----------------------------------+--------------------------------------------------+
-            | '2''    | Turn off output voltage          | 'OK' or error text                               |
+            | '0'     | Turn off output voltage          | 'OK' or error text                               |
             +---------+----------------------------------+--------------------------------------------------+
             | 'r'     | Send a stream of <cr> characters | (NA)                                             |
             +---------+----------------------------------+--------------------------------------------------+
@@ -184,7 +184,7 @@ class Series1900BUart(nanaimo.Fixture):
         if args.bk_command == '1':
             await self._up_or_down(True, uart, args, artifacts)
         elif args.bk_command == '0':
-            await self._up_or_down(True, uart, args, artifacts)
+            await self._up_or_down(False, uart, args, artifacts)
         elif args.bk_command == 'r':
             _, artifacts.result_code = await self._do_command(uart, '\r\r\r\r', args.bk_command_timeout)
         elif args.bk_command == '?':
