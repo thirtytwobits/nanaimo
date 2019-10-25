@@ -2,10 +2,11 @@
 # Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # This software is distributed under the terms of the MIT License.
 #
+"""
+TODO: Move all of this into contest.py
+"""
 import asyncio
-import os
 import pathlib
-import subprocess
 import typing
 
 import nanaimo
@@ -317,25 +318,6 @@ FAKE_TEST_FAILURE = '''[----------] 20 tests from SaturatedMathTest/6 (signed 8)
 [==========] 140 tests from 7 test suites ran. (0 ms total)
 [  FAILED  ] 140 tests.
 '''.splitlines()
-
-
-def run_nait(args: typing.List[str],
-             check_result: bool = True,
-             env: typing.Optional[typing.Dict[str, str]] = None) -> subprocess.CompletedProcess:
-    """
-    Helper to invoke nait for unit testing within the proper python coverage wrapper.
-    """
-    root_dir = pathlib.Path(__file__).parent.parent.parent
-    setup = root_dir / pathlib.Path('setup').with_suffix('.cfg')
-    coverage_args = ['coverage', 'run', '--parallel-mode', '--rcfile={}'.format(str(setup))]
-    nait = root_dir / pathlib.Path('src') / pathlib.Path('nait')
-    this_env = os.environ.copy()
-    if env is not None:
-        this_env.update(env)
-    return subprocess.run(coverage_args + [str(nait)] + args,
-                          check=check_result,
-                          stdout=subprocess.PIPE,
-                          env=this_env)
 
 
 def get_mock_JLinkExe() -> pathlib.Path:
