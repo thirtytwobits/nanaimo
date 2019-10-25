@@ -39,8 +39,14 @@ class Fixture(nanaimo.Fixture):
 
     @classmethod
     def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
-        arguments.add_argument('--saleae-port', default='10429', help='TCP port for the logic socket server.')
-        arguments.add_argument('--saleae-host', default='localhost', help='hostname for the logic socket server.')
+        arguments.add_argument('--saleae-port',
+                               enable_default_from_environ=True,
+                               default='10429',
+                               help='TCP port for the logic socket server.')
+        arguments.add_argument('--saleae-host',
+                               enable_default_from_environ=True,
+                               default='localhost',
+                               help='hostname for the logic socket server.')
 
     async def on_gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
         self.logger.info('about to connect to {}:{}'.format(args.saleae_host, args.saleae_port))

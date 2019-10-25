@@ -3,6 +3,7 @@
 # This software is distributed under the terms of the MIT License.
 #
 
+import argparse
 import asyncio
 import os
 import typing
@@ -204,3 +205,20 @@ async def test_countdown_sleep(MockFixtureManager: typing.Any, event_loop: async
     subject = fixtures.DummyFixture(nanaimo.FixtureManager(), loop=event_loop)
 
     await subject.countdown_sleep(5.3)
+
+
+def test_enable_default_from_environ() -> None:
+    a = nanaimo.Arguments(argparse.ArgumentParser())
+
+    a.add_argument('yep', enable_default_from_environ=False)
+
+    with pytest.raises(ValueError):
+        a.add_argument('nope', enable_default_from_environ=True)
+
+    with pytest.raises(ValueError):
+        a.add_argument('-n', enable_default_from_environ=True)
+
+    a.add_argument('--yep', enable_default_from_environ=True)
+
+    with pytest.raises(RuntimeError):
+        a.add_argument('--yep', enable_default_from_environ=True)

@@ -28,7 +28,9 @@ import argparse
 import asyncio
 import logging
 import math
+import os
 import typing
+import weakref
 
 import pluggy
 
@@ -53,14 +55,118 @@ class Arguments:
         or a :class:`argparse.ArgumentParser`
     """
 
+    _env_variable_index = weakref.WeakKeyDictionary()  # type: weakref.WeakKeyDictionary
+
     def __init__(self, inner_arguments: typing.Any):
         self._inner = inner_arguments
 
     def add_argument(self, *args: typing.Any, **kwargs: typing.Any) -> None:
+        """
+        This method invokes :meth:`argparse.ArgumentParser.add_argument` but with one additional argument:
+        ``enable_default_from_environ``. If this is provided as True then a default value will be taken from
+        an environment variable derived from the long form of the argument:
+
+        .. invisible-code-block: python
+            from nanaimo import Arguments
+            from unittest.mock import MagicMock, ANY
+            import argparse
+            import os
+
+            parser = argparse.ArgumentParser()
+            parser.add_argument = MagicMock()
+
+        .. code-block:: python
+
+            # Using...
+            long_arg = '--baud-rate'
+
+            # ...the environment variable looked for will be:
+            environment_var_name = 'NANAIMO_BAUD_RATE'
+
+            # If we set the environment variable...
+            os.environ[environment_var_name] = '115200'
+
+            a = Arguments(parser)
+
+            # ...and provide a default...
+            a.add_argument('--baud-rate',
+                           default=9600,
+                           type=int,
+                           enable_default_from_environ=True,
+                           help='Will be 9600 unless argument is provided.')
+
+            # ...the actual default value will be 115200
+
+        .. invisible-code-block: python
+
+            parser.add_argument.assert_called_once_with('--baud-rate', default=115200, type=int, help=ANY)
+
+            add_argument_call_args = parser.add_argument.call_args[1]
+
+        .. code-block:: python
+
+            assert add_argument_call_args['default'] == 115200
+
+        """
+
+        if 'enable_default_from_environ' in kwargs:
+            if kwargs['enable_default_from_environ']:
+                self._handle_enable_default_from_environ(args, kwargs)
+            del kwargs['enable_default_from_environ']
+
         if isinstance(self._inner, argparse.ArgumentParser):
             self._inner.add_argument(*args, **kwargs)
         else:
             self._inner.addoption(*args, **kwargs)
+
+    def _handle_enable_default_from_environ(self, args: typing.Tuple, kwargs: typing.Dict) -> None:
+
+        if len(args) == 0:
+            raise ValueError('No positional arguments')
+
+        if len(args) > 1:
+            longform = args[0] if args[0].startswith('--') else args[1]
+        else:
+            longform = args[0]
+
+        if not longform.startswith('--'):
+            raise ValueError('Cannot synthesize environment variable without a long-form argument.')
+        name = longform[2:]
+
+        env_variable = 'NANAIMO_{}'.format(name.upper().replace('-', '_'))
+        try:
+            parser_map = self._env_variable_index[self._inner]
+            if env_variable in parser_map:
+                raise RuntimeError('{} (derived from {}) was already derived from {}!'
+                                   .format(env_variable, name,
+                                           parser_map[env_variable]))
+            parser_map[self._inner][env_variable] = name
+        except KeyError:
+            self._env_variable_index[self._inner] = {env_variable: name}
+        self._set_default_from_environment(env_variable, args, kwargs)
+
+    @classmethod
+    def _set_default_from_environment(cls, env_variable: str, args: typing.Tuple, kwargs: typing.Dict) -> None:
+        try:
+            kwargs['default'] = os.environ.get(env_variable, kwargs['default'])
+        except KeyError:
+            kwargs['default'] = os.environ.get(env_variable, None)
+
+        if kwargs['default'] is not None:
+            try:
+                kwargs['default'] = kwargs['type'](kwargs['default'])
+            except KeyError:
+                pass
+
+        if env_variable in os.environ:
+            additional_help = 'Default value {} obtained from environment variable {}.'\
+                .format(os.environ[env_variable], env_variable)
+        else:
+            additional_help = 'Set {} in the environment to override default.'.format(env_variable)
+        try:
+            kwargs['help'] = kwargs['help'] + '\n' + additional_help
+        except KeyError:
+            kwargs['help'] = additional_help
 
 
 class Namespace:

@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# PYTHON_ARGCOMPLETE_OK
 #
 # Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # This software is distributed under the terms of the MIT License.
@@ -22,6 +24,8 @@ import asyncio
 import logging
 import sys
 import typing
+
+import argcomplete
 
 import nanaimo
 
@@ -94,7 +98,7 @@ def _make_parser(loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> arg
     parser.add_argument('--verbose', '-v', action='count',
                         help='verbosity level (-v, -vv)')
 
-    subparsers = parser.add_subparsers(help='Available fixtures.')
+    subparsers = parser.add_subparsers(dest='fixture', help='Available fixtures.')
 
     pm = nanaimo.PluggyFixtureManager()
 
@@ -120,6 +124,7 @@ def main() -> int:
     loop = asyncio.get_event_loop()
 
     parser = _make_parser(loop)
+    argcomplete.autocomplete(parser)
     args = parser.parse_args()
 
     _setup_logging(args)

@@ -97,19 +97,24 @@ class Series1900BUart(nanaimo.Fixture):
     @classmethod
     def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
         arguments.add_argument('--bk-port',
+                               enable_default_from_environ=True,
                                help='The port the BK Precision power supply is connected to.')
         arguments.add_argument('--bk-command', '--BC',
                                help='command', default='?')
         arguments.add_argument('--bk-command-timeout',
+                               enable_default_from_environ=True,
                                help='time out for individual commands.', default=4.0)
         arguments.add_argument('--bk-target-voltage',
+                               enable_default_from_environ=True,
                                type=float,
                                help='The target voltage')
         arguments.add_argument('--bk-target-voltage-threshold-rising',
+                               enable_default_from_environ=True,
                                type=float,
                                default=0.2,
                                help='Voltage offset from the target voltage to trigger on when the voltage is rising.')
         arguments.add_argument('--bk-target-voltage-threshold-falling',
+                               enable_default_from_environ=True,
                                type=float,
                                default=0.01,
                                help='Voltage offset from the target voltage to trigger on when the voltage is falling.')
