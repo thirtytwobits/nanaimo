@@ -78,6 +78,8 @@ import pytest
 
 import nanaimo
 
+from .config import ArgumentDefaults
+
 _fixture_manager = None  # type: typing.Optional[nanaimo.FixtureManager]
 """
 Pytest plugin singleton. The first time our pytest plugin is invoked
@@ -103,14 +105,17 @@ def create_pytest_fixture(pytest_request: typing.Any, fixture_type: typing.Type[
         :class:`FixtureManager`.
     """
     fm = _get_default_fixture_manager()
-    return fm.create_fixture(fixture_type.get_canonical_name(), nanaimo.Namespace(pytest_request.config.option))
+    args = pytest_request.config.option
+    args_ns = nanaimo.Namespace(args, ArgumentDefaults(args))
+    return fm.create_fixture(fixture_type.get_canonical_name(), args_ns)
 
 
 def pytest_addoption(parser) -> None:  # type: ignore
     manager = _get_default_fixture_manager()
+    nanaimo_defaults = nanaimo.config.ArgumentDefaults()
     for fixture_type in manager.fixture_types():
         group = parser.getgroup(fixture_type.get_canonical_name())
-        fixture_type.on_visit_test_arguments(nanaimo.Arguments(group))
+        fixture_type.on_visit_test_arguments(nanaimo.Arguments(group, nanaimo_defaults))
 
 
 @pytest.fixture

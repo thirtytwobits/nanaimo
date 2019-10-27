@@ -2,11 +2,16 @@
 # Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # This software is distributed under the terms of the MIT License.
 #
-import typing
-import pathlib
-import pytest
-import subprocess
 import os
+import pathlib
+import subprocess
+import typing
+
+import pytest
+
+import fixtures
+import nanaimo
+from nanaimo.config import ArgumentDefaults
 
 
 @pytest.fixture
@@ -29,3 +34,44 @@ def run_nait(request):  # type: ignore
                               stdout=subprocess.PIPE,
                               env=this_env)
     return _run_nait
+
+
+@pytest.fixture
+def paths_for_test(request):  # type: ignore
+    return fixtures.Paths(request.module.__file__)
+
+
+@pytest.fixture
+def test_config(request):  # type: ignore
+    return pathlib.Path(fixtures.__file__).parent / pathlib.Path('test').with_suffix('.cfg')
+
+
+@pytest.fixture
+def local_setup_cfg(request):  # type: ignore
+    return pathlib.Path(fixtures.__file__).parent.parent.parent / pathlib.Path('setup').with_suffix('.cfg')
+
+
+@pytest.fixture
+def nanaimo_defaults(request):  # type: ignore
+    return ArgumentDefaults(pathlib.Path(fixtures.__file__).parent / pathlib.Path('test').with_suffix('.cfg'))
+
+
+@pytest.fixture
+def dummy_nanaimo_fixture(request):  # type: ignore
+    return fixtures.DummyFixture(nanaimo.FixtureManager())
+
+
+@pytest.fixture
+def mock_JLinkExe(request):  # type: ignore
+    return pathlib.Path(fixtures.__file__).parent / pathlib.Path('mock_JLinkExe').with_suffix('.py')
+
+
+@pytest.fixture
+def s32K144_jlink_script(request):  # type: ignore
+    jlink_file = pathlib.Path('test_math_saturation_loadfile_swd').with_suffix('.jlink')
+    return pathlib.Path(fixtures.__file__).parent / jlink_file
+
+
+@pytest.fixture
+def s32K144_jlink_scripts(request):  # type: ignore
+    return pathlib.Path(fixtures.__file__).parent.glob('*.jlink')

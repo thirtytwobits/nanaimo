@@ -3,13 +3,12 @@
 # This software is distributed under the terms of the MIT License.
 #
 """
-TODO: Move all of this into contest.py
+Contains data files used in tests. Use conftest.py for fixtures.
 """
+import nanaimo
+import typing
 import asyncio
 import pathlib
-import typing
-
-import nanaimo
 
 FAKE_TEST_SUCCESS = '''[==========] Running 140 tests from 7 test suites.
 [----------] Global test environment set-up.
@@ -320,16 +319,20 @@ FAKE_TEST_FAILURE = '''[----------] 20 tests from SaturatedMathTest/6 (signed 8)
 '''.splitlines()
 
 
-def get_mock_JLinkExe() -> pathlib.Path:
-    return pathlib.Path(__file__).parent / pathlib.Path('mock_JLinkExe').with_suffix('.py')
+class DummyFixture(nanaimo.Fixture):
 
+    def __init__(self,
+                 manager: nanaimo.FixtureManager,
+                 args: nanaimo.Namespace = nanaimo.Namespace(),
+                 loop: typing.Optional[asyncio.AbstractEventLoop] = None):
+        super().__init__(manager, args, loop)
 
-def get_s32K144_jlink_script() -> pathlib.Path:
-    return pathlib.Path(__file__).parent / pathlib.Path('test_math_saturation_loadfile_swd').with_suffix('.jlink')
+    @classmethod
+    def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
+        pass
 
-
-def get_s32K144_jlink_scripts() -> typing.Iterable[pathlib.Path]:
-    return pathlib.Path(__file__).parent.glob('*.jlink')
+    async def on_gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
+        return nanaimo.Artifacts(0)
 
 
 class Paths:
@@ -376,19 +379,3 @@ class Paths:
         if not path_dir.exists() or not path_dir.is_dir():
             raise RuntimeWarning('Test directory "{}" was not setup properly. Tests may fail.'.format(path_dir))
         return path_dir
-
-
-class DummyFixture(nanaimo.Fixture):
-
-    def __init__(self,
-                 manager: nanaimo.FixtureManager,
-                 args: nanaimo.Namespace = nanaimo.Namespace(),
-                 loop: typing.Optional[asyncio.AbstractEventLoop] = None):
-        super().__init__(manager, args, loop)
-
-    @classmethod
-    def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
-        pass
-
-    async def on_gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
-        return nanaimo.Artifacts(0)

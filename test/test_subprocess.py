@@ -12,11 +12,6 @@ import pytest
 import fixtures
 
 
-@pytest.fixture
-def paths_for_test():  # type: ignore
-    return fixtures.Paths(__file__)
-
-
 class DummyProtocol(asyncio.SubprocessProtocol):
 
     def __init__(self, exit_future: asyncio.Future):
