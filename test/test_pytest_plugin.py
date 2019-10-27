@@ -13,7 +13,7 @@ def test_nanaimo_fixture_manager(nanaimo_fixture_manager: nanaimo.FixtureManager
     Ensure the fixture manager ... er; fixture works as expected.
     """
     assert type(nanaimo_fixture_manager) == nanaimo.PluggyFixtureManager
-    gtest_fixture = nanaimo_fixture_manager.create_fixture('gtest_over_jlink')
+    gtest_fixture = nanaimo_fixture_manager.create_fixture('gtest_over_jlink', nanaimo.Namespace())
     assert isinstance(gtest_fixture, nanaimo.Fixture)
 
 

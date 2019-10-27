@@ -28,6 +28,7 @@ import typing
 import argcomplete
 
 import nanaimo
+from nanaimo.config import ArgumentDefaults
 
 
 class CreateAndGatherFunctor:
@@ -65,15 +66,17 @@ def _auto_brief(documented: typing.Any, default_brief: str = '') -> str:
 
 def _visit_argparse(manager: nanaimo.FixtureManager,
                     subparsers: argparse._SubParsersAction,
-                    loop: asyncio.AbstractEventLoop) -> None:
+                    loop: asyncio.AbstractEventLoop,
+                    defaults: typing.Optional[ArgumentDefaults]) -> None:
     for fixture_type in manager.fixture_types():
         subparser = subparsers.add_parser(fixture_type.get_canonical_name(),
                                           help=_auto_brief(fixture_type))  # type: 'argparse.ArgumentParser'
-        fixture_type.on_visit_test_arguments(nanaimo.Arguments(subparser))
+        fixture_type.on_visit_test_arguments(nanaimo.Arguments(subparser, defaults))
         subparser.set_defaults(func=CreateAndGatherFunctor(fixture_type, manager, loop))
 
 
-def _make_parser(loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> argparse.ArgumentParser:
+def _make_parser(loop: typing.Optional[asyncio.AbstractEventLoop] = None,
+                 defaults: typing.Optional[ArgumentDefaults] = None) -> argparse.ArgumentParser:
     """
     Defines the command-line interface. Provided as a separate factory method to
     support sphinx-argparse documentation.
@@ -86,6 +89,9 @@ def _make_parser(loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> arg
 ----
 '''
 
+    if defaults is None:
+        defaults = ArgumentDefaults()
+
     parser = argparse.ArgumentParser(
         description='Run tests against hardware.',
         epilog=epilog,
@@ -95,6 +101,8 @@ def _make_parser(loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> arg
 
     parser.add_argument('--version', action='version', version=__version__)
 
+    parser.add_argument('--rcfile', help='Path to a default values configuration file.'
+                                         'See nanaimo.Namespace for details.')
     parser.add_argument('--verbose', '-v', action='count',
                         help='verbosity level (-v, -vv)')
 
@@ -102,7 +110,7 @@ def _make_parser(loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> arg
 
     pm = nanaimo.PluggyFixtureManager()
 
-    _visit_argparse(pm, subparsers, loop)  # type: ignore
+    _visit_argparse(pm, subparsers, loop, defaults)  # type: ignore
 
     return parser
 
@@ -122,15 +130,18 @@ def main() -> int:
     """
 
     loop = asyncio.get_event_loop()
+    defaults = ArgumentDefaults()
 
-    parser = _make_parser(loop)
+    parser = _make_parser(loop, defaults)
     argcomplete.autocomplete(parser)
     args = parser.parse_args()
+    defaults.set_args(args)
 
     _setup_logging(args)
 
     if hasattr(args, 'func'):
-        result = loop.run_until_complete(args.func(nanaimo.Namespace(args)))
+        args_ns = nanaimo.Namespace(args, defaults)
+        result = loop.run_until_complete(args.func(args_ns))
         try:
             return int(result)
         except ValueError:

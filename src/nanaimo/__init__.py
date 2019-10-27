@@ -28,11 +28,11 @@ import argparse
 import asyncio
 import logging
 import math
-import os
 import typing
-import weakref
 
 import pluggy
+
+from .config import ArgumentDefaults
 
 
 class AssertionError(RuntimeError):
@@ -53,12 +53,12 @@ class Arguments:
 
     :param inner_arguments: Either a pytest group (unpublished type returned from :meth:`pytest.Parser.getgroup`)
         or a :class:`argparse.ArgumentParser`
+    :param defaults: Optional provider of default values for arguments.
     """
 
-    _env_variable_index = weakref.WeakKeyDictionary()  # type: weakref.WeakKeyDictionary
-
-    def __init__(self, inner_arguments: typing.Any):
+    def __init__(self, inner_arguments: typing.Any, defaults: typing.Optional[ArgumentDefaults] = None):
         self._inner = inner_arguments
+        self._defaults = defaults
 
     def add_argument(self, *args: typing.Any, **kwargs: typing.Any) -> None:
         """
@@ -69,11 +69,13 @@ class Arguments:
         .. invisible-code-block: python
             from nanaimo import Arguments
             from unittest.mock import MagicMock, ANY
+            from nanaimo.config import ArgumentDefaults
             import argparse
             import os
 
             parser = argparse.ArgumentParser()
             parser.add_argument = MagicMock()
+            config = ArgumentDefaults()
 
         .. code-block:: python
 
@@ -86,7 +88,7 @@ class Arguments:
             # If we set the environment variable...
             os.environ[environment_var_name] = '115200'
 
-            a = Arguments(parser)
+            a = Arguments(parser, config)
 
             # ...and provide a default...
             a.add_argument('--baud-rate',
@@ -109,85 +111,128 @@ class Arguments:
 
         """
 
-        if 'enable_default_from_environ' in kwargs:
-            if kwargs['enable_default_from_environ']:
-                self._handle_enable_default_from_environ(args, kwargs)
-            del kwargs['enable_default_from_environ']
+        if self._defaults is not None:
+            self._defaults.populate_default(self._inner, args, kwargs)
 
         if isinstance(self._inner, argparse.ArgumentParser):
             self._inner.add_argument(*args, **kwargs)
         else:
             self._inner.addoption(*args, **kwargs)
 
-    def _handle_enable_default_from_environ(self, args: typing.Tuple, kwargs: typing.Dict) -> None:
-
-        if len(args) == 0:
-            raise ValueError('No positional arguments')
-
-        if len(args) > 1:
-            longform = args[0] if args[0].startswith('--') else args[1]
-        else:
-            longform = args[0]
-
-        if not longform.startswith('--'):
-            raise ValueError('Cannot synthesize environment variable without a long-form argument.')
-        name = longform[2:]
-
-        env_variable = 'NANAIMO_{}'.format(name.upper().replace('-', '_'))
-        try:
-            parser_map = self._env_variable_index[self._inner]
-            if env_variable in parser_map:
-                raise RuntimeError('{} (derived from {}) was already derived from {}!'
-                                   .format(env_variable, name,
-                                           parser_map[env_variable]))
-            parser_map[self._inner][env_variable] = name
-        except KeyError:
-            self._env_variable_index[self._inner] = {env_variable: name}
-        self._set_default_from_environment(env_variable, args, kwargs)
-
-    @classmethod
-    def _set_default_from_environment(cls, env_variable: str, args: typing.Tuple, kwargs: typing.Dict) -> None:
-        try:
-            kwargs['default'] = os.environ.get(env_variable, kwargs['default'])
-        except KeyError:
-            kwargs['default'] = os.environ.get(env_variable, None)
-
-        if kwargs['default'] is not None:
-            try:
-                kwargs['default'] = kwargs['type'](kwargs['default'])
-            except KeyError:
-                pass
-
-        if env_variable in os.environ:
-            additional_help = 'Default value {} obtained from environment variable {}.'\
-                .format(os.environ[env_variable], env_variable)
-        else:
-            additional_help = 'Set {} in the environment to override default.'.format(env_variable)
-        try:
-            kwargs['help'] = kwargs['help'] + '\n' + additional_help
-        except KeyError:
-            kwargs['help'] = additional_help
-
 
 class Namespace:
     """
     Generic object that acts like :class:`argparse.Namespace` but can be created using pytest
     plugin arguments as well.
+
+    If :class:`nanaimo.config.ArgumentDefaults` are used with the :class:`Arguments` and this class then a given
+    argument's value will be resolved in the following order:
+
+        1. provided value
+        2. config file specified by --rcfile argument.
+        3. nanaimo.cfg in user directory
+        4. nanaimo.cfg in system directory
+        5. default from environment (if ``enable_default_from_environ`` was set for the argument)
+        6. default specified for the argument.
+
+    This is accomplished by first rewriting the defaults when attributes are defined on the :class:`Arguments`
+    class and then capturing missing attributes on this class and looking up default values from configuration
+    files.
+
+    For lookup steps involving configuration files (where :class:`configparser.ConfigParser` is used internally)
+    the lookup will search the configuration space using underscores ``_`` as namespace separators. this search
+    will proceed as follows:
+
+    .. invisible-code-block: python
+
+        from nanaimo.config import ArgumentDefaults
+        from unittest.mock import MagicMock, ANY
+
+        argument_defaults = ArgumentDefaults()
+        argument_defaults._configparser = MagicMock()
+
+        values = MagicMock()
+        count = 0
+
+        def seventh_times_a_charm(_):
+            global count, values
+            count += 1
+            if count < 7:
+                raise KeyError
+            return values
+
+        argument_defaults._configparser.__getitem__.side_effect = seventh_times_a_charm
+
+    .. code-block:: python
+
+        # given
+        key = 'a_b_c_d'
+
+        # the following lookups will occur
+        config_lookups = {
+            'nanaimo:a_b_c': 'd',
+            'nanaimo:a_b': 'c_d',
+            'nanaimo:a': 'b_c_d',
+            'a_b_c': 'd',
+            'a_b': 'c_d',
+            'a': 'b_c_d',
+            'nanaimo': 'a_b_c_d'
+        }
+
+        # when using an ArgumentDefaults instance
+        _ = argument_defaults[key]
+
+    .. invisible-code-block: python
+
+        for item in config_lookups.items():
+            argument_defaults._configparser.__getitem__.assert_any_call(item[0])
+        values.__getitem__.assert_any_call('a_b_c_d')
+
+    So for a given configuration file::
+
+        [nanaimo]
+        a_b_c_d = 1
+
+        [a]
+        b_c_d = 2
+
+    the value ``2`` under the ``a`` group will override (i.e. mask) the value ``1`` under the ``nanaimo`` group.
+
+    .. note ::
+
+        A specific example:
+
+        - ``--bk-port <value>`` – if provided on the commandline will always override everything.
+        - ``[bk] port = <value>`` – in a config file will be found next if no argument was given on the commandline.
+        - ``NANAIMO_BK_PORT`` - set in the environment will be used if no configuration was provided because
+          the :mod:`nanaimo.instruments.bkprecision` module defines the ``bk-port`` argument with
+          ``enable_default_from_environ`` set.
+
     """
 
-    def __init__(self, parent: typing.Optional[typing.Any] = None):
+    def __init__(self,
+                 parent: typing.Optional[typing.Any] = None,
+                 overrides: typing.Optional[ArgumentDefaults] = None):
+        self._overrides = overrides
         if parent is not None:
             for key in vars(parent):
                 setattr(self, key, getattr(parent, key))
 
     def __getattr__(self, key: str) -> typing.Any:
-        return self.__dict__[key]
+        try:
+            return self.__dict__[key]
+        except KeyError:
+            if self._overrides is None:
+                raise
+        return self._overrides[key]
 
     def __contains__(self, key: str) -> typing.Any:
         if key in self.__dict__:
             return True
-        else:
+        elif self._overrides is None:
             return False
+        else:
+            return key in self._overrides
 
     def merge(self, **kwargs: typing.Any) -> 'Namespace':
         """
@@ -215,7 +260,7 @@ class Namespace:
         :return: A new namespace with the contents of this object and any values provided as
             kwargs overwriting the values in this instance where the keys are the same.
         """
-        merged = Namespace(self)
+        merged = Namespace(self, self._overrides)
         for key in kwargs:
             setattr(merged, key, kwargs[key])
         return merged
@@ -536,7 +581,7 @@ class FixtureManager:
 
     def create_fixture(self,
                        fixture_name: str,
-                       args: Namespace = Namespace(),
+                       args: Namespace,
                        loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> Fixture:
         raise NotImplementedError('The base class is an incomplete implementation.')
 
@@ -570,7 +615,7 @@ class PluggyFixtureManager(FixtureManager):
 
     def create_fixture(self,
                        fixture_name: str,
-                       args: Namespace = Namespace(),
+                       args: Namespace,
                        loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> Fixture:
         for fixture_type in self._pluginmanager.hook.get_fixture_type():
             if fixture_type.get_canonical_name() == fixture_name:

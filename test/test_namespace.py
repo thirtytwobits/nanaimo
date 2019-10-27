@@ -3,9 +3,13 @@
 # This software is distributed under the terms of the MIT License.
 #
 
+import configparser
+import pathlib
+
 import pytest
 
 import nanaimo
+from nanaimo.config import ArgumentDefaults
 
 
 def test_create_orphan() -> None:
@@ -61,3 +65,37 @@ def test_merge() -> None:
     assert 'yes' == subject.oldparent
     assert 'yes' == subject.merged
     assert 'subject' == subject.name
+
+
+def test_overrides(test_config: pathlib.Path) -> None:
+    """
+    Verify that we can provide overrides for namespace attributes.
+    """
+    fake_args = nanaimo.Namespace()
+    setattr(fake_args, 'rcfile', str(test_config))
+    defaults = ArgumentDefaults()
+    subject = nanaimo.Namespace(None, defaults)
+    with pytest.raises(KeyError):
+        assert subject.test_attr_yup == 'yup'
+
+    defaults.set_args(fake_args)
+    setattr(subject, 'test_attr_nope', 'yup')
+    assert subject.test_attr_yup == 'yup'
+    assert subject.test_attr_nope == 'yup'
+
+
+def test_setup_cfg(local_setup_cfg: pathlib.Path) -> None:
+    """
+    Verify we can embed Nanaimo configuration in a setup.cfg file.
+    """
+
+    # Quick self-check since we don't trust ourselves.
+    parser = configparser.ConfigParser()
+    assert parser.read([str(local_setup_cfg)]) == [str(local_setup_cfg)]
+    assert parser['nanaimo']['test_cfg'] == '1'
+
+    fake_args = nanaimo.Namespace()
+    setattr(fake_args, 'rcfile', str(local_setup_cfg))
+    defaults = ArgumentDefaults(fake_args)
+    subject = nanaimo.Namespace(None, defaults)
+    assert subject.test_cfg == '2'
