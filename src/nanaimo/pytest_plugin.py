@@ -106,7 +106,7 @@ def create_pytest_fixture(pytest_request: typing.Any, fixture_type: typing.Type[
     """
     fm = _get_default_fixture_manager()
     args = pytest_request.config.option
-    args_ns = nanaimo.Namespace(args, ArgumentDefaults(args))
+    args_ns = nanaimo.Namespace(args, ArgumentDefaults(args), allow_none_values=False)
     return fm.create_fixture(fixture_type.get_canonical_name(), args_ns)
 
 
