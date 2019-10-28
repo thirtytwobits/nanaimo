@@ -208,15 +208,25 @@ class Namespace:
           the :mod:`nanaimo.instruments.bkprecision` module defines the ``bk-port`` argument with
           ``enable_default_from_environ`` set.
 
+    :param parent: A namespace-like object to inherit attributes from.
+    :type parent: typing.Optional[typing.Any]
+    :param overrides: Defaults to use if a requested attribute is not available on this object.
+    :type overrides: typing.Optional[ArgumentDefaults]
+    :param allow_none_values: If True then an attribute with a None value is considered valid otherwise
+        any attribute that is None will cause the Namespace to search for a non-None value in the defaults.
+    :type allow_none_values: bool
     """
 
     def __init__(self,
                  parent: typing.Optional[typing.Any] = None,
-                 overrides: typing.Optional[ArgumentDefaults] = None):
+                 overrides: typing.Optional[ArgumentDefaults] = None,
+                 allow_none_values: bool = True):
         self._overrides = overrides
         if parent is not None:
             for key in vars(parent):
-                setattr(self, key, getattr(parent, key))
+                parent_value = getattr(parent, key)
+                if allow_none_values or parent_value is not None:
+                    setattr(self, key, parent_value)
 
     def __getattr__(self, key: str) -> typing.Any:
         try:

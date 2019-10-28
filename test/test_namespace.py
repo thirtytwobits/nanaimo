@@ -99,3 +99,28 @@ def test_setup_cfg(local_setup_cfg: pathlib.Path) -> None:
     defaults = ArgumentDefaults(fake_args)
     subject = nanaimo.Namespace(None, defaults)
     assert subject.test_cfg == '2'
+
+
+def test_setup_cfg_with_merge(local_setup_cfg: pathlib.Path) -> None:
+    """
+    Make sure merge acts as expected.
+    """
+    fake_args = nanaimo.Namespace()
+    setattr(fake_args, 'rcfile', str(local_setup_cfg))
+    defaults = ArgumentDefaults(fake_args)
+    subject = nanaimo.Namespace(None, defaults).merge()
+    assert subject.test_cfg == '2'
+
+
+def test_setup_cfg_with_none_value(local_setup_cfg: pathlib.Path) -> None:
+    """
+    Make sure None values are handled properly when looking for overrides.
+    """
+    fake_args = nanaimo.Namespace()
+    setattr(fake_args, 'rcfile', str(local_setup_cfg))
+    setattr(fake_args, 'test_cfg', None)
+    defaults = ArgumentDefaults(fake_args)
+    subject0 = nanaimo.Namespace(fake_args, defaults, allow_none_values=True)
+    assert subject0.test_cfg is None
+    subject1 = nanaimo.Namespace(fake_args, defaults, allow_none_values=False)
+    assert subject1.test_cfg == '2'

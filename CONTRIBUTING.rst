@@ -54,6 +54,34 @@ And to run a single test for a single version of python do::
 
     tox -e py36-test -- -k test_program_uploader_failure
 
+
+Sybil Doctest
+================================================
+
+This project makes extensive use of `Sybil <https://sybil.readthedocs.io/en/latest/>`_ doctests.
+These take the form of docstrings with a structure like thus::
+
+    .. invisible-code-block: python
+
+        from foo import bar
+
+    .. code-block:: python
+
+        # Use bar method to transform baz
+        bar('baz')
+        >>> 'braz'
+
+The invisible code block is executed but not displayed in the generated documentation and,
+conversely, ``code-block`` is both rendered using proper syntax formatting in the documentation
+and executed. REPL works the same as it does for :mod:`doctest` but ``assert`` is also a valid
+way to ensure the example is correct especially if used in a trailing ``invisible-code-block``.
+
+These tests are run as part of the regular pytest build. You can see the Sybil setup in the
+``conftest.py`` found under the root directory but otherwise shouldn't need to worry about
+it. The simple rule is; if the docstring ends up in the rendered documentation then your
+``code-block`` tests will be executed as unit tests.
+
+
 ************************************************
 Running Reports and Generating Docs
 ************************************************

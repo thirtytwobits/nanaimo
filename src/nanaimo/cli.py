@@ -140,7 +140,7 @@ def main() -> int:
     _setup_logging(args)
 
     if hasattr(args, 'func'):
-        args_ns = nanaimo.Namespace(args, defaults)
+        args_ns = nanaimo.Namespace(args, defaults, allow_none_values=False)
         result = loop.run_until_complete(args.func(args_ns))
         try:
             return int(result)
