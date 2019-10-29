@@ -8,7 +8,7 @@ import asyncio
 import os
 import pathlib
 import typing
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 import pytest
 
@@ -223,3 +223,21 @@ def test_enable_default_from_environ(nanaimo_defaults: nanaimo.config.ArgumentDe
 
     with pytest.raises(RuntimeError):
         a.add_argument('--yep', enable_default_from_environ=True)
+
+
+@pytest.mark.parametrize('required_prefix,test_positional_args,test_expected_args',
+                         [  # type: ignore
+                             ('tt', ['--foo-bar'], ['--tt-foo-bar']),
+                             ('z', ['-f', '--foo-bar'], ['-f', '--z-foo-bar']),
+                             ('pre', ['--foo-bar', '-x'], ['--pre-foo-bar', '-x']),
+                             ('a', ['-foo-bar', '-x'], ['-foo-bar', '-x'])
+                         ])
+def test_require_prefix(required_prefix, test_positional_args, test_expected_args) -> None:
+    parser = MagicMock(spec=argparse.ArgumentParser)
+    parser.add_argument = MagicMock()
+
+    a = nanaimo.Arguments(parser, required_prefix=required_prefix)
+
+    a.add_argument(*test_positional_args)
+
+    parser.add_argument.assert_called_once_with(*test_expected_args)

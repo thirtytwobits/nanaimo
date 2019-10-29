@@ -33,6 +33,7 @@ class Series1900BUart(nanaimo.Fixture):
     """
 
     fixture_name = 'bkprecision'
+    argument_prefix = 'bk'
 
     DefaultCommandTimeoutSeconds = 6.0
 
@@ -98,6 +99,7 @@ class Series1900BUart(nanaimo.Fixture):
     def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
         arguments.add_argument('--bk-port',
                                enable_default_from_environ=True,
+                               required=True,
                                help='The port the BK Precision power supply is connected to.')
         arguments.add_argument('--bk-command', '--BC',
                                help='command', default='?')
@@ -199,7 +201,7 @@ class Series1900BUart(nanaimo.Fixture):
                 setattr(artifacts, 'display_text', '{},{},{}'.format(
                     display[0], display[1], self.mode_to_text(int(display[1]))))
         else:
-            self.logger.warn('command {} is not a valid Series1900BUart command.'.format(args.bk_command))
+            self.logger.warning('command {} is not a valid Series1900BUart command.'.format(args.bk_command))
 
         return artifacts
 

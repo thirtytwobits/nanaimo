@@ -6,8 +6,6 @@
 import configparser
 import pathlib
 
-import pytest
-
 import nanaimo
 from nanaimo.config import ArgumentDefaults
 
@@ -28,8 +26,7 @@ def test_create_single_parent() -> None:
     setattr(parent, 'foo', 1)
     child = nanaimo.Namespace(parent)
     assert 1 == child.foo
-    with pytest.raises(KeyError):
-        child.bar
+    assert 'bar' not in child
 
 
 def test_create_grandparent() -> None:
@@ -75,8 +72,7 @@ def test_overrides(test_config: pathlib.Path) -> None:
     setattr(fake_args, 'rcfile', str(test_config))
     defaults = ArgumentDefaults()
     subject = nanaimo.Namespace(None, defaults)
-    with pytest.raises(KeyError):
-        assert subject.test_attr_yup == 'yup'
+    assert 'test_attr_yup' not in subject
 
     defaults.set_args(fake_args)
     setattr(subject, 'test_attr_nope', 'yup')

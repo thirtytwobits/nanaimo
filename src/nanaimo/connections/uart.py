@@ -163,7 +163,7 @@ class ConcurrentUart(AbstractAsyncSerial):
                 self._read_buffer.put_nowait(timestamped_line)
                 self._logger_rx.debug(re.sub('\\r', '<cr>', timestamped_line))
             except queue.Full:
-                self._logger_rx.warn("read buffer overflow.")
+                self._logger_rx.warning("read buffer overflow.")
                 self._rx_buffer_overflows += 1
 
     def _buffer_output(self) -> None:

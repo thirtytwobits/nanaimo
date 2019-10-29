@@ -27,6 +27,8 @@ import os
 import typing
 import weakref
 
+import logging
+
 
 class ArgumentDefaults:
     """
@@ -44,20 +46,43 @@ class ArgumentDefaults:
     Configuration merge rules are as defined by :meth:`configparser.ConfigParser.read`.
     """
 
+    @classmethod
+    def createDefaultsWithEarlyRcConfig(cls) -> 'ArgumentDefaults':
+        '''
+        A special factory method that creates a :class:`ArgumentDefaults` instance pulling
+        the value of ``--rcfile`` directly from :data:`sys.argv`. This allows defaults to
+        be pulled from a config file before argument parsing is performed.
+        '''
+        import sys
+
+        def args() -> None:
+            pass
+
+        for x in range(0, len(sys.argv) - 1):
+            if sys.argv[x] == '--rcfile':
+                setattr(args, 'rcfile', sys.argv[x+1])
+                break
+        if not hasattr(args, 'rcfile'):
+            setattr(args, 'rcfile', 'setup.cfg')
+
+        return ArgumentDefaults(args)
+
     def __init__(self, args: typing.Optional[typing.Any] = None) -> None:
         self._env_variable_index = weakref.WeakKeyDictionary()  # type: weakref.WeakKeyDictionary
         self._configparser = configparser.ConfigParser()
+        self._logger = logging.getLogger(__name__)
         if args is not None:
             self.set_args(args)
         else:
-            self._configparser.read(self._default_read_locations)
+            self.set_args(dict())
 
     def set_args(self, args: typing.Any) -> None:
         if hasattr(args, 'rcfile') and args.rcfile is not None:
             read_locations = [str(args.rcfile)] + self._default_read_locations
         else:
             read_locations = self._default_read_locations
-        self._configparser.read(read_locations)
+        read_from = self._configparser.read(read_locations)
+        self._logger.debug('Configuration read from {}'.format(str(read_from)))
 
     def __getitem__(self, key: str) -> typing.Any:
         namespaced_key = key.split('_')
@@ -92,13 +117,19 @@ class ArgumentDefaults:
                          parser: argparse.ArgumentParser,
                          inout_args: typing.Tuple,
                          inout_kwargs: typing.Dict) -> None:
-
         if 'enable_default_from_environ' in inout_kwargs:
             if inout_kwargs['enable_default_from_environ']:
                 self._handle_enable_default_from_environ(parser, inout_args, inout_kwargs)
             del inout_kwargs['enable_default_from_environ']
-        if 'required' in inout_kwargs and 'default' not in inout_kwargs:
-            inout_kwargs['default'] = self[self._derive_key_from_args(inout_args)]
+        if 'required' in inout_kwargs and ('default' not in inout_kwargs or inout_kwargs['default'] is None):
+            try:
+                derived = self._derive_key_from_args(inout_args)
+                inout_kwargs['default'] = self[derived]
+                if inout_kwargs['default'] is not None:
+                    # Since we have a default from configuration we can remove the required flag.
+                    del inout_kwargs['required']
+            except KeyError:
+                pass
 
     @classmethod
     def _derive_key_from_args(cls, inout_args: typing.Tuple) -> str:
@@ -112,7 +143,7 @@ class ArgumentDefaults:
 
         if not longform.startswith('--'):
             raise ValueError('Cannot synthesize environment variable without a long-form argument.')
-        return longform[2:]
+        return longform[2:].replace('-', '_')
 
     def _handle_enable_default_from_environ(self,
                                             parser: argparse.ArgumentParser,
