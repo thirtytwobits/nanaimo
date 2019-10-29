@@ -104,7 +104,6 @@ def _make_parser(loop: typing.Optional[asyncio.AbstractEventLoop] = None,
     parser.add_argument('--rcfile', help='Path to a default values configuration file.'
                                          'See nanaimo.Namespace for details.')
     parser.add_argument('--log-level', choices=['WARNING', 'INFO', 'DEBUG', 'VERBOSE_DEBUG'],
-                        default='INFO',
                         help='python logging level.')
 
     subparsers = parser.add_subparsers(dest='fixture', help='Available fixtures.')
@@ -118,17 +117,15 @@ def _make_parser(loop: typing.Optional[asyncio.AbstractEventLoop] = None,
 
 def _setup_logging(args: nanaimo.Namespace) -> None:
     fmt = '%(name)s : %(message)s'
-    if args.log_level is None:
-        return
-    elif args.log_level == 'WARNING':
+    if args.log_level == 'WARNING':
         level = logging.WARNING
-    elif args.log_level == 'INFO':
-        level = logging.INFO
     elif args.log_level == 'DEBUG':
         level = logging.DEBUG
     elif args.log_level == 'VERBOSE_DEBUG':
         level = logging.DEBUG
         logging.getLogger('asyncio').setLevel(logging.DEBUG)
+    else:
+        level = logging.INFO
     logging.basicConfig(stream=sys.stdout, level=level, format=fmt)
     if level >= logging.INFO:
         logging.getLogger(__name__).info('Nanaimo logging is configured.')
