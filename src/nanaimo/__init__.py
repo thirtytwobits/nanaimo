@@ -53,12 +53,20 @@ class Arguments:
 
     :param inner_arguments: Either a pytest group (unpublished type returned from :meth:`pytest.Parser.getgroup`)
         or a :class:`argparse.ArgumentParser`
-    :param defaults: Optional provider of default values for arguments.
+    :param typing.Any defaults: Optional provider of default values for arguments.
+    :type defaults: typing.Optional[ArgumentDefaults]
+    :param str required_prefix: If provided :meth:`add_argument` will rewrite arguments to enure they have the required
+        prefix.
     """
 
-    def __init__(self, inner_arguments: typing.Any, defaults: typing.Optional[ArgumentDefaults] = None):
+    def __init__(self,
+                 inner_arguments: typing.Any,
+                 defaults: typing.Optional[ArgumentDefaults] = None,
+                 required_prefix: typing.Optional[str] = None):
         self._inner = inner_arguments
         self._defaults = defaults
+        self._required_prefix = required_prefix
+        self._logger = logging.getLogger(__name__)
 
     def add_argument(self, *args: typing.Any, **kwargs: typing.Any) -> None:
         """
@@ -109,7 +117,28 @@ class Arguments:
 
             assert add_argument_call_args['default'] == 115200
 
+        .. invisible-code-block: python
+
+            parser.add_argument = MagicMock()
+
+        .. code-block:: python
+
+            # Using a required prefix...
+            a = Arguments(parser, config, required_prefix='ad')
+
+            # ...and adding an argument...
+            a.add_argument('--baud-rate')
+
+            # ...the actual argument added will be
+            actual_long_arg = '--ad-baud-rate'
+
+        .. invisible-code-block: python
+
+            parser.add_argument.assert_called_once_with(actual_long_arg)
+
         """
+        if self._required_prefix is not None:
+            args = self._rewrite_with_prefix(args)
 
         if self._defaults is not None:
             self._defaults.populate_default(self._inner, args, kwargs)
@@ -118,6 +147,32 @@ class Arguments:
             self._inner.add_argument(*args, **kwargs)
         else:
             self._inner.addoption(*args, **kwargs)
+
+    # +-----------------------------------------------------------------------+
+    # | PRIVATE
+    # +-----------------------------------------------------------------------+
+
+    def _rewrite_with_prefix(self, inout_args: typing.Tuple) -> typing.Tuple:
+        if len(inout_args) == 0:
+            raise AttributeError('No positional args provided?')
+
+        long_form_index = -1
+        for i in range(0, len(inout_args)):
+            if inout_args[i].startswith('--'):
+                long_form_index = i
+                break
+
+        if long_form_index >= 0 and not inout_args[long_form_index].startswith('--{}'.format(self._required_prefix)):
+            as_list = list(inout_args)
+            long_form = as_list[long_form_index]
+            rewritten = '--{}{}'.format(self._required_prefix, long_form[1:])
+            self._logger.info('Rewriting argument {} to {} because it was missing required prefix "{}".'
+                              .format(long_form,
+                                      rewritten,
+                                      self._required_prefix))
+            return tuple(as_list[:long_form_index] + [rewritten] + as_list[long_form_index + 1:])
+        else:
+            return inout_args
 
 
 class Namespace:
@@ -147,6 +202,7 @@ class Namespace:
 
         from nanaimo.config import ArgumentDefaults
         from unittest.mock import MagicMock, ANY
+        import nanaimo
 
         argument_defaults = ArgumentDefaults()
         argument_defaults._configparser = MagicMock()
@@ -208,6 +264,19 @@ class Namespace:
           the :mod:`nanaimo.instruments.bkprecision` module defines the ``bk-port`` argument with
           ``enable_default_from_environ`` set.
 
+    This object has a somewhat peculiar behavior for Python. All attributes will be reported either as a found value or
+    as ``None``. That is, any arbitrary attribute requested from this object will be ``None``. To differentiate between
+    ``None`` and "not set" you must using ``in``:
+
+    .. code-block:: python
+
+        ns = nanaimo.Namespace()
+        assert ns.foo is None
+        assert 'foo' not in ns
+
+    The behavior was designed to simplify argument handling code since argparse Namespaces will have ``None`` values for
+    all arguments even if the were not provided and had no default value.
+
     :param parent: A namespace-like object to inherit attributes from.
     :type parent: typing.Optional[typing.Any]
     :param overrides: Defaults to use if a requested attribute is not available on this object.
@@ -233,8 +302,11 @@ class Namespace:
             return self.__dict__[key]
         except KeyError:
             if self._overrides is None:
-                raise
-        return self._overrides[key]
+                return None
+        try:
+            return self._overrides[key]
+        except KeyError:
+            return None
 
     def __contains__(self, key: str) -> typing.Any:
         if key in self.__dict__:
@@ -385,6 +457,39 @@ class Fixture(metaclass=abc.ABCMeta):
 
         """
         return str(getattr(cls, 'fixture_name', '.'.join([cls.__module__, cls.__qualname__])))
+
+    @classmethod
+    def get_argument_prefix(cls) -> str:
+        """
+        The name to use as a prefix for arguments. This also becomes the configuration
+        section that the fixture's arguments can be overridden from. If the fixture
+        defines an ``argument_prefix`` class member this value is used otherwise the
+        value returned from :meth:`get_canonical_name` is used.
+
+        .. invisible-code-block: python
+            import nanaimo
+
+        .. code-block:: python
+
+            class MyFixture(nanaimo.Fixture):
+
+                argument_prefix = 'mf'
+
+        >>> MyFixture.get_argument_prefix()  # noqa : F821
+        'mf'
+
+        .. code-block:: python
+
+            class MyOtherFixture(nanaimo.Fixture):
+                # this class doesn't define argument_prefix so
+                # so the canonical name is used instead.
+                fixture_name = 'my_outre_fixture'
+
+        >>> MyOtherFixture.get_argument_prefix()  # noqa : F821
+        'my_outre_fixture'
+
+        """
+        return str(getattr(cls, 'argument_prefix', cls.get_canonical_name()))
 
     def __init__(self,
                  manager: 'FixtureManager',
@@ -558,6 +663,8 @@ class Fixture(metaclass=abc.ABCMeta):
             if wait_timeout is not None and self.loop.time() - start_time > wait_timeout:
                 break
 
+        for f in the_children_are_our_futures:
+            f.cancel()
         raise asyncio.TimeoutError()
 
 

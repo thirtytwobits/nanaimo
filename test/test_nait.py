@@ -28,5 +28,5 @@ def test_nanaimo_bar(run_nait) -> None:  # type: ignore
     """
     Eat your dessert!
     """
-    result = run_nait(['-vv', 'nanaimo_bar']).stdout.decode('utf-8')
+    result = run_nait(['--log-level', 'VERBOSE_DEBUG', 'nanaimo_bar']).stdout.decode('utf-8')
     print(result)

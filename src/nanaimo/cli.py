@@ -71,7 +71,7 @@ def _visit_argparse(manager: nanaimo.FixtureManager,
     for fixture_type in manager.fixture_types():
         subparser = subparsers.add_parser(fixture_type.get_canonical_name(),
                                           help=_auto_brief(fixture_type))  # type: 'argparse.ArgumentParser'
-        fixture_type.on_visit_test_arguments(nanaimo.Arguments(subparser, defaults))
+        fixture_type.on_visit_test_arguments(nanaimo.Arguments(subparser, defaults, fixture_type.get_argument_prefix()))
         subparser.set_defaults(func=CreateAndGatherFunctor(fixture_type, manager, loop))
 
 
@@ -103,8 +103,9 @@ def _make_parser(loop: typing.Optional[asyncio.AbstractEventLoop] = None,
 
     parser.add_argument('--rcfile', help='Path to a default values configuration file.'
                                          'See nanaimo.Namespace for details.')
-    parser.add_argument('--verbose', '-v', action='count',
-                        help='verbosity level (-v, -vv)')
+    parser.add_argument('--log-level', choices=['WARNING', 'INFO', 'DEBUG', 'VERBOSE_DEBUG'],
+                        default='INFO',
+                        help='python logging level.')
 
     subparsers = parser.add_subparsers(dest='fixture', help='Available fixtures.')
 
@@ -115,13 +116,22 @@ def _make_parser(loop: typing.Optional[asyncio.AbstractEventLoop] = None,
     return parser
 
 
-def _setup_logging(args: argparse.Namespace) -> None:
+def _setup_logging(args: nanaimo.Namespace) -> None:
     fmt = '%(name)s : %(message)s'
-    level = {0: logging.WARNING, 1: logging.INFO,
-             2: logging.DEBUG}.get(args.verbose or 0, logging.DEBUG)
-    logging.basicConfig(stream=sys.stderr, level=level, format=fmt)
-    if args.verbose is not None and args.verbose >= 3:
+    if args.log_level is None:
+        return
+    elif args.log_level == 'WARNING':
+        level = logging.WARNING
+    elif args.log_level == 'INFO':
+        level = logging.INFO
+    elif args.log_level == 'DEBUG':
+        level = logging.DEBUG
+    elif args.log_level == 'VERBOSE_DEBUG':
+        level = logging.DEBUG
         logging.getLogger('asyncio').setLevel(logging.DEBUG)
+    logging.basicConfig(stream=sys.stdout, level=level, format=fmt)
+    if level >= logging.INFO:
+        logging.getLogger(__name__).info('Nanaimo logging is configured.')
 
 
 def main() -> int:
@@ -130,22 +140,23 @@ def main() -> int:
     """
 
     loop = asyncio.get_event_loop()
-    defaults = ArgumentDefaults()
+    defaults = ArgumentDefaults.createDefaultsWithEarlyRcConfig()
 
     parser = _make_parser(loop, defaults)
     argcomplete.autocomplete(parser)
     args = parser.parse_args()
     defaults.set_args(args)
 
-    _setup_logging(args)
+    args_ns = nanaimo.Namespace(args, defaults, allow_none_values=False)
+
+    _setup_logging(args_ns)
 
     if hasattr(args, 'func'):
-        args_ns = nanaimo.Namespace(args, defaults, allow_none_values=False)
         result = loop.run_until_complete(args.func(args_ns))
         try:
             return int(result)
         except ValueError:
-            print('Nanaimo tests must return an int result!')
+            logging.getLogger(__name__).error('Nanaimo tests must return an int result!')
             raise
     else:
         parser.print_usage()

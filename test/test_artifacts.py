@@ -2,9 +2,6 @@
 # Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # This software is distributed under the terms of the MIT License.
 #
-
-import pytest
-
 import nanaimo
 
 
@@ -18,11 +15,11 @@ def test_create_artifacts() -> None:
 
 def test_missing_artifact() -> None:
     """
-    Verified that KeyError is raised if an undefined artifact is accessed.
+    Verified that KeyError is not raised if an undefined artifact is accessed.
     """
     subject = nanaimo.Artifacts()
-    with pytest.raises(KeyError):
-        subject.not_an_artifact
+    assert subject.not_an_artifact is None
+    assert 'not_an_artifact' not in subject
 
 
 def test_result_code() -> None:

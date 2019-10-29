@@ -42,6 +42,7 @@ class Fixture(nanaimo.Fixture):
     gtest tests pass else returns non-zero.
     """
     fixture_name = 'gtest_over_jlink'
+    argument_prefix = 'gtest'
 
     @classmethod
     def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
