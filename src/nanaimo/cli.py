@@ -22,7 +22,7 @@
 import argparse
 import asyncio
 import logging
-import sys
+import textwrap
 import typing
 
 import argcomplete
@@ -47,8 +47,11 @@ class CreateAndGatherFunctor:
         self._loop = loop
         self._logger = logging.getLogger(fixture_type.get_canonical_name())
 
-    async def __call__(self, args: nanaimo.Namespace) -> int:
-        fixture = self._fixture_type(self._manager, args, self._loop)
+    async def __call__(self, args: nanaimo.Namespace, gather_timeout_seconds: typing.Optional[float] = None) -> int:
+        fixture = self._fixture_type(self._manager,
+                                     args,
+                                     loop=self._loop,
+                                     gather_timeout_seconds=gather_timeout_seconds)
         artifacts = await fixture.gather()
         artifacts.dump(self._logger)
         return int(artifacts)
@@ -95,7 +98,7 @@ def _make_parser(loop: typing.Optional[asyncio.AbstractEventLoop] = None,
     parser = argparse.ArgumentParser(
         description='Run tests against hardware.',
         epilog=epilog,
-        formatter_class=argparse.RawTextHelpFormatter)
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     from nanaimo.version import __version__
 
@@ -105,6 +108,12 @@ def _make_parser(loop: typing.Optional[asyncio.AbstractEventLoop] = None,
                                          'See nanaimo.Namespace for details.')
     parser.add_argument('--log-level', choices=['WARNING', 'INFO', 'DEBUG', 'VERBOSE_DEBUG'],
                         help='python logging level.')
+
+    parser.add_argument('--gather-timeout-seconds',
+                        type=float,
+                        help=textwrap.dedent('''
+                            A gather timeout in fractional seconds to use for all fixtures.
+                            If not provided then Fixture.gather will not timeout.''').lstrip())
 
     subparsers = parser.add_subparsers(dest='fixture', help='Available fixtures.')
 
@@ -126,8 +135,8 @@ def _setup_logging(args: nanaimo.Namespace) -> None:
         logging.getLogger('asyncio').setLevel(logging.DEBUG)
     else:
         level = logging.INFO
-    logging.basicConfig(stream=sys.stdout, level=level, format=fmt)
-    if level >= logging.INFO:
+    logging.basicConfig(level=level, format=fmt)
+    if level <= logging.INFO:
         logging.getLogger(__name__).info('Nanaimo logging is configured.')
 
 
@@ -149,7 +158,7 @@ def main() -> int:
     _setup_logging(args_ns)
 
     if hasattr(args, 'func'):
-        result = loop.run_until_complete(args.func(args_ns))
+        result = loop.run_until_complete(args.func(args_ns, args_ns.gather_timeout_seconds))
         try:
             return int(result)
         except ValueError:

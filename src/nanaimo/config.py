@@ -40,7 +40,7 @@ class ArgumentDefaults:
     wire up the defaults, arguments, and namespaces for you.
     """
 
-    _default_read_locations = ['~/nanaimo.cfg', '/etc/nanaimo.cfg']
+    _default_read_locations = ['~/nanaimo.cfg', '/etc/nanaimo.cfg', 'setup.cfg']
     """
     These are all the locations that Nanaimo configuration files will be searched for.
     Configuration merge rules are as defined by :meth:`configparser.ConfigParser.read`.
@@ -62,8 +62,6 @@ class ArgumentDefaults:
             if sys.argv[x] == '--rcfile':
                 setattr(args, 'rcfile', sys.argv[x+1])
                 break
-        if not hasattr(args, 'rcfile'):
-            setattr(args, 'rcfile', 'setup.cfg')
 
         return ArgumentDefaults(args)
 
@@ -117,19 +115,34 @@ class ArgumentDefaults:
                          parser: argparse.ArgumentParser,
                          inout_args: typing.Tuple,
                          inout_kwargs: typing.Dict) -> None:
+
+        # First replace any default with one from configuration.
+        try:
+            derived_key = self._derive_key_from_args(inout_args)
+            from_config = self[derived_key]
+            if from_config is not None:
+                if 'type' in inout_kwargs:
+                    inout_kwargs['default'] = inout_kwargs['type'](from_config)
+                else:
+                    inout_kwargs['default'] = from_config
+                self._logger.debug('Setting the default for %s to %s (type %s) from a config file.',
+                                   derived_key,
+                                   inout_kwargs['default'],
+                                   type(inout_kwargs['default']))
+        except (KeyError, ValueError):
+            pass
+
+        # If we do have an environment variable and we allow this to be used
+        # as a default it should become the default.
         if 'enable_default_from_environ' in inout_kwargs:
             if inout_kwargs['enable_default_from_environ']:
                 self._handle_enable_default_from_environ(parser, inout_args, inout_kwargs)
             del inout_kwargs['enable_default_from_environ']
-        if 'required' in inout_kwargs and ('default' not in inout_kwargs or inout_kwargs['default'] is None):
-            try:
-                derived = self._derive_key_from_args(inout_args)
-                inout_kwargs['default'] = self[derived]
-                if inout_kwargs['default'] is not None:
-                    # Since we have a default from configuration we can remove the required flag.
-                    del inout_kwargs['required']
-            except KeyError:
-                pass
+
+        # Finally, delete required if we managed to find a default.
+        if 'required' in inout_kwargs and 'default' in inout_kwargs:
+            # Since we have a default from configuration we can remove the required flag.
+            del inout_kwargs['required']
 
     @classmethod
     def _derive_key_from_args(cls, inout_args: typing.Tuple) -> str:
@@ -142,7 +155,7 @@ class ArgumentDefaults:
             longform = str(inout_args[0])
 
         if not longform.startswith('--'):
-            raise ValueError('Cannot synthesize environment variable without a long-form argument.')
+            raise ValueError('No long-form argument to derive.')
         return longform[2:].replace('-', '_')
 
     def _handle_enable_default_from_environ(self,
@@ -165,18 +178,12 @@ class ArgumentDefaults:
 
     @classmethod
     def _set_default_from_environment(cls, env_variable: str, args: typing.Tuple, inout_kwargs: typing.Dict) -> None:
-        try:
-            inout_kwargs['default'] = os.environ.get(env_variable, inout_kwargs['default'])
-        except KeyError:
-            inout_kwargs['default'] = os.environ.get(env_variable, None)
-
-        if inout_kwargs['default'] is not None:
+        if env_variable in os.environ:
+            inout_kwargs['default'] = os.environ[env_variable]
             try:
                 inout_kwargs['default'] = inout_kwargs['type'](inout_kwargs['default'])
             except KeyError:
                 pass
-
-        if env_variable in os.environ:
             additional_help = 'Default value {} obtained from environment variable {}.'\
                 .format(os.environ[env_variable], env_variable)
         else:

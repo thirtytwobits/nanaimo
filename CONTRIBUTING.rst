@@ -68,8 +68,9 @@ These take the form of docstrings with a structure like thus::
     .. code-block:: python
 
         # Use bar method to transform baz
-        bar('baz')
-        >>> 'braz'
+
+    >>> bar('baz')  # noqa : F821
+    'braz'
 
 The invisible code block is executed but not displayed in the generated documentation and,
 conversely, ``code-block`` is both rendered using proper syntax formatting in the documentation

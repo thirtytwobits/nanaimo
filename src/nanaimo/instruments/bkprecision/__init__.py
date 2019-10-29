@@ -89,11 +89,14 @@ class Series1900BUart(nanaimo.Fixture):
     def __init__(self,
                  manager: 'nanaimo.FixtureManager',
                  args: nanaimo.Namespace,
-                 loop: typing.Optional[asyncio.AbstractEventLoop] = None,
-                 uart_factory: typing.Optional[UartFactoryType] = None):
-        super().__init__(manager, args, loop)
+                 **kwargs: typing.Any):
+        super().__init__(manager, args, **kwargs)
         self._debug = False
-        self._uart_factory = (uart_factory if uart_factory is not None else self.default_serial_port)
+        if 'uart_factory' in kwargs:
+            uart_factory = typing.cast(typing.Optional['Series1900BUart.UartFactoryType'], kwargs['uart_factory'])
+            self._uart_factory = (uart_factory if uart_factory is not None else self.default_serial_port)
+        else:
+            self._uart_factory = self.default_serial_port
 
     @classmethod
     def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
@@ -139,7 +142,7 @@ class Series1900BUart(nanaimo.Fixture):
             +---------+----------------------------------+--------------------------------------------------+
         """
 
-        with self._uart_factory(str(args.bk_port)) as bk_uart:
+        with self._uart_factory(args.bk_port) as bk_uart:
             artifacts = await self._do_command_from_args(bk_uart, args)
 
         return artifacts

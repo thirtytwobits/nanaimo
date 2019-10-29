@@ -316,7 +316,12 @@ class Namespace:
         else:
             return key in self._overrides
 
-    def merge(self, **kwargs: typing.Any) -> 'Namespace':
+    def __len__(self) -> int:
+        return len(self.__dict__)
+
+    T = typing.TypeVar('T')
+
+    def merge(self, **kwargs: typing.Any) -> 'Namespace.T':
         """
         Merges a list of keyword arguments with this namespace and returns a new, merged
         Namespace. This does not modify the instance that merge is called on.
@@ -342,10 +347,10 @@ class Namespace:
         :return: A new namespace with the contents of this object and any values provided as
             kwargs overwriting the values in this instance where the keys are the same.
         """
-        merged = Namespace(self, self._overrides)
+        merged = self.__class__(parent=self, overrides=self._overrides)
         for key in kwargs:
             setattr(merged, key, kwargs[key])
-        return merged
+        return typing.cast('Namespace.T', merged)
 
 
 class Artifacts(Namespace):
@@ -354,11 +359,92 @@ class Artifacts(Namespace):
     from the fixture's activities.
 
     :param result_code: The value to report as the status of the activity that gathered the artifacts.
-    :param parent: A parent namespace to lookup in if the current namespace doesn't have a value.
+    :param parent: A namespace-like object to inherit attributes from.
+    :type parent: typing.Optional[typing.Any]
+    :param overrides: Defaults to use if a requested attribute is not available on this object.
+    :type overrides: typing.Optional[ArgumentDefaults]
+    :param allow_none_values: If True then an attribute with a None value is considered valid otherwise
+        any attribute that is None will cause the Artifacts to search for a non-None value in the defaults.
+    :type allow_none_values: bool
     """
 
-    def __init__(self, result_code: int = 0, parent: typing.Optional[typing.Any] = None):
-        super().__init__(parent)
+    @classmethod
+    def combine(cls, *artifacts: 'Artifacts') -> 'Artifacts':
+        '''
+        Combine a series of artifacts into a single instance.
+        This method uses :meth:`Namespace.merge` but adds additional semantics including:
+
+        .. note ::
+
+            While this method does not modify the original objects it also does not do a deep
+            copy of artifact values.
+
+        .. invisible-code-block: python
+            from nanaimo import Artifacts
+
+            first = Artifacts()
+            setattr(first, 'foo', 1)
+            second = Artifacts()
+            setattr(second, 'bar', 2)
+
+            combined = Artifacts.combine(first, second)
+            assert 1 == combined.foo
+            assert 2 == combined.bar
+
+        Given two :class:`Artifacts` objects with the same attribute the right-most item in the
+        combine list will overwrite the previous values and become the only value:
+
+        .. code-block:: python
+
+            setattr(first, 'foo', 1)
+            setattr(second, 'foo', 2)
+
+            assert Artifacts.combine(first, second).foo == 2
+            assert Artifacts.combine(second, first).foo == 1
+
+        The :data:`result_code` of the combined value will be either 0 iff all combined
+        Artifact objects have a result_code of 0:
+
+        .. code-block:: python
+
+            first.result_code = 0
+            second.result_code = 0
+
+            assert Artifacts.combine(first, second).result_code == 0
+
+        or will be non-zero if any instance had a non-zero result code:
+
+        .. code-block:: python
+
+            first.result_code = 0
+            second.result_code = 1
+
+            assert Artifacts.combine(first, second).result_code != 0
+
+        :param artifacts: A list of artifacts to combine into a single :class:`Artifacts` instance.
+        :raises ValueError: if no artifact objects were provided or if the method was otherwise unable to
+            create a new object from the provided ones.
+        '''
+        combined = None
+        result_codes_were_all_zeros = True
+        for a in artifacts:
+            if combined is not None:
+                combined = combined.merge(**a.__dict__)
+            else:
+                combined = a
+            if a.result_code != 0:
+                result_codes_were_all_zeros = False
+        if combined is None:
+            raise ValueError('Nothing to combine.')
+        combined.result_code = (0 if result_codes_were_all_zeros else -1)
+        return combined
+
+    def __init__(self,
+                 result_code: int = 0,
+                 parent: typing.Optional[typing.Any] = None,
+                 overrides: typing.Optional[ArgumentDefaults] = None,
+                 allow_none_values: bool = True):
+        super().__init__(parent=parent, overrides=overrides, allow_none_values=allow_none_values)
         self._result_code = result_code
 
     @property
@@ -422,7 +508,7 @@ class Fixture(metaclass=abc.ABCMeta):
                 return artifacts
 
     .. invisible-code-block: python
-        foo = MyFixture(nanaimo.FixtureManager(), nanaimo.Namespace(), _doc_loop)
+        foo = MyFixture(nanaimo.FixtureManager(), nanaimo.Namespace(), loop=_doc_loop)
 
         _doc_loop.run_until_complete(foo.gather())
 
@@ -434,6 +520,12 @@ class Fixture(metaclass=abc.ABCMeta):
 
         pytest --foo=baz
 
+    :param nanaimo.FixtureManager manager: The fixture manager that is the scope for this fixture. There must be
+        a 1:1 relationship between a fixture instance and a fixture manager instance.
+    :param nanaimo.Namespace args: A namespace containing the arguments for this fixture.
+    :param kwargs: All fixtures can be given a :class:`asyncio.AbstractEventLoop` instance to use as ``loop`` and
+        an initial value for :data:`gather_timeout_seconds` as ``gather_timeout_seconds (float)``. Other keyword
+        arguments may used by fixture specializations.
     """
 
     @classmethod
@@ -491,15 +583,20 @@ class Fixture(metaclass=abc.ABCMeta):
         """
         return str(getattr(cls, 'argument_prefix', cls.get_canonical_name()))
 
-    def __init__(self,
-                 manager: 'FixtureManager',
-                 args: Namespace,
-                 loop: typing.Optional[asyncio.AbstractEventLoop] = None):
+    def __init__(self, manager: 'FixtureManager', args: Namespace, **kwargs: typing.Any):
         self._manager = manager
         self._args = args
         self._name = self.get_canonical_name()
         self._logger = logging.getLogger(self._name)
-        self._loop = loop
+        if 'loop' in kwargs:
+            self._loop = typing.cast(typing.Optional[asyncio.AbstractEventLoop], kwargs['loop'])
+        else:
+            self._loop = None
+        if 'gather_timeout_seconds' in kwargs:
+            gather_timeout_seconds = typing.cast(typing.Optional[float], kwargs['gather_timeout_seconds'])
+            self._gather_timeout_seconds = (gather_timeout_seconds if gather_timeout_seconds is not None else 0)
+        else:
+            self._gather_timeout_seconds = 0
 
     async def gather(self, **kwargs: typing.Any) -> Artifacts:
         """
@@ -509,8 +606,23 @@ class Fixture(metaclass=abc.ABCMeta):
                        constructor
         :return: A set of artifacts with the :attr:`Artifacts.result_code` set to indicate the success or failure of the
                  fixture's artifact gathering activies.
+        :raises asyncio.TimeoutError: If :data:`gather_timeout_seconds` is > 0 and :meth:`on_gather` takes longer
+            then this to complete or if on_gather itself raises a timeout error.
         """
-        return await self.on_gather(self._args.merge(**kwargs))
+        routine = self.on_gather(self._args.merge(**kwargs))
+        if self._gather_timeout_seconds > 0:
+            done, pending = await asyncio.wait([asyncio.ensure_future(routine)],
+                                               loop=self._loop,
+                                               timeout=self._gather_timeout_seconds,
+                                               return_when=asyncio.ALL_COMPLETED)
+            if len(pending) > 0:
+                pending.pop().cancel()
+                raise asyncio.TimeoutError('{} gather was cancelled after waiting for {} seconds'
+                                           .format(self.get_canonical_name(),
+                                                   self._gather_timeout_seconds))
+            return done.pop().result()
+        else:
+            return await routine
 
     # +-----------------------------------------------------------------------+
     # | PROPERTIES
@@ -557,6 +669,18 @@ class Fixture(metaclass=abc.ABCMeta):
         """
         return self._args
 
+    @property
+    def gather_timeout_seconds(self) -> float:
+        """
+        The timeout in fractional seconds to wait for :meth:`on_gather` to complete before raising
+        a :class:`asyncio.TimeoutError`.
+        """
+        return self._gather_timeout_seconds
+
+    @gather_timeout_seconds.setter
+    def gather_timeout_seconds(self, gather_timeout_seconds: float) -> None:
+        self._gather_timeout_seconds = gather_timeout_seconds
+
     # +-----------------------------------------------------------------------+
     # | ABSTRACT METHODS
     # +-----------------------------------------------------------------------+
@@ -583,6 +707,7 @@ class Fixture(metaclass=abc.ABCMeta):
         :type args: Namespace
         :return: A set of artifacts with the :attr:`Artifacts.result_code` set to indicate the success or failure of the
             fixture's artifact gathering activies.
+        :raises asyncio.TimeoutError: It is valid for a fixture to raise timeout errors from this method.
         """
         ...
 
@@ -700,6 +825,16 @@ class FixtureManager:
                        fixture_name: str,
                        args: Namespace,
                        loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> Fixture:
+        """
+        Create a new :class:`Fixture` instance iff the ``fixture_name``` is a registered
+        plugin for this process.
+
+        :param str fixture_name: The canonical name of the fixture to instantiate.
+        :param nanaimo.Namespace args: The arguments to provide to the new instance.
+        :param loop: An event loop to provide the fixture instance.
+        :type loop: typing.Optional[asyncio.AbstractEventLoop]
+        :raises KeyError: if ``fixture_name`` was not registered with this manager.
+        """
         raise NotImplementedError('The base class is an incomplete implementation.')
 
 
@@ -716,6 +851,7 @@ class PluggyFixtureManager(FixtureManager):
 
     def __init__(self) -> None:
         super().__init__()
+        self._logger = logging.getLogger(__name__)
         self._pluginmanager = pluggy.PluginManager(self.plugin_name)
 
         class PluginNamespace:
@@ -726,17 +862,29 @@ class PluggyFixtureManager(FixtureManager):
         self._pluginmanager.add_hookspecs(PluginNamespace)
         self._pluginmanager.load_setuptools_entrypoints(self.plugin_name)
 
+        prefix_map = dict()  # type: typing.Dict
+        self._blacklist = set()  # type: typing.Set
+        for fixture_type in self._pluginmanager.hook.get_fixture_type():
+            fap = fixture_type.get_argument_prefix()
+            if fap in prefix_map:
+                self._blacklist.add(fixture_type.get_canonical_name())
+                self._logger.error('Argument prefix {} was already registered by {}! Fixture {} will not be available.'
+                                   .format(fap, prefix_map[fap], fixture_type.get_canonical_name()))
+            else:
+                prefix_map[fap] = fixture_type.get_canonical_name()
+
     def fixture_types(self) -> typing.Generator:
         for fixture_type in self._pluginmanager.hook.get_fixture_type():
-            yield fixture_type
+            if fixture_type.get_canonical_name() not in self._blacklist:
+                yield fixture_type
 
     def create_fixture(self,
                        fixture_name: str,
                        args: Namespace,
                        loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> Fixture:
-        for fixture_type in self._pluginmanager.hook.get_fixture_type():
+        for fixture_type in self.fixture_types():
             if fixture_type.get_canonical_name() == fixture_name:
-                fixture = typing.cast(Fixture, fixture_type(self, args, loop))
+                fixture = typing.cast(Fixture, fixture_type(self, args, loop=loop))
                 self._fixture_cache[fixture_name] = fixture
                 return fixture
         raise KeyError(fixture_name)
