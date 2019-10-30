@@ -34,7 +34,7 @@ class Fixture(nanaimo.Fixture):
     Gathers a log over a serial connection until a given pattern is matched.
     """
 
-    fixture_name = 'serial_log_watch'
+    fixture_name = 'nanaimo_serial_watch'
     argument_prefix = 'lw'
 
     def __init__(self,
@@ -114,5 +114,5 @@ def get_fixture_type() -> typing.Type['nanaimo.Fixture']:
 
 
 @pytest.fixture
-def serial_log_watch(request: typing.Any) -> nanaimo.Fixture:
+def nanaimo_serial_watch(request: typing.Any) -> nanaimo.Fixture:
     return nanaimo.pytest_plugin.create_pytest_fixture(request, Fixture)

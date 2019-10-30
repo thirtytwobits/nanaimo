@@ -20,7 +20,10 @@
 import asyncio
 import typing
 
+import pytest
+
 import nanaimo
+import nanaimo.pytest_plugin
 
 
 class Fixture(nanaimo.Fixture):
@@ -33,7 +36,7 @@ class Fixture(nanaimo.Fixture):
     .. invisible-code-block: python
 
         from nanaimo import Namespace, FixtureManager, Arguments
-        from nanaimo.builtin import nanaimo_bar, gather
+        from nanaimo.builtin import nanaimo_bar, nanaimo_gather
         import asyncio
         import argparse
 
@@ -46,7 +49,7 @@ class Fixture(nanaimo.Fixture):
 
             bar_one = nanaimo_bar.Fixture(manager)
             bar_two = nanaimo_bar.Fixture(manager)
-            gather_fixture = gather.Fixture(manager)
+            gather_fixture = nanaimo_gather.Fixture(manager)
 
             return await gather_fixture.gather(
                 gather_coroutine=[
@@ -64,7 +67,7 @@ class Fixture(nanaimo.Fixture):
 
     You can also use the --gather-coroutines argument to specify fixtures by name::
 
-        nait gather --gather-coroutine nanaimo_bar --gather-coroutine bkprecision --BC 1
+        nait nanaimo_gather --gather-coroutine nanaimo_bar --gather-coroutine nanaimo_bar
 
     """
 
@@ -92,3 +95,8 @@ class Fixture(nanaimo.Fixture):
 @nanaimo.PluggyFixtureManager.type_factory
 def get_fixture_type() -> typing.Type['nanaimo.Fixture']:
     return Fixture
+
+
+@pytest.fixture
+def nanaimo_gather(request: typing.Any) -> nanaimo.Fixture:
+    return nanaimo.pytest_plugin.create_pytest_fixture(request, Fixture)

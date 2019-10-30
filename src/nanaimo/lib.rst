@@ -40,17 +40,31 @@ nanaimo (library)
    :members:
 
 ***************************************
-:mod:`nanaimo.builtin.gather`
+:mod:`nanaimo.builtin.nanaimo_gather`
 ***************************************
 
-.. automodule:: nanaimo.builtin.gather
+.. automodule:: nanaimo.builtin.nanaimo_gather
    :members:
 
 ***************************************
-:mod:`nanaimo.builtin.serial_log_watch`
+:mod:`nanaimo.builtin.nanaimo_scp`
 ***************************************
 
-.. automodule:: nanaimo.builtin.serial_log_watch
+.. automodule:: nanaimo.builtin.nanaimo_scp
+   :members:
+
+***************************************
+:mod:`nanaimo.builtin.nanaimo_ssh`
+***************************************
+
+.. automodule:: nanaimo.builtin.nanaimo_ssh
+   :members:
+
+*******************************************
+:mod:`nanaimo.builtin.nanaimo_serial_watch`
+*******************************************
+
+.. automodule:: nanaimo.builtin.nanaimo_serial_watch
    :members:
 
 ***************************************
