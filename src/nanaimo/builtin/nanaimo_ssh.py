@@ -17,6 +17,7 @@
 #                                        @&&&&&&&&&&%#######&@%
 #  nanaimo                                   (@&&&&####@@*
 #
+import asyncio
 import typing
 
 import pytest
@@ -55,28 +56,30 @@ class Fixture(nanaimo.Fixture):
                           user: str,
                           command: str,
                           port: typing.Optional[int] = None) -> int:
-        # TODO: implement me
-        # cmd = 'ssh {}{} {}@{}:{}'.format('-P {}'.format(port) if port is not None else '',
-        #                                  str(file_to_upload), user, target, str(target_path))
+        cmd = 'ssh {port} {user}@{target} \'{command}\''.format(
+            port='-P {}'.format(port) if port is not None else '',
+            command=str(command),
+            user=user,
+            target=target
+        )
 
-        # self._logger.info('starting upload: %s', cmd)
-        # proc = await asyncio.create_subprocess_shell(
-        #     cmd,
-        #     stdout=asyncio.subprocess.PIPE,
-        #     stderr=asyncio.subprocess.PIPE
-        # )  # type: asyncio.subprocess.Process
+        self._logger.info(cmd)
+        proc = await asyncio.create_subprocess_shell(
+            cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )  # type: asyncio.subprocess.Process
 
-        # stdout, stderr = await proc.communicate()
+        stdout, stderr = await proc.communicate()
 
-        # self._logger.info('%s exited with %i', cmd, proc.returncode)
+        self._logger.info('%s exited with %i', cmd, proc.returncode)
 
-        # if stdout:
-        #     self._logger.debug(stdout.decode())
-        # if stderr:
-        #     self._logger.error(stderr.decode())
+        if stdout:
+            self._logger.debug(stdout.decode())
+        if stderr:
+            self._logger.error(stderr.decode())
 
-        # return proc.returncode
-        return 0
+        return proc.returncode
 
 
 @nanaimo.PluggyFixtureManager.type_factory

@@ -38,7 +38,7 @@ class Fixture(nanaimo.Fixture):
     @classmethod
     def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
         arguments.add_argument('--scp-file', help='The file to upload.')
-        arguments.add_argument('--scp-remote-dir', help='The file to upload.')
+        arguments.add_argument('--scp-remote-dir', help='The directory to upload to.')
         arguments.add_argument('--scp-target',
                                help='The IP or hostname for the target system.')
         arguments.add_argument('--scp-as-user',
@@ -50,8 +50,9 @@ class Fixture(nanaimo.Fixture):
         """
         artifacts = nanaimo.Artifacts()
         remote_directory = pathlib.Path(args.scp_remote_dir)
-        artifacts.result_code = await self._upload(args.scp_file, remote_directory, args.scp_target, args.scp_as_user)
-        setattr(artifacts, 'remote_path', remote_directory / pathlib.Path(args.scp_file).stem)
+        remote_path = remote_directory / pathlib.Path(args.scp_file).stem
+        artifacts.result_code = await self._upload(args.scp_file, remote_path, args.scp_target, args.scp_as_user)
+        setattr(artifacts, 'remote_path', remote_path)
         return artifacts
 
     async def _upload(self,

@@ -46,6 +46,7 @@
         "chdir",
         "cleandir",
         "ctypes",
+        "datefmt",
         "functools",
         "functors",
         "getcwd",

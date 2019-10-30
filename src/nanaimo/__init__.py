@@ -811,7 +811,6 @@ class Fixture(metaclass=abc.ABCMeta):
             async def gated_task():
                 while True:
                     await asyncio.sleep(.1)
-                    print('still running')
 
             async def gate_task():
                 await asyncio.sleep(1)
@@ -852,6 +851,14 @@ class Fixture(metaclass=abc.ABCMeta):
     # +-----------------------------------------------------------------------+
     # | PRIVATE
     # +-----------------------------------------------------------------------+
+    @classmethod
+    async def _do_cancel_remaining(cls, pending: typing.Set[asyncio.Future]) -> None:
+        for f in pending:
+            f.cancel()
+            try:
+                await f
+            except asyncio.CancelledError:
+                pass
 
     async def _observe_tasks(self,
                              observer_co_or_f: typing.Union[typing.Coroutine, asyncio.Future],
@@ -864,10 +871,14 @@ class Fixture(metaclass=abc.ABCMeta):
         :returns: observer, observed, done, pending
         """
         did_timeout = False
-        observing_my_future = asyncio.ensure_future(observer_co_or_f)
-        the_children_are_our_futures = [observing_my_future]
+        observer_future = asyncio.ensure_future(observer_co_or_f)
+        the_children_are_our_futures = [observer_future]
+        observed_futures = []
+        done_done = set()  # type: typing.Set[asyncio.Future]
         for co_or_f in args:
-            the_children_are_our_futures.append(asyncio.ensure_future(co_or_f))
+            o = asyncio.ensure_future(co_or_f)
+            the_children_are_our_futures.append(o)
+            observed_futures.append(o)
 
         start_time = self.loop.time()
         wait_timeout = (timeout_seconds if timeout_seconds > 0 else None)
@@ -878,26 +889,26 @@ class Fixture(metaclass=abc.ABCMeta):
                 timeout=wait_timeout,
                 return_when=asyncio.FIRST_COMPLETED)
 
-            if observing_my_future.done():
+            for d in done:
+                the_children_are_our_futures.remove(d)
+                done_done.add(d)
+
+            if observer_future.done():
                 break
 
             if wait_timeout is not None and self.loop.time() - start_time > wait_timeout:
                 did_timeout = True
                 break
 
-        the_children_are_our_futures.remove(observing_my_future)
         if cancel_remaining:
-            for f in the_children_are_our_futures:
-                f.cancel()
-                try:
-                    await f
-                except asyncio.CancelledError:
-                    pass
+            await self._do_cancel_remaining(pending)
+            done_done.update(pending)
+            pending.clear()
 
         if did_timeout:
             raise asyncio.TimeoutError()
         else:
-            return observing_my_future, the_children_are_our_futures, done, pending
+            return observer_future, observed_futures, done_done, pending
 
 
 class FixtureManager:
