@@ -316,6 +316,9 @@ class Namespace:
         else:
             return key in self._overrides
 
+    def __iter__(self) -> typing.Iterator:
+        return iter(self.__dict__)
+
     def __len__(self) -> int:
         return len(self.__dict__)
 
@@ -583,9 +586,9 @@ class Fixture(metaclass=abc.ABCMeta):
         """
         return str(getattr(cls, 'argument_prefix', cls.get_canonical_name()))
 
-    def __init__(self, manager: 'FixtureManager', args: Namespace, **kwargs: typing.Any):
+    def __init__(self, manager: 'FixtureManager', args: typing.Optional[Namespace] = None, **kwargs: typing.Any):
         self._manager = manager
-        self._args = args
+        self._args = (args if args is not None else Namespace())
         self._name = self.get_canonical_name()
         self._logger = logging.getLogger(self._name)
         if 'loop' in kwargs:
@@ -598,7 +601,7 @@ class Fixture(metaclass=abc.ABCMeta):
         else:
             self._gather_timeout_seconds = 0
 
-    async def gather(self, **kwargs: typing.Any) -> Artifacts:
+    async def gather(self, *args: typing.Any, **kwargs: typing.Any) -> Artifacts:
         """
         Coroutine awaited to gather a new set of fixture artifacts.
 
@@ -612,7 +615,7 @@ class Fixture(metaclass=abc.ABCMeta):
         routine = self.on_gather(self._args.merge(**kwargs))
         if self._gather_timeout_seconds > 0:
             done, pending = await asyncio.wait([asyncio.ensure_future(routine)],
-                                               loop=self._loop,
+                                               loop=self.manager.loop,
                                                timeout=self._gather_timeout_seconds,
                                                return_when=asyncio.ALL_COMPLETED)
             if len(pending) > 0:
@@ -643,7 +646,7 @@ class Fixture(metaclass=abc.ABCMeta):
         :raises RuntimeError: if no running event loop could be found.
         """
         if self._loop is None or not self._loop.is_running():
-            self._loop = asyncio.get_event_loop()
+            self._loop = self.manager.loop
         if not self._loop.is_running():
             raise RuntimeError('No running event loop was found!')
         return self._loop
@@ -798,8 +801,23 @@ class FixtureManager:
     A simple fixture manager and a baseclass for specalized managers.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> None:
         self._fixture_cache = dict()  # type: typing.Dict[str, Fixture]
+        self._loop = loop
+
+    @property
+    def loop(self) -> asyncio.AbstractEventLoop:
+        """
+        The running asyncio EventLoop in use by all Fixtures.
+        This will be the loop provided to the fixture manager in the constructor if that loop is still
+        running otherwise the loop will be a running loop retrieved by :func:`asyncio.get_event_loop`.
+        :raises RuntimeError: if no running event loop could be found.
+        """
+        if self._loop is None or not self._loop.is_running():
+            self._loop = asyncio.get_event_loop()
+        if not self._loop.is_running():
+            raise RuntimeError('No running event loop was found!')
+        return self._loop
 
     def fixture_types(self) -> typing.Generator:
         """
