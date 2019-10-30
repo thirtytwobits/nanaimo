@@ -33,17 +33,24 @@ nanaimo (library)
    :members:
 
 ***************************************
-:mod:`nanaimo.builtin.gtest_over_jlink`
-***************************************
-
-.. automodule:: nanaimo.builtin.gtest_over_jlink
-   :members:
-
-***************************************
 :mod:`nanaimo.builtin.nanaimo_bar`
 ***************************************
 
 .. automodule:: nanaimo.builtin.nanaimo_bar
+   :members:
+
+***************************************
+:mod:`nanaimo.builtin.serial_log_watch`
+***************************************
+
+.. automodule:: nanaimo.builtin.serial_log_watch
+   :members:
+
+***************************************
+:mod:`nanaimo.builtin.gtest_over_jlink`
+***************************************
+
+.. automodule:: nanaimo.builtin.gtest_over_jlink
    :members:
 
 *************************************

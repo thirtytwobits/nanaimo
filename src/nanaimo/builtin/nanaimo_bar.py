@@ -32,6 +32,7 @@ class Fixture(nanaimo.Fixture):
     """
 
     fixture_name = 'nanaimo_bar'
+    argument_prefix = 'nb'
 
     @classmethod
     def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:

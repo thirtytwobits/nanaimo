@@ -2,6 +2,7 @@
 # Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # This software is distributed under the terms of the MIT License.
 #
+import asyncio
 import os
 import pathlib
 import subprocess
@@ -10,7 +11,9 @@ import typing
 import pytest
 
 import fixtures
+import fixtures.simulators
 import nanaimo
+import nanaimo.pytest_plugin
 from nanaimo.config import ArgumentDefaults
 
 
@@ -75,3 +78,30 @@ def s32K144_jlink_script(request):  # type: ignore
 @pytest.fixture
 def s32K144_jlink_scripts(request):  # type: ignore
     return pathlib.Path(fixtures.__file__).parent.glob('*.jlink')
+
+
+@pytest.fixture
+def serial_simulator_type(request):  # type: ignore
+    return fixtures.simulators.Serial
+
+
+class GatherTimeoutFixture(nanaimo.Fixture):
+
+    @classmethod
+    def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
+        pass
+
+    async def on_gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
+        """
+        Sleep forever
+        """
+        while True:
+            await asyncio.sleep(1)
+
+
+@pytest.fixture
+def gather_timeout_fixture(request: typing.Any) -> nanaimo.Fixture:
+    args = nanaimo.Namespace(request.config.option,
+                             ArgumentDefaults(request.config.option),
+                             allow_none_values=False)
+    return GatherTimeoutFixture(nanaimo.FixtureManager(), args)

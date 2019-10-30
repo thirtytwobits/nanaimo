@@ -7,7 +7,6 @@ Contains data files used in tests. Use conftest.py for fixtures.
 """
 import nanaimo
 import typing
-import asyncio
 import pathlib
 
 FAKE_TEST_SUCCESS = '''[==========] Running 140 tests from 7 test suites.
@@ -324,8 +323,8 @@ class DummyFixture(nanaimo.Fixture):
     def __init__(self,
                  manager: nanaimo.FixtureManager,
                  args: nanaimo.Namespace = nanaimo.Namespace(),
-                 loop: typing.Optional[asyncio.AbstractEventLoop] = None):
-        super().__init__(manager, args, loop)
+                 **kwargs: typing.Any):
+        super().__init__(manager, args, **kwargs)
 
     @classmethod
     def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
