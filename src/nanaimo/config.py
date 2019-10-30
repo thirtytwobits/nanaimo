@@ -47,7 +47,7 @@ class ArgumentDefaults:
     """
 
     @classmethod
-    def createDefaultsWithEarlyRcConfig(cls) -> 'ArgumentDefaults':
+    def create_defaults_with_early_rc_config(cls) -> 'ArgumentDefaults':
         '''
         A special factory method that creates a :class:`ArgumentDefaults` instance pulling
         the value of ``--rcfile`` directly from :data:`sys.argv`. This allows defaults to

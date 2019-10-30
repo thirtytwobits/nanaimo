@@ -112,7 +112,7 @@ def create_pytest_fixture(pytest_request: typing.Any, fixture_type: typing.Type[
 
 def pytest_addoption(parser) -> None:  # type: ignore
     manager = _get_default_fixture_manager()
-    nanaimo_defaults = ArgumentDefaults.createDefaultsWithEarlyRcConfig()
+    nanaimo_defaults = ArgumentDefaults.create_defaults_with_early_rc_config()
     for fixture_type in manager.fixture_types():
         group = parser.getgroup(fixture_type.get_canonical_name())
         fixture_type.on_visit_test_arguments(nanaimo.Arguments(group,

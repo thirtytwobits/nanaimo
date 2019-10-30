@@ -40,6 +40,13 @@ nanaimo (library)
    :members:
 
 ***************************************
+:mod:`nanaimo.builtin.gather`
+***************************************
+
+.. automodule:: nanaimo.builtin.gather
+   :members:
+
+***************************************
 :mod:`nanaimo.builtin.serial_log_watch`
 ***************************************
 

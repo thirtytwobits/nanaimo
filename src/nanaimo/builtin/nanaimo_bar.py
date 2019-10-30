@@ -18,6 +18,7 @@
 #  nanaimo                                   (@&&&&####@@*
 #
 import functools
+import time
 import typing
 
 import pytest
@@ -44,7 +45,8 @@ class Fixture(nanaimo.Fixture):
         """
         artifacts = nanaimo.Artifacts()
         self.logger.info("don't forget to eat your dessert.")
-        setattr(artifacts, 'eat', functools.partial(self.logger.info, 'Nanaimo bars are yummy.'))
+        artifacts.eat = functools.partial(self.logger.info, 'Nanaimo bars are yummy.')
+        setattr(artifacts, 'bar_{}'.format(args.bar_number), time.monotonic())
         return artifacts
 
 

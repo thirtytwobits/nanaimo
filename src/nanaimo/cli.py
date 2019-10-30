@@ -146,7 +146,7 @@ def main() -> int:
     """
 
     loop = asyncio.get_event_loop()
-    defaults = ArgumentDefaults.createDefaultsWithEarlyRcConfig()
+    defaults = ArgumentDefaults.create_defaults_with_early_rc_config()
 
     parser = _make_parser(loop, defaults)
     argcomplete.autocomplete(parser)
