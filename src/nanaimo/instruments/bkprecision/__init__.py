@@ -23,7 +23,10 @@ import pathlib
 import re
 import typing
 
+import pytest
+
 import nanaimo
+import nanaimo.pytest_plugin
 from nanaimo.connections.uart import AbstractAsyncSerial, ConcurrentUart
 
 
@@ -279,3 +282,8 @@ class Series1900BUart(nanaimo.Fixture):
 @nanaimo.PluggyFixtureManager.type_factory
 def get_fixture_type() -> typing.Type['nanaimo.Fixture']:
     return Series1900BUart
+
+
+@pytest.fixture
+def nanaimo_instr_bk_precision(request: typing.Any) -> nanaimo.Fixture:
+    return nanaimo.pytest_plugin.create_pytest_fixture(request, Series1900BUart)

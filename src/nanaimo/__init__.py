@@ -738,13 +738,26 @@ class Fixture(metaclass=abc.ABCMeta):
     async def observe_tasks_assert_not_done(self,
                                             observer_co_or_f: typing.Union[typing.Coroutine, asyncio.Future],
                                             timeout_seconds: float,
-                                            *args: typing.Union[typing.Coroutine, asyncio.Future]) \
+                                            *persistent_tasks: typing.Union[typing.Coroutine, asyncio.Future]) \
             -> typing.Set[asyncio.Future]:
         """
         Allows running a set of tasks but returning when an observer task completes. This allows a pattern where
         a single task is evaluating the side-effects of other tasks as a gate to continuing the test.
+
+        :param observer_co_or_f: The task that is expected to complete in less than ``timeout_seconds``.
+        :type observer_co_or_f: typing.Union[typing.Coroutine, asyncio.Future]
+        :param float timeout_seconds: Time in seconds to observe for before raising :class:`asyncio.TimeoutError`.
+            Set to 0 to disable.
+        :param persistent_tasks: Iterable of tasks that must remain active or :class:`AssertionError` will be raised.
+        :type persistent_tasks: *typing.Union[typing.Coroutine, asyncio.Future]
+
+        :return: a list of the persistent tasks as futures.
+        :rtype: typing.Set[asyncio.Future]
+
+        :raises AssertionError: if any of the persistent tasks exited.
+        :raises asyncio.TimeoutError: if the observer task does not complete within ``timeout_seconds``.
         """
-        done, pending = await self._observe_tasks(observer_co_or_f, timeout_seconds, *args)
+        _, _, done, pending = await self._observe_tasks(observer_co_or_f, timeout_seconds, False, *persistent_tasks)
         if len(done) > 1:
             raise AssertionError('Tasks under observation completed before the observation was complete.')
         return pending
@@ -752,14 +765,89 @@ class Fixture(metaclass=abc.ABCMeta):
     async def observe_tasks(self,
                             observer_co_or_f: typing.Union[typing.Coroutine, asyncio.Future],
                             timeout_seconds: float,
-                            *args: typing.Union[typing.Coroutine, asyncio.Future]) -> typing.Set[asyncio.Future]:
+                            *persistent_tasks: typing.Union[typing.Coroutine, asyncio.Future]) \
+            -> typing.Set[asyncio.Future]:
         """
         Allows running a set of tasks but returning when an observer task completes. This allows a pattern where
-        a single task is evaluating the side-effects of other tasks as a gate to continuing the test.
+        a single task is evaluating the side-effects of other tasks as a gate to continuing the test or simply
+        that a set of task should continue to run but a single task must complete.
+
+        :param observer_co_or_f: The task that is expected to complete in less than ``timeout_seconds``.
+        :type observer_co_or_f: typing.Union[typing.Coroutine, asyncio.Future]
+        :param float timeout_seconds: Time in seconds to observe for before raising :class:`asyncio.TimeoutError`.
+            Set to 0 to disable.
+        :param persistent_tasks: Iterable of tasks that may remain active.
+        :type persistent_tasks: *typing.Union[typing.Coroutine, asyncio.Future]
+
+        :return: a list of the persistent tasks as futures.
+        :rtype: typing.Set[asyncio.Future]
+
+        :raises AssertionError: if any of the persistent tasks exited.
+        :raises asyncio.TimeoutError: if the observer task does not complete within ``timeout_seconds``.
         """
 
-        done, pending = await self._observe_tasks(observer_co_or_f, timeout_seconds, *args)
+        _, _, done, pending = await self._observe_tasks(observer_co_or_f, timeout_seconds, False, *persistent_tasks)
         return pending
+
+    async def gate_tasks(self,
+                         gate_co_or_f: typing.Union[typing.Coroutine, asyncio.Future],
+                         timeout_seconds: float,
+                         *gated_tasks: typing.Union[typing.Coroutine, asyncio.Future]) \
+            -> typing.Tuple[asyncio.Future, typing.List[asyncio.Future]]:
+        """
+        Runs a set of tasks until a gate task completes then cancels the remaining tasks.
+
+        .. invisible-code-block: python
+
+            from nanaimo import FixtureManager
+            from nanaimo.builtin import nanaimo_bar
+            import asyncio
+
+            loop = asyncio.get_event_loop()
+            manager = FixtureManager(loop=loop)
+
+        .. code-block:: python
+
+            async def gated_task():
+                while True:
+                    await asyncio.sleep(.1)
+                    print('still running')
+
+            async def gate_task():
+                await asyncio.sleep(1)
+                return 'gate passed'
+
+            async def example():
+
+                any_fixture = nanaimo_bar.Fixture(manager)
+
+                gate_future, gated_futures = await any_fixture.gate_tasks(gate_task(), 0, gated_task())
+
+                assert not gate_future.cancelled()
+                assert 'gate passed' == gate_future.result()
+                assert len(gated_futures) == 1
+                assert gated_futures[0].cancelled()
+
+        .. invisible-code-block: python
+
+            loop.run_until_complete(example())
+
+        :param gate_co_or_f: The task that is expected to complete in less than ``timeout_seconds``.
+        :type gate_co_or_f: typing.Union[typing.Coroutine, asyncio.Future]
+        :param float timeout_seconds: Time in seconds to wait for the gate for before raising
+            :class:`asyncio.TimeoutError`. Set to 0 to disable.
+        :param persistent_tasks: Iterable of tasks that may remain active.
+        :type persistent_tasks: *typing.Union[typing.Coroutine, asyncio.Future]
+
+        :return: a tuple of the gate future and a set of the gated futures.
+        :rtype: typing.Tuple[asyncio.Future, typing.Set[asyncio.Future]]:
+
+        :raises AssertionError: if any of the persistent tasks exited.
+        :raises asyncio.TimeoutError: if the observer task does not complete within ``timeout_seconds``.
+        """
+
+        observer, observed, _, _ = await self._observe_tasks(gate_co_or_f, timeout_seconds, True, *gated_tasks)
+        return observer, observed
 
     # +-----------------------------------------------------------------------+
     # | PRIVATE
@@ -768,9 +856,14 @@ class Fixture(metaclass=abc.ABCMeta):
     async def _observe_tasks(self,
                              observer_co_or_f: typing.Union[typing.Coroutine, asyncio.Future],
                              timeout_seconds: float,
+                             cancel_remaining: bool,
                              *args: typing.Union[typing.Coroutine, asyncio.Future]) -> \
-            typing.Tuple[typing.Set[asyncio.Future], typing.Set[asyncio.Future]]:
-
+            typing.Tuple[asyncio.Future, typing.List[asyncio.Future],
+                         typing.Set[asyncio.Future], typing.Set[asyncio.Future]]:
+        """
+        :returns: observer, observed, done, pending
+        """
+        did_timeout = False
         observing_my_future = asyncio.ensure_future(observer_co_or_f)
         the_children_are_our_futures = [observing_my_future]
         for co_or_f in args:
@@ -786,14 +879,25 @@ class Fixture(metaclass=abc.ABCMeta):
                 return_when=asyncio.FIRST_COMPLETED)
 
             if observing_my_future.done():
-                return done, pending
-
-            if wait_timeout is not None and self.loop.time() - start_time > wait_timeout:
                 break
 
-        for f in the_children_are_our_futures:
-            f.cancel()
-        raise asyncio.TimeoutError()
+            if wait_timeout is not None and self.loop.time() - start_time > wait_timeout:
+                did_timeout = True
+                break
+
+        the_children_are_our_futures.remove(observing_my_future)
+        if cancel_remaining:
+            for f in the_children_are_our_futures:
+                f.cancel()
+                try:
+                    await f
+                except asyncio.CancelledError:
+                    pass
+
+        if did_timeout:
+            raise asyncio.TimeoutError()
+        else:
+            return observing_my_future, the_children_are_our_futures, done, pending
 
 
 class FixtureManager:

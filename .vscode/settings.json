@@ -75,6 +75,7 @@
         "rcfile",
         "reparent",
         "rmtree",
+        "rtype",
         "saleae",
         "sched",
         "shutil",

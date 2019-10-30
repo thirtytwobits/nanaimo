@@ -59,6 +59,7 @@ class ConcurrentUart(AbstractAsyncSerial):
         self._serial_futures = []  # type: typing.List[concurrent.futures.Future]
         self._logger_tx = logging.getLogger(type(self).__name__ + "_tx")
         self._logger_rx = logging.getLogger(type(self).__name__ + "_rx")
+        self._extra_verbose = False
 
     @property
     def serial_port(self) -> serial.Serial:
@@ -87,6 +88,14 @@ class ConcurrentUart(AbstractAsyncSerial):
     @timeout_seconds.setter
     def timeout_seconds(self, value: float) -> None:
         self._s.timeout = value
+
+    @property
+    def extra_verbose(self) -> bool:
+        return self._extra_verbose
+
+    @extra_verbose.setter
+    def extra_verbose(self, extra_verbose: bool) -> None:
+        self._extra_verbose = extra_verbose
 
     # +-----------------------------------------------------------------------+
     # | CONTEXT MANAGER
@@ -161,7 +170,8 @@ class ConcurrentUart(AbstractAsyncSerial):
             try:
                 timestamped_line = TimestampedLine.create(decoded_line, rx_timestamp_seconds)
                 self._read_buffer.put_nowait(timestamped_line)
-                self._logger_rx.debug(re.sub('\\r', '<cr>', timestamped_line))
+                if self._extra_verbose:
+                    self._logger_rx.debug(re.sub('\\r', '<cr>', timestamped_line))
             except queue.Full:
                 self._logger_rx.warning("read buffer overflow.")
                 self._rx_buffer_overflows += 1
@@ -181,6 +191,6 @@ class ConcurrentUart(AbstractAsyncSerial):
             if writeline != self.WriteBufferEndOfTransmission:
                 self._s.write(self._tx_encoder.encode(writeline))
                 if self._echo:
-                    self._logger_tx.debug(re.sub('\\r', '<cr>', writeline))
+                    self._logger_tx.info(re.sub('\\r', '<cr>', writeline))
         except queue.Empty:
             pass
