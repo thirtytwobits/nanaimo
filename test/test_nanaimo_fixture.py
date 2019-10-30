@@ -6,7 +6,7 @@
 import nanaimo
 import argparse
 import nanaimo.builtin
-from nanaimo.builtin import gather
+from nanaimo.builtin import nanaimo_gather
 import pytest
 
 
@@ -27,11 +27,11 @@ def test_canonical_name(dummy_nanaimo_fixture: nanaimo.Fixture) -> None:
 async def test_gather_coroutines(nanaimo_fixture_manager: nanaimo.FixtureManager) -> None:
 
     parser = argparse.ArgumentParser()
-    gather.Fixture.on_visit_test_arguments(nanaimo.Arguments(parser))
+    nanaimo_gather.Fixture.on_visit_test_arguments(nanaimo.Arguments(parser))
     args = nanaimo.Namespace(parser.parse_args(['--gather-coroutine', 'nanaimo_bar',
                                                 '--gather-coroutine', 'nanaimo_bar']))
 
-    gather_fixture = gather.Fixture(nanaimo_fixture_manager, args)
+    gather_fixture = nanaimo_gather.Fixture(nanaimo_fixture_manager, args)
 
     results = await gather_fixture.gather()
 
