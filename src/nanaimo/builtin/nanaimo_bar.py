@@ -43,6 +43,7 @@ class Fixture(nanaimo.fixtures.Fixture):
     async def on_gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
         """
         Create a delicious function in the artifacts to eat.
+
         +--------------+---------------------------+-----------------------------------------------+
         | **Returned Artifacts**                                                                   |
         +--------------+---------------------------+-----------------------------------------------+

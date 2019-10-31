@@ -43,6 +43,8 @@ class Fixture(nanaimo.fixtures.SubprocessFixture):
                                help='The IP or hostname for the target system.')
         arguments.add_argument('--scp-as-user',
                                help='The user to upload as.')
+        arguments.add_argument('--scp-identity',
+                               help='The identify file to use')
 
     def on_construct_command(cls, args: nanaimo.Namespace) -> str:
         """
@@ -50,8 +52,15 @@ class Fixture(nanaimo.fixtures.SubprocessFixture):
         """
         remote_directory = pathlib.Path(args.scp_remote_dir)
         remote_path = remote_directory / pathlib.Path(args.scp_file).stem
-        cmd = 'scp {}{} {}@{}:{}'.format('-P {}'.format(args.scp_port) if args.scp_port is not None else '',
-                                         str(args.scp_file), args.scp_as_user, args.scp_target, str(remote_path))
+        port_string = '-P {}'.format(args.scp_port) if args.scp_port is not None else ''
+        identity_string = '-i {}'.format(args.scp_identity) if args.scp_identity is not None else ''
+
+        cmd = 'scp {port}{file} {ident} {user}@{target}:{remote_path}'.format(port=port_string,
+                                                                              file=str(args.scp_file),
+                                                                              user=args.scp_as_user,
+                                                                              target=args.scp_target,
+                                                                              remote_path=str(remote_path),
+                                                                              ident=identity_string)
         return cmd
 
 

@@ -42,13 +42,16 @@ class Fixture(nanaimo.fixtures.SubprocessFixture):
                                help='The user to upload as.')
         arguments.add_argument('--ssh-command',
                                help='The command to run.')
+        arguments.add_argument('--ssh-identity',
+                               help='The identify file to use')
 
     def on_construct_command(self, args: nanaimo.Namespace) -> str:
-        cmd = 'ssh {port} {user}@{target} \'{command}\''.format(
+        cmd = 'ssh {port} {user}@{target} {ident} \'{command}\''.format(
             port='-P {}'.format(args.ssh_port) if args.ssh_port is not None else '',
             command=str(args.ssh_command),
             user=args.ssh_as_user,
-            target=args.ssh_target
+            target=args.ssh_target,
+            ident='-i {}'.format(args.ssh_identity) if args.ssh_identity is not None else ''
         )
         return cmd
 
