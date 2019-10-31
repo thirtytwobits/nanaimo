@@ -18,5 +18,5 @@
 #  nanaimo                                   (@&&&&####@@*
 #
 """
-Built-in :class:`Fixture` objects for common scenarios. See individual fixture documentation for use.
+Built-in :class:`nanaimo.fixtures.Fixture` objects for common scenarios. See individual fixture documentation for use.
 """

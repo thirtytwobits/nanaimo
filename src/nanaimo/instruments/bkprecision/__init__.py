@@ -26,11 +26,12 @@ import typing
 import pytest
 
 import nanaimo
+import nanaimo.fixtures
 import nanaimo.pytest_plugin
 from nanaimo.connections.uart import AbstractAsyncSerial, ConcurrentUart
 
 
-class Series1900BUart(nanaimo.Fixture):
+class Series1900BUart(nanaimo.fixtures.Fixture):
     """
     Control of a 1900B series BK Precision power supply via UART.
     """
@@ -90,7 +91,7 @@ class Series1900BUart(nanaimo.Fixture):
             yield bk_uart
 
     def __init__(self,
-                 manager: 'nanaimo.FixtureManager',
+                 manager: nanaimo.fixtures.FixtureManager,
                  args: nanaimo.Namespace,
                  **kwargs: typing.Any):
         super().__init__(manager, args, **kwargs)
@@ -279,11 +280,11 @@ class Series1900BUart(nanaimo.Fixture):
         return result
 
 
-@nanaimo.PluggyFixtureManager.type_factory
-def get_fixture_type() -> typing.Type['nanaimo.Fixture']:
+@nanaimo.fixtures.PluggyFixtureManager.type_factory
+def get_fixture_type() -> typing.Type['nanaimo.fixtures.Fixture']:
     return Series1900BUart
 
 
 @pytest.fixture
-def nanaimo_instr_bk_precision(request: typing.Any) -> nanaimo.Fixture:
+def nanaimo_instr_bk_precision(request: typing.Any) -> nanaimo.fixtures.Fixture:
     return nanaimo.pytest_plugin.create_pytest_fixture(request, Series1900BUart)

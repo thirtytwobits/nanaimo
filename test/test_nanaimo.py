@@ -12,7 +12,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-import fixtures
+import material
 import nanaimo
 import nanaimo.connections
 import nanaimo.connections.uart
@@ -25,8 +25,8 @@ def test_uart_monitor(serial_simulator_type: typing.Type) -> None:
     """
     Verify the nanaimo.ConcurrentUart class using a mock serial port.
     """
-    serial = serial_simulator_type(fixtures.FAKE_TEST_SUCCESS)
-    last_line = fixtures.FAKE_TEST_SUCCESS[-1]
+    serial = serial_simulator_type(material.FAKE_TEST_SUCCESS)
+    last_line = material.FAKE_TEST_SUCCESS[-1]
     with nanaimo.connections.uart.ConcurrentUart(serial) as monitor:
         while True:
             line = monitor.readline()
@@ -57,7 +57,7 @@ async def test_program_while_monitoring(mock_JLinkExe: pathlib.Path,
                                         serial_simulator_type: typing.Type) -> None:
     scripts = s32K144_jlink_scripts
     uploader = nanaimo.instruments.jlink.ProgramUploaderJLink(mock_JLinkExe)
-    serial = serial_simulator_type(fixtures.FAKE_TEST_SUCCESS)
+    serial = serial_simulator_type(material.FAKE_TEST_SUCCESS)
     uploads = 0
     with nanaimo.connections.uart.ConcurrentUart(serial) as monitor:
         for script in scripts:
@@ -76,7 +76,7 @@ async def test_program_while_monitoring(mock_JLinkExe: pathlib.Path,
 
 @pytest.mark.asyncio
 async def test_failed_test(serial_simulator_type: typing.Type) -> None:
-    serial = serial_simulator_type(fixtures.FAKE_TEST_FAILURE)
+    serial = serial_simulator_type(material.FAKE_TEST_FAILURE)
     with nanaimo.connections.uart.ConcurrentUart(serial) as monitor:
         assert 1 == await nanaimo.parsers.gtest.Parser(10).read_test(monitor)
 

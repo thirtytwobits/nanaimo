@@ -19,7 +19,7 @@
 #
 """
 Connections are built-in async abstractions using standard communication
-protocols like UART, I2C, CAN, TCP/IP, etc. :class:`Instrument` and :class:`Fixture`
+protocols like UART, I2C, CAN, TCP/IP, etc. :class:`Instrument` and :class:`nanaimo.fixtures.Fixture`
 classes use connections to bind to physical hardware.
 """
 import asyncio
@@ -31,6 +31,9 @@ import nanaimo
 
 
 class TimestampedLine(str):
+    """
+    A line of text with an associated timestamp.
+    """
 
     @classmethod
     def create(cls, line_text: object, timestamp_seconds: float) -> 'TimestampedLine':
@@ -47,6 +50,9 @@ class TimestampedLine(str):
 
 
 class AbstractSerial:
+    """
+    Abstract base class for a serial communication channel.
+    """
 
     @classmethod
     def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
@@ -57,6 +63,10 @@ class AbstractSerial:
 
 
 class AbstractAsyncSerial(AbstractSerial):
+    """
+    Abstract base class for a serial communication channel that provides
+    asynchronous methods.
+    """
 
     def __init__(self, loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> None:
         self._loop = (loop if loop is not None else asyncio.get_event_loop())

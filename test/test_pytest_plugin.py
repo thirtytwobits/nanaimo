@@ -6,27 +6,28 @@
 import pytest
 
 import nanaimo
+import nanaimo.fixtures
 
 
-def test_nanaimo_fixture_manager(nanaimo_fixture_manager: nanaimo.FixtureManager) -> None:
+def test_nanaimo_fixture_manager(nanaimo_fixture_manager: nanaimo.fixtures.FixtureManager) -> None:
     """
     Ensure the fixture manager ... er; fixture works as expected.
     """
-    assert type(nanaimo_fixture_manager) == nanaimo.PluggyFixtureManager
+    assert type(nanaimo_fixture_manager) == nanaimo.fixtures.nanaimo.fixtures.PluggyFixtureManager
     gtest_fixture = nanaimo_fixture_manager.create_fixture('gtest_over_jlink', nanaimo.Namespace())
-    assert isinstance(gtest_fixture, nanaimo.Fixture)
+    assert isinstance(gtest_fixture, nanaimo.fixtures.Fixture)
 
 
 @pytest.mark.asyncio
-async def test_gtest_over_jlink_plugin(gtest_over_jlink: nanaimo.Fixture) -> None:
+async def test_gtest_over_jlink_plugin(gtest_over_jlink: nanaimo.fixtures.Fixture) -> None:
     """
     Make sure we've properly exported gtest_over_jlink as a pytest plugin.
     """
-    assert isinstance(gtest_over_jlink, nanaimo.Fixture)
+    assert isinstance(gtest_over_jlink, nanaimo.fixtures.Fixture)
 
 
 @pytest.mark.asyncio
-async def test_nanaimo_bar(nanaimo_bar: nanaimo.Fixture) -> None:
+async def test_nanaimo_bar(nanaimo_bar: nanaimo.fixtures.Fixture) -> None:
     """
     Test eating a Nanaimo bar (exercises directly exposing a plugin to pytest.)
     """
@@ -39,7 +40,7 @@ async def test_nanaimo_bar(nanaimo_bar: nanaimo.Fixture) -> None:
 
 
 @pytest.mark.asyncio
-async def test_another_nanaimo_bar(nanaimo_fixture_manager: nanaimo.FixtureManager) -> None:
+async def test_another_nanaimo_bar(nanaimo_fixture_manager: nanaimo.fixtures.FixtureManager) -> None:
     """
     Test eating another Nanaimo bar (exercises using fixtures across multiple tests)
     """

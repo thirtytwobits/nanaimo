@@ -5,9 +5,12 @@
 """
 Contains data files used in tests. Use conftest.py for fixtures.
 """
-import nanaimo
-import typing
 import pathlib
+import typing
+
+import nanaimo
+import nanaimo.fixtures
+
 
 FAKE_TEST_SUCCESS = '''[==========] Running 140 tests from 7 test suites.
 [----------] Global test environment set-up.
@@ -318,10 +321,10 @@ FAKE_TEST_FAILURE = '''[----------] 20 tests from SaturatedMathTest/6 (signed 8)
 '''.splitlines()
 
 
-class DummyFixture(nanaimo.Fixture):
+class DummyFixture(nanaimo.fixtures.Fixture):
 
     def __init__(self,
-                 manager: nanaimo.FixtureManager,
+                 manager: nanaimo.fixtures.FixtureManager,
                  args: nanaimo.Namespace = nanaimo.Namespace(),
                  **kwargs: typing.Any):
         super().__init__(manager, args, **kwargs)

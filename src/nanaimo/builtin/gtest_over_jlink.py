@@ -18,7 +18,7 @@
 #  nanaimo                                   (@&&&&####@@*
 #
 """
-Built-in :class:`Fixture` objects for common scenarios. See individual fixture documentation for use.
+Built-in :class:`nanaimo.fixtures.Fixture` objects for common scenarios. See individual fixture documentation for use.
 """
 import asyncio
 import pathlib
@@ -34,9 +34,10 @@ import nanaimo.instruments.jlink
 import nanaimo.parsers
 import nanaimo.parsers.gtest
 import nanaimo.pytest_plugin
+import nanaimo.fixtures
 
 
-class Fixture(nanaimo.Fixture):
+class Fixture(nanaimo.fixtures.Fixture):
     """
     Uploads a firmware using JLink and monitors a UART expected gtest output. Returns 0 if all
     gtest tests pass else returns non-zero.
@@ -72,11 +73,11 @@ class Fixture(nanaimo.Fixture):
         return nanaimo.Artifacts(result)
 
 
-@nanaimo.PluggyFixtureManager.type_factory
-def get_fixture_type() -> typing.Type['nanaimo.Fixture']:
+@nanaimo.fixtures.PluggyFixtureManager.type_factory
+def get_fixture_type() -> typing.Type['Fixture']:
     return Fixture
 
 
 @pytest.fixture
-def gtest_over_jlink(request: typing.Any) -> nanaimo.Fixture:
+def gtest_over_jlink(request: typing.Any) -> nanaimo.fixtures.Fixture:
     return nanaimo.pytest_plugin.create_pytest_fixture(request, Fixture)

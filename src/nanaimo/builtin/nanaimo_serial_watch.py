@@ -26,10 +26,11 @@ import pytest
 import nanaimo
 import nanaimo.connections
 import nanaimo.connections.uart
+import nanaimo.fixtures
 import nanaimo.pytest_plugin
 
 
-class Fixture(nanaimo.Fixture):
+class Fixture(nanaimo.fixtures.Fixture):
     """
     Gathers a log over a serial connection until a given pattern is matched.
     """
@@ -38,7 +39,7 @@ class Fixture(nanaimo.Fixture):
     argument_prefix = 'lw'
 
     def __init__(self,
-                 manager: nanaimo.FixtureManager,
+                 manager: nanaimo.fixtures.FixtureManager,
                  args: nanaimo.Namespace,
                  **kwargs: typing.Any) -> None:
         super().__init__(manager, args, **kwargs)
@@ -62,6 +63,16 @@ class Fixture(nanaimo.Fixture):
     async def on_gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
         """
         Watch the logs until the pattern matches.
+
+        +--------------+---------------------------+-----------------------------------------------+
+        | **Returned Artifacts**                                                                   |
+        +--------------+---------------------------+-----------------------------------------------+
+        | key          | type                      | Notes                                         |
+        +==============+===========================+===============================================+
+        | match        | re.MatchObject            | The match if result_code is 0                 |
+        +--------------+---------------------------+-----------------------------------------------+
+        | matched_line | str                       | The full line matched if result_code is 0     |
+        +--------------+---------------------------+-----------------------------------------------+
         """
         with self._uart_factory(args.lw_port, args.lw_port_speed) as monitor:
 
@@ -111,11 +122,11 @@ class Fixture(nanaimo.Fixture):
         return nanaimo.Artifacts()
 
 
-@nanaimo.PluggyFixtureManager.type_factory
-def get_fixture_type() -> typing.Type['nanaimo.Fixture']:
+@nanaimo.fixtures.PluggyFixtureManager.type_factory
+def get_fixture_type() -> typing.Type['Fixture']:
     return Fixture
 
 
 @pytest.fixture
-def nanaimo_serial_watch(request: typing.Any) -> nanaimo.Fixture:
+def nanaimo_serial_watch(request: typing.Any) -> nanaimo.fixtures.Fixture:
     return nanaimo.pytest_plugin.create_pytest_fixture(request, Fixture)

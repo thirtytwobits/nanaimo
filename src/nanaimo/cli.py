@@ -28,7 +28,8 @@ import typing
 import argcomplete
 
 import nanaimo
-from nanaimo.config import ArgumentDefaults
+import nanaimo.fixtures
+import nanaimo.config
 
 
 class CreateAndGatherFunctor:
@@ -39,8 +40,8 @@ class CreateAndGatherFunctor:
     """
 
     def __init__(self,
-                 fixture_type: typing.Type['nanaimo.Fixture'],
-                 manager: nanaimo.FixtureManager,
+                 fixture_type: typing.Type[nanaimo.fixtures.Fixture],
+                 manager: nanaimo.fixtures.FixtureManager,
                  loop: asyncio.AbstractEventLoop):
         self._fixture_type = fixture_type
         self._manager = manager
@@ -67,10 +68,10 @@ def _auto_brief(documented: typing.Any, default_brief: str = '') -> str:
         return lines[0]
 
 
-def _visit_argparse(manager: nanaimo.FixtureManager,
+def _visit_argparse(manager: nanaimo.fixtures.FixtureManager,
                     subparsers: argparse._SubParsersAction,
                     loop: asyncio.AbstractEventLoop,
-                    defaults: typing.Optional[ArgumentDefaults]) -> None:
+                    defaults: typing.Optional[nanaimo.config.ArgumentDefaults]) -> None:
     for fixture_type in manager.fixture_types():
         subparser = subparsers.add_parser(fixture_type.get_canonical_name(),
                                           help=_auto_brief(fixture_type))  # type: 'argparse.ArgumentParser'
@@ -79,7 +80,7 @@ def _visit_argparse(manager: nanaimo.FixtureManager,
 
 
 def _make_parser(loop: typing.Optional[asyncio.AbstractEventLoop] = None,
-                 defaults: typing.Optional[ArgumentDefaults] = None) -> argparse.ArgumentParser:
+                 defaults: typing.Optional[nanaimo.config.ArgumentDefaults] = None) -> argparse.ArgumentParser:
     """
     Defines the command-line interface. Provided as a separate factory method to
     support sphinx-argparse documentation.
@@ -93,7 +94,7 @@ def _make_parser(loop: typing.Optional[asyncio.AbstractEventLoop] = None,
 '''
 
     if defaults is None:
-        defaults = ArgumentDefaults()
+        defaults = nanaimo.config.ArgumentDefaults()
 
     parser = argparse.ArgumentParser(
         description='Run tests against hardware.',
@@ -117,7 +118,7 @@ def _make_parser(loop: typing.Optional[asyncio.AbstractEventLoop] = None,
 
     subparsers = parser.add_subparsers(dest='fixture', help='Available fixtures.')
 
-    pm = nanaimo.PluggyFixtureManager()
+    pm = nanaimo.fixtures.PluggyFixtureManager()
 
     _visit_argparse(pm, subparsers, loop, defaults)  # type: ignore
 
@@ -146,7 +147,7 @@ def main() -> int:
     """
 
     loop = asyncio.get_event_loop()
-    defaults = ArgumentDefaults.create_defaults_with_early_rc_config()
+    defaults = nanaimo.config.ArgumentDefaults.create_defaults_with_early_rc_config()
 
     parser = _make_parser(loop, defaults)
     argcomplete.autocomplete(parser)

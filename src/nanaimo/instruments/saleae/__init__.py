@@ -26,9 +26,10 @@ import asyncio
 import typing
 
 import nanaimo
+import nanaimo.fixtures
 
 
-class Fixture(nanaimo.Fixture):
+class Fixture(nanaimo.fixtures.Fixture):
     """
     .. Warning:: Stubbed-out implementation
         This fixture doesn't do anything yet either then the most naive query possible of the Saleae.
@@ -71,6 +72,6 @@ class Fixture(nanaimo.Fixture):
         return nanaimo.Artifacts()
 
 
-@nanaimo.PluggyFixtureManager.type_factory
-def get_fixture_type() -> typing.Type['nanaimo.Fixture']:
+@nanaimo.fixtures.PluggyFixtureManager.type_factory
+def get_fixture_type() -> typing.Type['Fixture']:
     return Fixture
