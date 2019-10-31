@@ -9,7 +9,7 @@ import typing
 
 import pytest
 
-import fixtures
+import material
 
 
 class DummyProtocol(asyncio.SubprocessProtocol):
@@ -28,7 +28,7 @@ class DummyProtocol(asyncio.SubprocessProtocol):
 
 @pytest.mark.asyncio
 @pytest.mark.timeout(15)
-async def test_continuous_subprocess(paths_for_test: fixtures.Paths, event_loop: asyncio.AbstractEventLoop) -> None:
+async def test_continuous_subprocess(paths_for_test: material.Paths, event_loop: asyncio.AbstractEventLoop) -> None:
     exit_future = asyncio.Future(loop=event_loop)  # type: typing.Future
 
     code = """

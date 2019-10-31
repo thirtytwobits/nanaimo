@@ -26,10 +26,11 @@ import pytest
 import nanaimo
 import nanaimo.connections
 import nanaimo.connections.uart
+import nanaimo.fixtures
 import nanaimo.pytest_plugin
 
 
-class Fixture(nanaimo.Fixture):
+class Fixture(nanaimo.fixtures.Fixture):
     """
     Gathers a log over a serial connection until a given pattern is matched.
     """
@@ -38,7 +39,7 @@ class Fixture(nanaimo.Fixture):
     argument_prefix = 'lw'
 
     def __init__(self,
-                 manager: nanaimo.FixtureManager,
+                 manager: nanaimo.fixtures.FixtureManager,
                  args: nanaimo.Namespace,
                  **kwargs: typing.Any) -> None:
         super().__init__(manager, args, **kwargs)
@@ -57,31 +58,43 @@ class Fixture(nanaimo.Fixture):
                                help='A python regular expression to search for')
         arguments.add_argument('--lw-disruption', default='\r\n')
         arguments.add_argument('--lw-disturb-rate', type=float)
+        arguments.add_argument('--lw-update-period', type=float, default=1.0, help='Fractional time in seconds')
 
     async def on_gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
         """
         Watch the logs until the pattern matches.
+
+        +--------------+---------------------------+-----------------------------------------------+
+        | **Returned Artifacts**                                                                   |
+        +--------------+---------------------------+-----------------------------------------------+
+        | key          | type                      | Notes                                         |
+        +==============+===========================+===============================================+
+        | match        | re.MatchObject            | The match if result_code is 0                 |
+        +--------------+---------------------------+-----------------------------------------------+
+        | matched_line | str                       | The full line matched if result_code is 0     |
+        +--------------+---------------------------+-----------------------------------------------+
         """
         with self._uart_factory(args.lw_port, args.lw_port_speed) as monitor:
-            disturb_rate = args.lw_disturb_rate
-            if disturb_rate is not None and float(disturb_rate) > 0:
-                while True:
-                    done, pending = await asyncio.wait([asyncio.ensure_future(self._matcher(args, monitor)),
-                                                        asyncio.ensure_future(self._agitator(args, monitor))])
-                    if len(done) == 2:
-                        done0 = done.pop().result()
-                        done1 = done.pop().result()
-                        artifacts = nanaimo.Artifacts.combine(done0, done1)
-                        break
-            else:
-                artifacts = await self._matcher(args, monitor)
 
+            match_future, _ = await self.gate_tasks(self._matcher(args, monitor),
+                                                    0.0,
+                                                    self._agitator(args, monitor),
+                                                    self._updater(args))
+
+        artifacts = typing.cast(nanaimo.Artifacts, match_future.result())
         self._logger.info('Found match : %s', artifacts.matched_line)
         return artifacts
 
     # +-----------------------------------------------------------------------+
     # | PRIVATE
     # +-----------------------------------------------------------------------+
+    async def _updater(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
+        if args.lw_update_period is not None:
+            while True:
+                await asyncio.sleep(args.lw_update_period)
+                self._logger.info('still waiting...')
+
+        return nanaimo.Artifacts()
 
     async def _matcher(self, args: nanaimo.Namespace,
                        monitor: nanaimo.connections.uart.ConcurrentUart) -> nanaimo.Artifacts:
@@ -101,18 +114,19 @@ class Fixture(nanaimo.Fixture):
 
     async def _agitator(self, args: nanaimo.Namespace,
                         monitor: nanaimo.connections.uart.ConcurrentUart) -> nanaimo.Artifacts:
-        artifacts = nanaimo.Artifacts()
-        await asyncio.sleep(args.lw_disturb_rate)
-        self._logger.debug('About to disturb the uart...')
-        await monitor.put_line(args.lw_disruption)
-        return artifacts
+        if args.lw_disturb_rate is not None:
+            while True:
+                await asyncio.sleep(args.lw_disturb_rate)
+                self._logger.debug('About to disturb the uart...')
+                await monitor.put_line(args.lw_disruption)
+        return nanaimo.Artifacts()
 
 
-@nanaimo.PluggyFixtureManager.type_factory
-def get_fixture_type() -> typing.Type['nanaimo.Fixture']:
+@nanaimo.fixtures.PluggyFixtureManager.type_factory
+def get_fixture_type() -> typing.Type['Fixture']:
     return Fixture
 
 
 @pytest.fixture
-def nanaimo_serial_watch(request: typing.Any) -> nanaimo.Fixture:
+def nanaimo_serial_watch(request: typing.Any) -> nanaimo.fixtures.Fixture:
     return nanaimo.pytest_plugin.create_pytest_fixture(request, Fixture)

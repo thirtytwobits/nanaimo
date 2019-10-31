@@ -67,7 +67,7 @@ class ArgumentDefaults:
 
     def __init__(self, args: typing.Optional[typing.Any] = None) -> None:
         self._env_variable_index = weakref.WeakKeyDictionary()  # type: weakref.WeakKeyDictionary
-        self._configparser = configparser.ConfigParser()
+        self._configparser = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation())
         self._logger = logging.getLogger(__name__)
         if args is not None:
             self.set_args(args)

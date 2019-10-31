@@ -20,11 +20,12 @@
 """
 Nanaimo presents itself as a single pytest fixture called `nanaimo_fixture_manager`
 which allows tests to access or control test hardware fixtures. To register your
-test fixture with the Nanaimo fixture manager use the `nanaimo.PluggyFixtureManager.type_factory`
-:class:`pluggy.HookimplMarker` to register your :class:`nanaimo.Fixture`.
+test fixture with the Nanaimo fixture manager use the `nanaimo.fixtures.PluggyFixtureManager.type_factory`
+:class:`pluggy.HookimplMarker` to register your :class:`nanaimo.fixtures.Fixture`.
 
 .. invisible-code-block: python
     import nanaimo
+    import nanaimo.fixtures
     import pytest
     import typing
 
@@ -32,7 +33,7 @@ test fixture with the Nanaimo fixture manager use the `nanaimo.PluggyFixtureMana
 
     # In my_namespace/__init__.py
 
-    class MyTestFixture(nanaimo.Fixture):
+    class MyTestFixture(nanaimo.fixtures.Fixture):
 
         @classmethod
         def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
@@ -44,8 +45,8 @@ test fixture with the Nanaimo fixture manager use the `nanaimo.PluggyFixtureMana
             return artifacts
 
 
-    @nanaimo.PluggyFixtureManager.type_factory
-    def get_fixture_type() -> typing.Type['nanaimo.Fixture']:
+    @nanaimo.fixtures.PluggyFixtureManager.type_factory
+    def get_fixture_type() -> typing.Type['nanaimo.fixtures.Fixture']:
         return MyTestFixture
 
 Individual fixtures can choose to present pytest fixtures directly using `pytest.fixture`
@@ -54,7 +55,7 @@ and :func:`create_pytest_fixture`
 .. code-block:: python
 
     @pytest.fixture
-    def my_test_fixture(request: typing.Any) -> nanaimo.Fixture:
+    def my_test_fixture(request: typing.Any) -> nanaimo.fixtures.Fixture:
         return nanaimo.pytest_plugin.create_pytest_fixture(request, MyTestFixture)
 
 
@@ -77,24 +78,26 @@ import typing
 import pytest
 
 import nanaimo
+import nanaimo.fixtures
+import nanaimo.config
 
-from .config import ArgumentDefaults
 
-_fixture_manager = None  # type: typing.Optional[nanaimo.FixtureManager]
+_fixture_manager = None  # type: typing.Optional[nanaimo.fixtures.FixtureManager]
 """
 Pytest plugin singleton. The first time our pytest plugin is invoked
 we populate to provide a peristent store of Nanaimo fixtures and artifacts.
 """
 
 
-def _get_default_fixture_manager() -> nanaimo.FixtureManager:
+def _get_default_fixture_manager() -> nanaimo.fixtures.FixtureManager:
     global _fixture_manager
     if _fixture_manager is None:
-        _fixture_manager = nanaimo.PluggyFixtureManager()
+        _fixture_manager = nanaimo.fixtures.nanaimo.fixtures.PluggyFixtureManager()
     return _fixture_manager
 
 
-def create_pytest_fixture(pytest_request: typing.Any, fixture_type: typing.Type[nanaimo.Fixture]) -> nanaimo.Fixture:
+def create_pytest_fixture(pytest_request: typing.Any,
+                          fixture_type: typing.Type[nanaimo.fixtures.Fixture]) -> nanaimo.fixtures.Fixture:
     """
     Create a fixture for a `pytest.fixture` request. This method ensures the fixture is created through
     the default :class:`FixtureManager`.
@@ -106,13 +109,13 @@ def create_pytest_fixture(pytest_request: typing.Any, fixture_type: typing.Type[
     """
     fm = _get_default_fixture_manager()
     args = pytest_request.config.option
-    args_ns = nanaimo.Namespace(args, ArgumentDefaults(args), allow_none_values=False)
+    args_ns = nanaimo.Namespace(args, nanaimo.config.ArgumentDefaults(args), allow_none_values=False)
     return fm.create_fixture(fixture_type.get_canonical_name(), args_ns)
 
 
 def pytest_addoption(parser) -> None:  # type: ignore
     manager = _get_default_fixture_manager()
-    nanaimo_defaults = ArgumentDefaults.create_defaults_with_early_rc_config()
+    nanaimo_defaults = nanaimo.config.ArgumentDefaults.create_defaults_with_early_rc_config()
     for fixture_type in manager.fixture_types():
         group = parser.getgroup(fixture_type.get_canonical_name())
         fixture_type.on_visit_test_arguments(nanaimo.Arguments(group,
@@ -121,13 +124,18 @@ def pytest_addoption(parser) -> None:  # type: ignore
 
 
 @pytest.fixture
-def nanaimo_fixture_manager(request: typing.Any) -> nanaimo.FixtureManager:
+def nanaimo_fixture_manager(request: typing.Any) -> nanaimo.fixtures.FixtureManager:
     """
     The default fixture for Nanaimo. Available as `nanaimo_fixture_manager`
 
+    .. invisible-code-block: python
+
+        import nanaimo
+        import nanaimo.fixtures
+
     .. code-block:: python
 
-        def test_example(nanaimo_fixture_manager: nanaimo.FixtureManager) -> None:
+        def test_example(nanaimo_fixture_manager: nanaimo.fixtures.FixtureManager) -> None:
             my_fixture = nanaimo_fixture_manager.get_fixture('my_fixture')
 
     :param pytest_request: The request object passed into the pytest fixture factory.

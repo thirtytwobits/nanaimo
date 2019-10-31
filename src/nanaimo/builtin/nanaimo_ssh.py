@@ -22,10 +22,11 @@ import typing
 import pytest
 
 import nanaimo
+import nanaimo.fixtures
 import nanaimo.pytest_plugin
 
 
-class Fixture(nanaimo.Fixture):
+class Fixture(nanaimo.fixtures.SubprocessFixture):
     """
     This fixture assumes that ssh is available and functional on the system.
     """
@@ -42,48 +43,21 @@ class Fixture(nanaimo.Fixture):
         arguments.add_argument('--ssh-command',
                                help='The command to run.')
 
-    async def on_gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
-        """
-        Do the upload. Return a status artifact.
-        """
-        artifacts = nanaimo.Artifacts()
-        artifacts.result_code = await self._do_command(args.ssh_target, args.ssh_as_user, args.ssh_command)
-        return artifacts
-
-    async def _do_command(self,
-                          target: str,
-                          user: str,
-                          command: str,
-                          port: typing.Optional[int] = None) -> int:
-        # TODO: implement me
-        # cmd = 'ssh {}{} {}@{}:{}'.format('-P {}'.format(port) if port is not None else '',
-        #                                  str(file_to_upload), user, target, str(target_path))
-
-        # self._logger.info('starting upload: %s', cmd)
-        # proc = await asyncio.create_subprocess_shell(
-        #     cmd,
-        #     stdout=asyncio.subprocess.PIPE,
-        #     stderr=asyncio.subprocess.PIPE
-        # )  # type: asyncio.subprocess.Process
-
-        # stdout, stderr = await proc.communicate()
-
-        # self._logger.info('%s exited with %i', cmd, proc.returncode)
-
-        # if stdout:
-        #     self._logger.debug(stdout.decode())
-        # if stderr:
-        #     self._logger.error(stderr.decode())
-
-        # return proc.returncode
-        return 0
+    def on_construct_command(self, args: nanaimo.Namespace) -> str:
+        cmd = 'ssh {port} {user}@{target} \'{command}\''.format(
+            port='-P {}'.format(args.ssh_port) if args.ssh_port is not None else '',
+            command=str(args.ssh_command),
+            user=args.ssh_as_user,
+            target=args.ssh_target
+        )
+        return cmd
 
 
-@nanaimo.PluggyFixtureManager.type_factory
-def get_fixture_type() -> typing.Type['nanaimo.Fixture']:
+@nanaimo.fixtures.PluggyFixtureManager.type_factory
+def get_fixture_type() -> typing.Type['Fixture']:
     return Fixture
 
 
 @pytest.fixture
-def nanaimo_ssh(request: typing.Any) -> nanaimo.Fixture:
+def nanaimo_ssh(request: typing.Any) -> nanaimo.fixtures.Fixture:
     return nanaimo.pytest_plugin.create_pytest_fixture(request, Fixture)
