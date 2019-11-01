@@ -51,7 +51,7 @@ class Fixture(nanaimo.fixtures.SubprocessFixture):
         Form the upload command.
         """
         remote_directory = pathlib.Path(args.scp_remote_dir)
-        remote_path = remote_directory / pathlib.Path(args.scp_file).stem
+        remote_path = remote_directory / pathlib.Path(args.scp_file).name
         port_string = '-P {}'.format(args.scp_port) if args.scp_port is not None else ''
         identity_string = '-i {}'.format(args.scp_identity) if args.scp_identity is not None else ''
 
