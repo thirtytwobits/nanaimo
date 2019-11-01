@@ -55,7 +55,7 @@ class Fixture(nanaimo.fixtures.SubprocessFixture):
         port_string = '-P {}'.format(args.scp_port) if args.scp_port is not None else ''
         identity_string = '-i {}'.format(args.scp_identity) if args.scp_identity is not None else ''
 
-        cmd = 'scp {port}{file} {ident} {user}@{target}:{remote_path}'.format(port=port_string,
+        cmd = 'scp {ident} {port}{file} {user}@{target}:{remote_path}'.format(port=port_string,
                                                                               file=str(args.scp_file),
                                                                               user=args.scp_as_user,
                                                                               target=args.scp_target,
