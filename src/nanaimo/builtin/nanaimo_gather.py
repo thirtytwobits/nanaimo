@@ -101,4 +101,11 @@ def get_fixture_type() -> typing.Type['Fixture']:
 
 @pytest.fixture
 def nanaimo_gather(request: typing.Any) -> nanaimo.fixtures.Fixture:
+    """
+    Provides a :class:`nanaimo.builtin.nanaimo_gather.Fixture` fixture to a pytest.
+
+    :param pytest_request: The request object passed into the pytest fixture factory.
+    :type pytest_request: _pytest.fixtures.FixtureRequest
+    :rtype: nanaimo.builtin.nanaimo_gather.Fixture
+    """
     return nanaimo.pytest_plugin.create_pytest_fixture(request, Fixture)

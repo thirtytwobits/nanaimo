@@ -141,5 +141,29 @@ def nanaimo_fixture_manager(request: typing.Any) -> nanaimo.fixtures.FixtureMana
     :param pytest_request: The request object passed into the pytest fixture factory.
     :type pytest_request: _pytest.fixtures.FixtureRequest
     :return: A reference to the default fixture manager.
+    :rtype: nanaimo.fixtures.FixtureManager
     """
     return _get_default_fixture_manager()
+
+
+@pytest.fixture
+def nanaimo_arguments(request: typing.Any) -> nanaimo.Namespace:
+    """
+    Exposes the commandline arguments and defaults provided to a test.
+
+    .. invisible-code-block: python
+
+        import nanaimo
+        import nanaimo.fixtures
+
+    .. code-block:: python
+
+        def test_example(nanaimo_arguments: nanaimo.Namespace) -> None:
+            an_argument = nanaimo_arguments.some_arg
+
+    :param pytest_request: The request object passed into the pytest fixture factory.
+    :type pytest_request: _pytest.fixtures.FixtureRequest
+    :return: A namespace with the pytest commandline args added per the documented rules.
+    :rtype: nanaimo.Namespace
+    """
+    return nanaimo.Namespace(request.config.option)

@@ -151,6 +151,26 @@ class Series1900BUart(nanaimo.fixtures.Fixture):
 
         return artifacts
 
+    def is_volage_above_on_threshold(self, voltage: float) -> bool:
+        """
+        Return if a given voltage is above the configured threshold for the
+        high/on/rising voltage for this fixture.
+        """
+        rising_threshold_voltage = \
+            self.fixture_arguments.bk_target_voltage - self.fixture_arguments.bk_target_voltage_threshold_rising
+        return (True if voltage > rising_threshold_voltage else False)
+
+    def is_volage_below_off_threshold(self, voltage: float) -> bool:
+        """
+        Return if a given voltage is below the configured threshold for the
+        low/off/falling voltage for this fixture.
+        """
+        falling_threshold_voltage = self.fixture_arguments.bk_target_voltage_threshold_falling
+        return (True if voltage < falling_threshold_voltage else False)
+
+    # +-----------------------------------------------------------------------+
+    # | PRIVATE
+    # +-----------------------------------------------------------------------+
     async def _get_display(self,
                            uart: AbstractAsyncSerial,
                            command_timeout: float) -> typing.Tuple[typing.Tuple[float, float, int], int]:
@@ -181,14 +201,10 @@ class Series1900BUart(nanaimo.fixtures.Fixture):
                                                                 (self.CommandTurnOn if is_up else self.CommandTurnOff),
                                                                 args.bk_command_timeout)
         if inout_artifacts.result_code == 0 and args.bk_target_voltage is not None:
-            target_voltage = (args.bk_target_voltage - args.bk_target_voltage_threshold_rising
-                              if is_up
-                              else args.bk_target_voltage_threshold_falling)
             wait_timeout = max(0, args.bk_command_timeout - (uart.time() - start_time))
             inout_artifacts.result_code = await self._wait_for_voltage(uart,
                                                                        wait_timeout,
-                                                                       is_up,
-                                                                       target_voltage)
+                                                                       is_up)
 
     async def _do_command_from_args(self,
                                     uart: AbstractAsyncSerial,
@@ -262,20 +278,20 @@ class Series1900BUart(nanaimo.fixtures.Fixture):
     async def _wait_for_voltage(self,
                                 uart: AbstractAsyncSerial,
                                 command_timeout: float,
-                                is_min: bool,
-                                threshold_v: float) -> int:
+                                is_rising: bool) -> int:
         start_time = uart.time()
         while True:
             if uart.time() - start_time > command_timeout:
                 raise asyncio.TimeoutError()
             display_tuple, result = await self._get_display(uart, command_timeout)
             voltage = display_tuple[0]
-            if result == 0 and (voltage >= threshold_v if is_min else voltage <= threshold_v):
-                if is_min:
+            if result == 0:
+                if is_rising and self.is_volage_above_on_threshold(voltage):
                     self.logger.debug('---------------POWER SUPPLY UP----------------')
-                else:
+                    break
+                elif not is_rising and self.is_volage_below_off_threshold(voltage):
                     self.logger.debug('--------------POWER SUPPLY DOWN---------------')
-                break
+                    break
             await asyncio.sleep(.01)
         return result
 
@@ -287,4 +303,14 @@ def get_fixture_type() -> typing.Type['nanaimo.fixtures.Fixture']:
 
 @pytest.fixture
 def nanaimo_instr_bk_precision(request: typing.Any) -> nanaimo.fixtures.Fixture:
+    """
+    Provides a :class:`nanaimo.instruments.bkprecision.Series1900BUart` fixture to a pytest.
+    This fixture controls a `BK Precision 1900B series power supply <https://bit.ly/34jeSz2>`_
+    attached to the system via UART.
+
+    :param pytest_request: The request object passed into the pytest fixture factory.
+    :type pytest_request: _pytest.fixtures.FixtureRequest
+    :return: A fixture providing control of a Series 1900 BK Precision power supply via UART.
+    :rtype: nanaimo.instruments.bkprecision.Series1900BUart
+    """
     return nanaimo.pytest_plugin.create_pytest_fixture(request, Series1900BUart)
