@@ -171,20 +171,25 @@ class Fixture(metaclass=abc.ABCMeta):
         :raises asyncio.TimeoutError: If :data:`gather_timeout_seconds` is > 0 and :meth:`on_gather` takes longer
             then this to complete or if on_gather itself raises a timeout error.
         """
-        routine = self.on_gather(self._args.merge(**kwargs))
-        if self._gather_timeout_seconds > 0:
-            done, pending = await asyncio.wait([asyncio.ensure_future(routine)],
-                                               loop=self.manager.loop,
-                                               timeout=self._gather_timeout_seconds,
-                                               return_when=asyncio.ALL_COMPLETED)
-            if len(pending) > 0:
-                pending.pop().cancel()
-                raise asyncio.TimeoutError('{} gather was cancelled after waiting for {} seconds'
-                                           .format(self.get_canonical_name(),
-                                                   self._gather_timeout_seconds))
-            return done.pop().result()
-        else:
-            return await routine
+        pushed_args = self._args
+        self._args = self._args.merge(**kwargs)
+        try:
+            routine = self.on_gather(self._args)
+            if self._gather_timeout_seconds > 0:
+                done, pending = await asyncio.wait([asyncio.ensure_future(routine)],
+                                                   loop=self.manager.loop,
+                                                   timeout=self._gather_timeout_seconds,
+                                                   return_when=asyncio.ALL_COMPLETED)
+                if len(pending) > 0:
+                    pending.pop().cancel()
+                    raise asyncio.TimeoutError('{} gather was cancelled after waiting for {} seconds'
+                                               .format(self.get_canonical_name(),
+                                                       self._gather_timeout_seconds))
+                return done.pop().result()
+            else:
+                return await routine
+        finally:
+            self._args = pushed_args
 
     # +-----------------------------------------------------------------------+
     # | PROPERTIES

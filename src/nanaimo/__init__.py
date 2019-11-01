@@ -309,12 +309,6 @@ class Namespace:
         else:
             return key in self._overrides
 
-    def __iter__(self) -> typing.Iterator:
-        return iter(self.__dict__)
-
-    def __len__(self) -> int:
-        return len(self.__dict__)
-
     T = typing.TypeVar('T')
 
     def merge(self, **kwargs: typing.Any) -> 'Namespace.T':
