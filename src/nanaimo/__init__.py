@@ -467,3 +467,109 @@ class Artifacts(Namespace):
         Converts a reference to this object into its `result_code`.
         """
         return self._result_code
+
+
+def assert_success(artifacts: Artifacts) -> Artifacts:
+    """
+    Syntactic sugar to allow more fluent handling of :meth:`fixtures.Fixture.gather`
+    artifacts. For example:
+
+    .. invisible-code-block: python
+
+        import asyncio
+        from nanaimo import Artifacts, assert_success
+        from nanaimo.fixtures import Fixture, FixtureManager
+
+        _doc_loop = asyncio.new_event_loop()
+
+        class DummyFixture(Fixture):
+            @classmethod
+            def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
+                pass
+
+            async def on_gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
+                return nanaimo.Artifacts()
+
+        fixture = DummyFixture(FixtureManager(loop=_doc_loop))
+
+    .. code-block:: python
+
+        async def test_my_fixture():
+
+            artifacts = assert_success(await fixture.gather())
+
+            # Now we can use the artifacts. If the gather had returned
+            # non-zero for the result_code an assertion error would have
+            # been raised.
+
+    .. invisible-code-block: python
+
+        _doc_loop.run_until_complete(test_my_fixture())
+
+    :param artifacts: The artifacts to assert on.
+    :type artifacts: nanaimo.Artifacts
+    :returns: artifacts (for convenience).
+    :rtype: nanaimo.Artifacts()
+    """
+    assert artifacts.result_code == 0
+    return artifacts
+
+
+def assert_success_if(artifacts: Artifacts, conditional: typing.Callable[[Artifacts], bool]) -> Artifacts:
+    """
+    Syntactic sugar to allow more fluent handling of :meth:`fixtures.Fixture.gather`
+    artifacts but with a user-supplied conditional.
+
+    .. invisible-code-block: python
+
+        import asyncio
+        import pytest
+        from nanaimo import Artifacts, assert_success_if
+        from nanaimo.fixtures import Fixture, FixtureManager
+
+        _doc_loop = asyncio.new_event_loop()
+
+        class DummyFixture(Fixture):
+            @classmethod
+            def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
+                pass
+
+            async def on_gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
+                a = nanaimo.Artifacts()
+                setattr(a, 'foo', 'bar')
+                return a
+
+        fixture = DummyFixture(FixtureManager(loop=_doc_loop))
+
+    .. code-block:: python
+
+        async def test_my_fixture():
+
+            def fail_if_no_foo(artifacts: Artifacts) -> bool:
+                return 'foo' in artifacts
+
+            artifacts = assert_success_if(await fixture.gather(), fail_if_no_foo)
+
+            print('artifacts have foo. It\'s value is {}'.format(artifacts.foo))
+
+    .. invisible-code-block: python
+
+        _doc_loop.run_until_complete(test_my_fixture())
+
+        async def test_failure():
+
+            assert_success_if(await fixture.gather(), lambda _: False)
+
+        with pytest.raises(nanaimo.AssertionError):
+            _doc_loop.run_until_complete(test_failure())
+
+    :param artifacts: The artifacts to assert on.
+    :type artifacts: nanaimo.Artifacts
+    :param conditiona: A method called to evaluate gathered artifacts iff :data:`Artifacts.result_code` is 0.
+        Return False to trigger an assertion, True to pass.
+    :returns: artifacts (for convenience).
+    :rtype: nanaimo.Artifacts()
+    """
+    assert artifacts.result_code == 0
+    assert conditional(artifacts)
+    return artifacts

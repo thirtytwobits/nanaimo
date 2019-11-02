@@ -66,6 +66,24 @@ Builtin Fixtures |nanaimo logo|
     :show-inheritance:
     :noindex:
 
+.. autoclass:: nanaimo.builtin.nanaimo_serial_watch.Fixture
+    :members:
+    :show-inheritance:
+    :noindex:
+
+.. autoclass:: nanaimo.instruments.bkprecision.Series1900BUart
+    :members:
+    :show-inheritance:
+    :noindex:
+
+Builtin Subprocess Fixtures
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. autoclass:: nanaimo.fixtures.SubprocessFixture
+    :members:
+    :show-inheritance:
+    :noindex:
+
 .. autoclass:: nanaimo.builtin.nanaimo_scp.Fixture
     :members:
     :show-inheritance:
@@ -76,15 +94,6 @@ Builtin Fixtures |nanaimo logo|
     :show-inheritance:
     :noindex:
 
-.. autoclass:: nanaimo.builtin.nanaimo_serial_watch.Fixture
-    :members:
-    :show-inheritance:
-    :noindex:
-
-.. autoclass:: nanaimo.instruments.bkprecision.Series1900BUart
-    :members:
-    :show-inheritance:
-    :noindex:
 
 |pytest logo| Pytest Plugins
 -------------------------------------------------
@@ -107,6 +116,11 @@ Builtin Fixtures |nanaimo logo|
 .. autofunction:: nanaimo.pytest_plugin.nanaimo_arguments
     :noindex:
 
+.. autofunction:: nanaimo.pytest_plugin.nanaimo_log
+    :noindex:
+
+.. autofunction:: nanaimo.pytest_plugin.nanaimo_fixture_manager
+    :noindex:
 
 .. |pytest logo| image:: docs/images/pytest1.png
   :width: 100

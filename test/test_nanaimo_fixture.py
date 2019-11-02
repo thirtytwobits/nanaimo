@@ -171,10 +171,12 @@ async def test_subprocess_fixture() -> None:
         def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
             pass
 
-        def on_construct_command(self, arguments: nanaimo.Namespace) -> str:
+        def on_construct_command(self, arguments: nanaimo.Namespace, inout_artifacts: nanaimo.Artifacts) -> str:
+            setattr(inout_artifacts, 'foo', 'bar')
             return 'nait --version'
 
     subject = SubprocessTestHarness(nanaimo.fixtures.FixtureManager())
     artifacts = await subject.gather()
 
     assert nanaimo.version.__version__ == artifacts.stdout.strip()
+    assert 'bar' == artifacts.foo

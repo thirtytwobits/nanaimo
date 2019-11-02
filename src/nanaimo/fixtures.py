@@ -499,7 +499,7 @@ class SubprocessFixture(Fixture):
         """
         artifacts = nanaimo.Artifacts()
 
-        cmd = self.on_construct_command(args)
+        cmd = self.on_construct_command(args, artifacts)
 
         self._logger.debug('About to execute command "%s" in a subprocess shell', cmd)
 
@@ -525,10 +525,17 @@ class SubprocessFixture(Fixture):
     # | ABSTRACT METHODS
     # +-----------------------------------------------------------------------+
     @abc.abstractmethod
-    def on_construct_command(self, arguments: nanaimo.Namespace) -> str:
+    def on_construct_command(self, arguments: nanaimo.Namespace, inout_artifacts: nanaimo.Artifacts) -> str:
         """
         Called by the subprocess fixture to ask the specialization to form a command
         given a set of arguments.
+
+        :param arguments: The arguments passed into :meth:`Fixture.on_gather`.
+        :type arguments: nanaimo.Arguments
+        :param inout_artifacts: A set of artifacts the superclass is assembling This
+            is provided to the subclass to allow it to optionally contribute artifacts.
+        :type inout_artifacts: nanaimo.Artifacts
+        :return: The command to run in a subprocess shell.
         """
         ...
 
@@ -541,7 +548,6 @@ class FixtureManager:
     """
 
     def __init__(self, loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> None:
-        self._fixture_cache = dict()  # type: typing.Dict[str, Fixture]
         self._loop = loop
 
     @property
@@ -560,27 +566,14 @@ class FixtureManager:
 
     def fixture_types(self) -> typing.Generator:
         """
-        Yields each fixture type registered with this object. The types may or may not
-        have already been instantiated.
+        Yields each fixture type registered with this object.
         """
         if False:
             yield
 
-    def get_fixture(self, fixture_name: str) -> Fixture:
-        """
-        Get a fixture instance if it was already created for this manager.
-
-        :param fixture_name: The canonical name of the fixture.
-        :type fixture_name: str
-        :return: A manager-scoped fixture instance (i.e. One-and-only-one
-            fixture instance with this name for this manager object).
-        :raises KeyError: if fixture_name was not instantiated.
-        """
-        return self._fixture_cache[fixture_name]
-
     def create_fixture(self,
                        fixture_name: str,
-                       args: nanaimo.Namespace,
+                       args: typing.Optional[nanaimo.Namespace] = None,
                        loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> Fixture:
         """
         Create a new :class:`nanaimo.fixtures.Fixture` instance iff the ``fixture_name``` is a registered
@@ -637,11 +630,10 @@ class PluggyFixtureManager(FixtureManager):
 
     def create_fixture(self,
                        fixture_name: str,
-                       args: nanaimo.Namespace,
+                       args: typing.Optional[nanaimo.Namespace] = None,
                        loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> Fixture:
         for fixture_type in self.fixture_types():
             if fixture_type.get_canonical_name() == fixture_name:
                 fixture = typing.cast(Fixture, fixture_type(self, args, loop=loop))
-                self._fixture_cache[fixture_name] = fixture
                 return fixture
         raise KeyError(fixture_name)
