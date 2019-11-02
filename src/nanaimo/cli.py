@@ -126,7 +126,7 @@ def _make_parser(loop: typing.Optional[asyncio.AbstractEventLoop] = None,
 
 
 def _setup_logging(args: nanaimo.Namespace) -> None:
-    fmt = '%(name)s %(asctime)s : %(message)s'
+    fmt = '%(asctime)s %(levelname)s %(name)s: %(message)s'
     if args.log_level == 'WARNING':
         level = logging.WARNING
     elif args.log_level == 'DEBUG':

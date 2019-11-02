@@ -73,14 +73,14 @@ then, if you do want to expose your fixture directly, you'll need to add your fi
             pytest_my_plugin = my_namspace
 
 """
+import logging
 import typing
 
 import pytest
 
 import nanaimo
-import nanaimo.fixtures
 import nanaimo.config
-
+import nanaimo.fixtures
 
 _fixture_manager = None  # type: typing.Optional[nanaimo.fixtures.FixtureManager]
 """
@@ -132,11 +132,40 @@ def nanaimo_fixture_manager(request: typing.Any) -> nanaimo.fixtures.FixtureMana
 
         import nanaimo
         import nanaimo.fixtures
+        import pytest
+        import asyncio
 
     .. code-block:: python
 
+        class MyFixture(nanaimo.fixtures.Fixture):
+
+            @classmethod
+            def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
+                pass
+
+            async def on_gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
+                return nanaimo.Artifacts()
+
         def test_example(nanaimo_fixture_manager: nanaimo.fixtures.FixtureManager) -> None:
-            my_fixture = nanaimo_fixture_manager.get_fixture('my_fixture')
+
+            with pytest.raises(KeyError):
+                # If the fixture hasn't been registered with the manager
+                # this throws.
+                my_fixture = nanaimo_fixture_manager.create_fixture('my_fixture')
+
+            # Use this when creating new fixtures.
+            my_new_fixture = MyFixture(nanaimo_fixture_manager)
+
+    .. invisible-code-block: python
+
+        class DummyFixtureManager(nanaimo.fixtures.FixtureManager):
+            def create_fixture(self,
+                       fixture_name,
+                       args = None,
+                       loop = None):
+                raise KeyError()
+
+        test_example(DummyFixtureManager())
 
     :param pytest_request: The request object passed into the pytest fixture factory.
     :type pytest_request: _pytest.fixtures.FixtureRequest
@@ -167,3 +196,43 @@ def nanaimo_arguments(request: typing.Any) -> nanaimo.Namespace:
     :rtype: nanaimo.Namespace
     """
     return nanaimo.Namespace(request.config.option)
+
+
+@pytest.fixture
+def nanaimo_log(request: typing.Any) -> logging.Logger:
+    """
+    Provides the unit tests with a logger configured for use with the Nanaimo
+    framework.
+
+    .. note ::
+
+        For now this is just a Python logger. Future revisions may add capabilities like the
+        ability to log to a display or otherwise provide feedback to humans about the status
+        of a test.
+
+    .. invisible-code-block: python
+
+        import nanaimo
+        import logging
+
+    .. code-block:: python
+
+        def test_example(nanaimo_log: logging.Logger) -> None:
+            nanaimo_log.info('Hiya')
+
+    It's recommended that all Nanaimo tests configure logging in a tox.ini, pytest.ini, or
+    pyproject.toml (when this is supported). For example, the following section in tox.ini
+    would enable cli logging for nanaimo tests::
+
+        [pytest]
+        log_cli = true
+        log_cli_level = DEBUG
+        log_format = %(asctime)s %(levelname)s %(name)s: %(message)s
+        log_date_format = %Y-%m-%d %H:%M:%S
+
+    :param pytest_request: The request object passed into the pytest fixture factory.
+    :type pytest_request: _pytest.fixtures.FixtureRequest
+    :return: A logger for use by Nanaimo tests.
+    :rtype: logging.Logger
+    """
+    return logging.getLogger(request.function.__name__)

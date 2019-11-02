@@ -44,7 +44,7 @@ async def test_another_nanaimo_bar(nanaimo_fixture_manager: nanaimo.fixtures.Fix
     """
     Test eating another Nanaimo bar (exercises using fixtures across multiple tests)
     """
-    nanaimo_bar = nanaimo_fixture_manager.get_fixture('nanaimo_bar')
+    nanaimo_bar = nanaimo_fixture_manager.create_fixture('nanaimo_bar')
     assert nanaimo_bar is not None
     assert 'nanaimo_bar' == nanaimo_bar.name
     artifacts = await nanaimo_bar.gather()

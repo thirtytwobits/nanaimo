@@ -45,8 +45,8 @@ class Fixture(nanaimo.fixtures.SubprocessFixture):
         arguments.add_argument('--ssh-identity',
                                help='The identify file to use')
 
-    def on_construct_command(self, args: nanaimo.Namespace) -> str:
-        cmd = 'ssh {port} {user}@{target} {ident} \'{command}\''.format(
+    def on_construct_command(self, args: nanaimo.Namespace, inout_artifacts: nanaimo.Artifacts) -> str:
+        cmd = 'ssh {port} {ident} {user}@{target} \'{command}\''.format(
             port='-P {}'.format(args.ssh_port) if args.ssh_port is not None else '',
             command=str(args.ssh_command),
             user=args.ssh_as_user,
