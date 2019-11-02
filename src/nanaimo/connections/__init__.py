@@ -32,7 +32,8 @@ import nanaimo
 
 class TimestampedLine(str):
     """
-    A line of text with an associated timestamp.
+    A line of text with an associated timestamp. This is a subclass of string so the
+    object may be treated as a string without conversion.
     """
 
     @classmethod
@@ -46,6 +47,10 @@ class TimestampedLine(str):
 
     @property
     def timestamp_seconds(self) -> float:
+        """
+        The timestamp for the line in fractional seconds. For example, this would be the time
+        the line of text was received when this type is returned for a getter.
+        """
         return self._timestamp_seconds
 
 
@@ -99,6 +104,15 @@ class AbstractAsyncSerial(AbstractSerial):
     # | ASYNC OPERATIONS
     # +-----------------------------------------------------------------------+
     async def get_line(self, timeout_seconds: float = 0) -> TimestampedLine:
+        """
+        Get a line of text.
+
+        :param float timeout_seconds: Time in fractional seconds to wait for input.
+        :returns: A line of text with the time it was received at.
+        :rtype: TimestampedLine
+        :raises asyncio.TimeoutError: If a full line of text was not received within
+            the specified timeout period.
+        """
         start_time = self.time()
         while True:
             try:
@@ -110,7 +124,17 @@ class AbstractAsyncSerial(AbstractSerial):
                     raise asyncio.TimeoutError()
                 await asyncio.sleep(0.001)
 
-    async def put_line(self, input_line: str, end: typing.Optional[str] = None, timeout_seconds: float = 0) -> float:
+    async def put_line(self, input_line: str, timeout_seconds: float = 0) -> float:
+        """
+        Put a line of text to the serial device.
+
+        :param str input_line: The line to put.
+        :param float timeout_seconds: Fractional seconds to block for if the input buffer is full. If the buffer does
+            not become available within this time then :class:`asyncio.TimeoutError` is raised. Use 0 to block
+            forever.
+        :return: The monotonic system time that the line was put into the serial buffers at (see :meth:`time`).
+        :raises asyncio.TimeoutError: If an input buffer did not become available within the specified timeout.
+        """
         start_time = self.time()
         while self._queues_are_running:
             try:

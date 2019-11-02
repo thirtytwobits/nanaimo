@@ -90,6 +90,7 @@
         "uploader",
         "virtualenv",
         "wchar",
-        "xargs"
+        "xargs",
+        "xfail"
     ]
 }

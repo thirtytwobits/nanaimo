@@ -17,7 +17,12 @@
 #                                        @&&&&&&&&&&%#######&@%
 #  nanaimo                                   (@&&&&####@@*
 #
+"""
+The pytest plugin module for nanaimo. The module init runs first allowing Nanaimo to
+setup the plugin module before it is imported.
 
-__version__ = '0.0.31'
+"""
 
-__license__ = 'MIT'
+import pytest
+
+pytest.register_assert_rewrite('nanaimo.pytest.plugin')

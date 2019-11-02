@@ -27,7 +27,7 @@ import pytest
 
 import nanaimo
 import nanaimo.fixtures
-import nanaimo.pytest_plugin
+import nanaimo.pytest.plugin
 from nanaimo.connections.uart import AbstractAsyncSerial, ConcurrentUart
 
 
@@ -313,4 +313,4 @@ def nanaimo_instr_bk_precision(request: typing.Any) -> nanaimo.fixtures.Fixture:
     :return: A fixture providing control of a Series 1900 BK Precision power supply via UART.
     :rtype: nanaimo.instruments.bkprecision.Series1900BUart
     """
-    return nanaimo.pytest_plugin.create_pytest_fixture(request, Series1900BUart)
+    return nanaimo.pytest.plugin.create_pytest_fixture(request, Series1900BUart.get_canonical_name())

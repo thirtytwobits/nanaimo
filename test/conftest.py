@@ -13,9 +13,8 @@ import pytest
 import material
 import material.simulators
 import nanaimo
-import nanaimo.pytest_plugin
-import nanaimo.fixtures
 import nanaimo.config
+import nanaimo.fixtures
 
 
 @pytest.fixture

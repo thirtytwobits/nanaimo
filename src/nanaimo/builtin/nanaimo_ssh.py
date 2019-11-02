@@ -23,7 +23,7 @@ import pytest
 
 import nanaimo
 import nanaimo.fixtures
-import nanaimo.pytest_plugin
+import nanaimo.pytest.plugin
 
 
 class Fixture(nanaimo.fixtures.SubprocessFixture):
@@ -72,4 +72,4 @@ def nanaimo_ssh(request: typing.Any) -> nanaimo.fixtures.Fixture:
     :type pytest_request: _pytest.fixtures.FixtureRequest
     :rtype: nanaimo.builtin.nanaimo_ssh.Fixture
     """
-    return nanaimo.pytest_plugin.create_pytest_fixture(request, Fixture)
+    return nanaimo.pytest.plugin.create_pytest_fixture(request, Fixture.get_canonical_name())

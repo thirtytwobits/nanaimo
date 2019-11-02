@@ -113,13 +113,13 @@ Builtin Subprocess Fixtures
 .. autofunction:: nanaimo.builtin.nanaimo_serial_watch.nanaimo_serial_watch
     :noindex:
 
-.. autofunction:: nanaimo.pytest_plugin.nanaimo_arguments
+.. autofunction:: nanaimo.pytest.plugin.nanaimo_arguments
     :noindex:
 
-.. autofunction:: nanaimo.pytest_plugin.nanaimo_log
+.. autofunction:: nanaimo.pytest.plugin.nanaimo_log
     :noindex:
 
-.. autofunction:: nanaimo.pytest_plugin.nanaimo_fixture_manager
+.. autofunction:: nanaimo.pytest.plugin.nanaimo_fixture_manager
     :noindex:
 
 .. |pytest logo| image:: docs/images/pytest1.png
