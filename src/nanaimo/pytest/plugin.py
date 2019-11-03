@@ -18,10 +18,7 @@
 #  nanaimo                                   (@&&&&####@@*
 #
 """
-Nanaimo presents itself as a single pytest fixture called `nanaimo_fixture_manager`
-which allows tests to access or control test hardware fixtures. To register your
-test fixture with the Nanaimo fixture manager use the `nanaimo.fixtures.PluggyFixtureManager.type_factory`
-:class:`pluggy.HookimplMarker` to register your :class:`nanaimo.fixtures.Fixture`.
+Nanaimo provides a collection of pytest fixtures all defined in this module.
 
 .. invisible-code-block: python
     import nanaimo
@@ -56,20 +53,20 @@ and :func:`create_pytest_fixture`
 
     @pytest.fixture
     def my_test_fixture(request: typing.Any) -> nanaimo.fixtures.Fixture:
-        return nanaimo.pytest_plugin.create_pytest_fixture(request, MyTestFixture)
+        return nanaimo.pytest.plugin.create_pytest_fixture(request, MyTestFixture.get_canonical_name())
 
 
 In your setup.cfg you'll first need to register nanaimo with pytest ::
 
     [options]
         pytest11 =
-            pytest_nanaimo = nanaimo.pytest_plugin
+            pytest_nanaimo = nanaimo.pytest.plugin
 
 then, if you do want to expose your fixture directly, you'll need to add your fixture's namespace::
 
     [options]
         pytest11 =
-            pytest_nanaimo = nanaimo.pytest_plugin
+            pytest_nanaimo = nanaimo.pytest.plugin
             pytest_my_plugin = my_namspace
 
 """
@@ -81,6 +78,7 @@ import pytest
 import nanaimo
 import nanaimo.config
 import nanaimo.fixtures
+import nanaimo.display
 
 _fixture_manager = None  # type: typing.Optional[nanaimo.fixtures.FixtureManager]
 """
@@ -97,20 +95,34 @@ def _get_default_fixture_manager() -> nanaimo.fixtures.FixtureManager:
 
 
 def create_pytest_fixture(pytest_request: typing.Any,
-                          fixture_type: typing.Type[nanaimo.fixtures.Fixture]) -> nanaimo.fixtures.Fixture:
+                          canonical_name: str) -> nanaimo.fixtures.Fixture:
     """
     Create a fixture for a `pytest.fixture` request. This method ensures the fixture is created through
-    the default :class:`FixtureManager`.
+    the default :class:`FixtureManager`. For example, using :class:`nanaimo.fixtures.PluggyFixtureManager`
+    you must first register your fixture like thus::
+
+        @nanaimo.fixtures.PluggyFixtureManager.type_factory
+        def get_fixture_type() -> typing.Type['nanaimo.fixtures.Fixture']:
+            return MyFixtureType
+
+    Then you can register your fixture with pytest like this::
+
+        @pytest.fixture
+        def nanaimo_pytest_my_fixture(request: typing.Any) -> nanaimo.fixtures.Fixture:
+            return nanaimo.pytest.plugin.create_pytest_fixture(request, MyFixtureType.canonical_name())
 
     :param pytest_request: The request object passed into the pytest fixture factory.
     :type pytest_request: _pytest.fixtures.FixtureRequest
+    :param canonical_name: The canonical name of the fixture to create
+        (see :meth:`nanaimo.fixtures.Fixture.get_canonical_name`).
     :return: Either a new fixture or a fixture of the same name that was already created for the default
         :class:`FixtureManager`.
+    :raises KeyError: if ``fixture_type`` was not a registered nanaimo fixture.
     """
     fm = _get_default_fixture_manager()
     args = pytest_request.config.option
     args_ns = nanaimo.Namespace(args, nanaimo.config.ArgumentDefaults(args), allow_none_values=False)
-    return fm.create_fixture(fixture_type.get_canonical_name(), args_ns)
+    return fm.create_fixture(canonical_name, args_ns)
 
 
 def pytest_addoption(parser) -> None:  # type: ignore
@@ -236,3 +248,124 @@ def nanaimo_log(request: typing.Any) -> logging.Logger:
     :rtype: logging.Logger
     """
     return logging.getLogger(request.function.__name__)
+
+
+def assert_success(artifacts: nanaimo.Artifacts) -> nanaimo.Artifacts:
+    """
+    Syntactic sugar to allow more fluent handling of :meth:`fixtures.Fixture.gather`
+    artifacts. For example:
+
+    .. invisible-code-block: python
+
+        import asyncio
+        import nanaimo
+        from nanaimo import Artifacts
+        from nanaimo.fixtures import Fixture, FixtureManager
+
+        _doc_loop = asyncio.new_event_loop()
+
+        class DummyFixture(Fixture):
+            @classmethod
+            def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
+                pass
+
+            async def on_gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
+                return nanaimo.Artifacts()
+
+        fixture = DummyFixture(FixtureManager(loop=_doc_loop))
+
+    .. code-block:: python
+
+        from nanaimo.pytest.plugin import assert_success
+
+        async def test_my_fixture():
+
+            artifacts = assert_success(await fixture.gather())
+
+            # Now we can use the artifacts. If the gather had returned
+            # non-zero for the result_code an assertion error would have
+            # been raised.
+
+    .. invisible-code-block: python
+
+        _doc_loop.run_until_complete(test_my_fixture())
+
+    :param artifacts: The artifacts to assert on.
+    :type artifacts: nanaimo.Artifacts
+    :returns: artifacts (for convenience).
+    :rtype: nanaimo.Artifacts()
+    """
+    assert artifacts.result_code == 0
+    return artifacts
+
+
+def assert_success_if(artifacts: nanaimo.Artifacts,
+                      conditional: typing.Callable[[nanaimo.Artifacts], bool]) -> nanaimo.Artifacts:
+    """
+    Syntactic sugar to allow more fluent handling of :meth:`fixtures.Fixture.gather`
+    artifacts but with a user-supplied conditional.
+
+    .. invisible-code-block: python
+
+        import asyncio
+        import pytest
+        import nanaimo
+        from nanaimo import Artifacts
+        from nanaimo.fixtures import Fixture, FixtureManager
+
+        _doc_loop = asyncio.new_event_loop()
+
+        class DummyFixture(Fixture):
+            @classmethod
+            def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
+                pass
+
+            async def on_gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
+                a = nanaimo.Artifacts()
+                setattr(a, 'foo', 'bar')
+                return a
+
+        fixture = DummyFixture(FixtureManager(loop=_doc_loop))
+
+    .. code-block:: python
+
+        from nanaimo.pytest.plugin import assert_success_if
+
+        async def test_my_fixture():
+
+            def fail_if_no_foo(artifacts: Artifacts) -> bool:
+                return 'foo' in artifacts
+
+            artifacts = assert_success_if(await fixture.gather(), fail_if_no_foo)
+
+            print('artifacts have foo. It\'s value is {}'.format(artifacts.foo))
+
+    .. invisible-code-block: python
+
+        _doc_loop.run_until_complete(test_my_fixture())
+
+        async def test_failure():
+
+            assert_success_if(await fixture.gather(), lambda _: False)
+
+        with pytest.raises(AssertionError):
+            _doc_loop.run_until_complete(test_failure())
+
+    :param artifacts: The artifacts to assert on.
+    :type artifacts: nanaimo.Artifacts
+    :param conditiona: A method called to evaluate gathered artifacts iff :data:`Artifacts.result_code` is 0.
+        Return False to trigger an assertion, True to pass.
+    :returns: artifacts (for convenience).
+    :rtype: nanaimo.Artifacts()
+    """
+    assert artifacts.result_code == 0
+    assert conditional(artifacts)
+    return artifacts
+
+
+def pytest_runtest_setup(item: typing.Any) -> None:
+    nanaimo.display.CharacterDisplayFactory.get_display().write(item.name)
+
+
+def pytest_runtest_teardown(item: typing.Any) -> None:
+    nanaimo.display.CharacterDisplayFactory.get_display().clear()

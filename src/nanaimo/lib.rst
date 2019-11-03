@@ -29,10 +29,10 @@ nanaimo (library)
    :show-inheritance:
 
 *************************************
-:mod:`nanaimo.pytest_plugin`
+:mod:`nanaimo.pytest.plugin`
 *************************************
 
-.. automodule:: nanaimo.pytest_plugin
+.. automodule:: nanaimo.pytest.plugin
    :members:
    :show-inheritance:
 

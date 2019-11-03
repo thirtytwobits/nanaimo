@@ -27,7 +27,7 @@ import nanaimo
 import nanaimo.connections
 import nanaimo.connections.uart
 import nanaimo.fixtures
-import nanaimo.pytest_plugin
+import nanaimo.pytest.plugin
 
 
 class Fixture(nanaimo.fixtures.Fixture):
@@ -138,4 +138,4 @@ def nanaimo_serial_watch(request: typing.Any) -> nanaimo.fixtures.Fixture:
     :type pytest_request: _pytest.fixtures.FixtureRequest
     :rtype: nanaimo.builtin.nanaimo_serial_watch.Fixture
     """
-    return nanaimo.pytest_plugin.create_pytest_fixture(request, Fixture)
+    return nanaimo.pytest.plugin.create_pytest_fixture(request, Fixture.get_canonical_name())

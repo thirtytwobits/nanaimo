@@ -33,7 +33,7 @@ import nanaimo.instruments
 import nanaimo.instruments.jlink
 import nanaimo.parsers
 import nanaimo.parsers.gtest
-import nanaimo.pytest_plugin
+import nanaimo.pytest.plugin
 import nanaimo.fixtures
 
 
@@ -80,4 +80,4 @@ def get_fixture_type() -> typing.Type['Fixture']:
 
 @pytest.fixture
 def gtest_over_jlink(request: typing.Any) -> nanaimo.fixtures.Fixture:
-    return nanaimo.pytest_plugin.create_pytest_fixture(request, Fixture)
+    return nanaimo.pytest.plugin.create_pytest_fixture(request, Fixture.get_canonical_name())

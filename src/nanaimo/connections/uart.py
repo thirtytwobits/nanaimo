@@ -128,12 +128,26 @@ class ConcurrentUart(AbstractAsyncSerial):
     # +-----------------------------------------------------------------------+
 
     def readline(self) -> typing.Optional[TimestampedLine]:
+        """
+        Get a line of text from the receive buffers.
+
+        :returns: A line of text with the time it was received at.
+        :rtype: TimestampedLine
+        """
         try:
             return self._read_buffer.get_nowait()
         except queue.Empty:
             return None
 
     def writeline(self, input_line: str, end: typing.Optional[str] = None) -> float:
+        """
+        Enqueue a line of text to be transmitted on the serial device.
+
+        :param str input_line: The line to put.
+        :param end: Line ending (overrides the default :meth:`eol`).
+        :type end: typing.Optional[str]
+        :return: The monotonic system time that the line was put into the serial buffers at (see :meth:`time`).
+        """
         try:
             self._write_buffer.put_nowait(input_line + (end if end is not None else self._eol))
             return self.time()

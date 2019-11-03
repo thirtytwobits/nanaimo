@@ -23,11 +23,11 @@ contains internal implementations used by public types to facilitate this functi
 """
 import argparse
 import configparser
+import logging
 import os
+import pathlib
 import typing
 import weakref
-
-import logging
 
 
 class ArgumentDefaults:
@@ -79,7 +79,10 @@ class ArgumentDefaults:
             read_locations = [str(args.rcfile)] + self._default_read_locations
         else:
             read_locations = self._default_read_locations
-        read_from = self._configparser.read(read_locations)
+        resolved_locations = []
+        for read_location in read_locations:
+            resolved_locations.append(str(pathlib.Path(read_location).expanduser()))
+        read_from = self._configparser.read(resolved_locations)
         self._logger.debug('Configuration read from {}'.format(str(read_from)))
 
     def __getitem__(self, key: str) -> typing.Any:

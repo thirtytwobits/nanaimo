@@ -51,3 +51,8 @@ async def test_another_nanaimo_bar(nanaimo_fixture_manager: nanaimo.fixtures.Fix
     assert artifacts is not None
     artifacts.eat()
     assert nanaimo_bar.loop.is_running()
+
+
+@pytest.mark.xfail
+def test_assert_success() -> None:
+    nanaimo.pytest.plugin.assert_success(nanaimo.Artifacts(1))

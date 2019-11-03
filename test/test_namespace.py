@@ -57,7 +57,7 @@ def test_merge() -> None:
 
     setattr(child, 'name', 'child')
 
-    subject = child.merge(name='subject', merged='yes')
+    subject = child.merge(name='subject', merged='yes')  # type: nanaimo.Namespace
 
     assert 'yes' == subject.oldparent
     assert 'yes' == subject.merged
@@ -104,7 +104,7 @@ def test_setup_cfg_with_merge(local_setup_cfg: pathlib.Path) -> None:
     fake_args = nanaimo.Namespace()
     setattr(fake_args, 'rcfile', str(local_setup_cfg))
     defaults = ArgumentDefaults(fake_args)
-    subject = nanaimo.Namespace(None, defaults).merge()
+    subject = nanaimo.Namespace(None, defaults).merge()  # type: nanaimo.Namespace
     assert subject.test_cfg == '2'
 
 

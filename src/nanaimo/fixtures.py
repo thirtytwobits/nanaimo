@@ -572,18 +572,18 @@ class FixtureManager:
             yield
 
     def create_fixture(self,
-                       fixture_name: str,
+                       canonical_name: str,
                        args: typing.Optional[nanaimo.Namespace] = None,
                        loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> Fixture:
         """
-        Create a new :class:`nanaimo.fixtures.Fixture` instance iff the ``fixture_name``` is a registered
+        Create a new :class:`nanaimo.fixtures.Fixture` instance iff the ``canonical_name``` is a registered
         plugin for this process.
 
-        :param str fixture_name: The canonical name of the fixture to instantiate.
+        :param str canonical_name: The canonical name of the fixture to instantiate.
         :param nanaimo.Namespace args: The arguments to provide to the new instance.
         :param loop: An event loop to provide the fixture instance.
         :type loop: typing.Optional[asyncio.AbstractEventLoop]
-        :raises KeyError: if ``fixture_name`` was not registered with this manager.
+        :raises KeyError: if ``canonical_name`` was not registered with this manager.
         """
         raise NotImplementedError('The base class is an incomplete implementation.')
 
@@ -629,11 +629,11 @@ class PluggyFixtureManager(FixtureManager):
                 yield fixture_type
 
     def create_fixture(self,
-                       fixture_name: str,
+                       canonical_name: str,
                        args: typing.Optional[nanaimo.Namespace] = None,
                        loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> Fixture:
         for fixture_type in self.fixture_types():
-            if fixture_type.get_canonical_name() == fixture_name:
+            if fixture_type.get_canonical_name() == canonical_name:
                 fixture = typing.cast(Fixture, fixture_type(self, args, loop=loop))
                 return fixture
-        raise KeyError(fixture_name)
+        raise KeyError(canonical_name)

@@ -24,7 +24,7 @@ import typing
 import pytest
 
 import nanaimo
-import nanaimo.pytest_plugin
+import nanaimo.pytest.plugin
 import nanaimo.fixtures
 
 
@@ -70,4 +70,4 @@ def get_fixture_type() -> typing.Type['Fixture']:
 
 @pytest.fixture
 def nanaimo_bar(request: typing.Any) -> nanaimo.fixtures.Fixture:
-    return nanaimo.pytest_plugin.create_pytest_fixture(request, Fixture)
+    return nanaimo.pytest.plugin.create_pytest_fixture(request, Fixture.get_canonical_name())
