@@ -73,12 +73,13 @@ then, if you do want to expose your fixture directly, you'll need to add your fi
 import logging
 import typing
 
+import _pytest
 import pytest
 
 import nanaimo
 import nanaimo.config
-import nanaimo.fixtures
 import nanaimo.display
+import nanaimo.fixtures
 
 _fixture_manager = None  # type: typing.Optional[nanaimo.fixtures.FixtureManager]
 """
@@ -363,9 +364,32 @@ def assert_success_if(artifacts: nanaimo.Artifacts,
     return artifacts
 
 
+_display_singleton = None  # type: typing.Optional[nanaimo.display.CharacterDisplay]
+
+
+def _get_display() -> nanaimo.display.CharacterDisplay:
+    global _display_singleton
+    if _display_singleton is None:
+        # TODO: #65, use generic version
+        _display_singleton = typing.cast(nanaimo.display.CharacterDisplay,
+                                         _get_default_fixture_manager().create_fixture('character_display'))
+    return _display_singleton
+
+
+def pytest_sessionstart(session: _pytest.main.Session) -> None:
+    _get_display().configure()
+
+
 def pytest_runtest_setup(item: typing.Any) -> None:
-    nanaimo.display.CharacterDisplayFactory.get_display().write(item.name)
+    display = _get_display()
+    display.clear(display_default_message=False)
+    display.write(item.name)
 
 
-def pytest_runtest_teardown(item: typing.Any) -> None:
-    nanaimo.display.CharacterDisplayFactory.get_display().clear()
+def pytest_sessionfinish(session: _pytest.main.Session, exitstatus: int) -> None:
+    display = _get_display()
+    display.clear(display_default_message=True)
+    if exitstatus == 0:
+        display.set_bg_colour(255, 0, 0)
+    else:
+        display.set_bg_colour(0, 255, 0)

@@ -137,10 +137,10 @@ class Fixture(metaclass=abc.ABCMeta):
                 fixture_name = 'my_outre_fixture'
 
         >>> MyOtherFixture.get_argument_prefix()  # noqa : F821
-        'my_outre_fixture'
+        'my-outre-fixture'
 
         """
-        return str(getattr(cls, 'argument_prefix', cls.get_canonical_name()))
+        return str(getattr(cls, 'argument_prefix', cls.get_canonical_name().replace('_', '-')))
 
     def __init__(self,
                  manager: 'FixtureManager',
