@@ -376,10 +376,6 @@ def _get_display() -> nanaimo.display.CharacterDisplay:
     return _display_singleton
 
 
-def pytest_sessionstart(session: _pytest.main.Session) -> None:
-    _get_display().configure()
-
-
 def pytest_runtest_setup(item: typing.Any) -> None:
     display = _get_display()
     display.clear(display_default_message=False)
@@ -390,6 +386,6 @@ def pytest_sessionfinish(session: _pytest.main.Session, exitstatus: int) -> None
     display = _get_display()
     display.clear(display_default_message=True)
     if exitstatus == 0:
-        display.set_bg_colour(255, 0, 0)
-    else:
         display.set_bg_colour(0, 255, 0)
+    else:
+        display.set_bg_colour(255, 0, 0)
