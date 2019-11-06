@@ -376,6 +376,10 @@ def _get_display() -> nanaimo.display.CharacterDisplay:
     return _display_singleton
 
 
+def pytest_sessionstart(session: _pytest.main.Session) -> None:
+    _get_display().set_bg_colour(0, 0, 255)
+
+
 def pytest_runtest_setup(item: typing.Any) -> None:
     display = _get_display()
     display.clear(display_default_message=False)

@@ -139,7 +139,6 @@ class _CharacterDisplayAdafruitSerialBackpack(_CharacterDisplayInterface):
         self._uart.write(bytes([0xFE, 0xD0, r, g, b]))
 
     def configure(self) -> None:
-        self.set_bg_colour(0, 0, 255)
         self._uart.write(bytes([0xFE, 0xD1, self._columns, self._lines]))
         if self._default_message is not None:
             self._uart.write(bytes([0xFE, 0x40]))
