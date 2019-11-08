@@ -86,6 +86,14 @@ def serial_simulator_type(request):  # type: ignore
     return material.simulators.Serial
 
 
+@pytest.fixture
+def build_output(request):  # type: ignore
+    builddir = pathlib.Path(material.__file__).parent.parent.parent / pathlib.Path('build')
+    if not builddir.exists():
+        builddir.mkdir()
+    return builddir
+
+
 class GatherTimeoutFixture(nanaimo.fixtures.Fixture):
 
     @classmethod

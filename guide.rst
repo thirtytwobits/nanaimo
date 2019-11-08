@@ -84,6 +84,11 @@ Builtin Subprocess Fixtures
     :show-inheritance:
     :noindex:
 
+.. autoclass:: nanaimo.builtin.nanaimo_cmd.Fixture
+    :members:
+    :show-inheritance:
+    :noindex:
+
 .. autoclass:: nanaimo.builtin.nanaimo_scp.Fixture
     :members:
     :show-inheritance:
