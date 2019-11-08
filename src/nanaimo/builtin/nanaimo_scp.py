@@ -37,6 +37,7 @@ class Fixture(nanaimo.fixtures.SubprocessFixture):
 
     @classmethod
     def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
+        super().on_visit_test_arguments(arguments)
         arguments.add_argument('--scp-file', help='The file to upload.')
         arguments.add_argument('--scp-remote-dir', help='The directory to upload to.')
         arguments.add_argument('--scp-target',

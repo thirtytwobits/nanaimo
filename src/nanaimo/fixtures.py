@@ -27,6 +27,7 @@ import asyncio
 import io
 import logging
 import math
+import textwrap
 import typing
 
 import pluggy
@@ -142,6 +143,19 @@ class Fixture(metaclass=abc.ABCMeta):
 
         """
         return str(getattr(cls, 'argument_prefix', cls.get_canonical_name().replace('_', '-')))
+
+    @classmethod
+    def get_arg_covariant(cls, args: nanaimo.Namespace, base_name: str) -> typing.Optional[typing.Any]:
+        """
+        When called by a baseclass this method will return the most specalized argument value
+        available.
+        """
+
+        prefix = cls.get_argument_prefix().replace('-', '_')
+        if len(prefix) > 0:
+            prefix += '_'
+        full_key = '{}{}'.format(prefix, base_name.replace('-', '_'))
+        return getattr(args, full_key)
 
     def __init__(self,
                  manager: 'FixtureManager',
@@ -483,32 +497,57 @@ class SubprocessFixture(Fixture):
     """
     Fixture base type that accepts a string argument ``cmd`` and executes it as a subprocess.
     """
+    @classmethod
+    def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
+        arguments.add_argument('--cwd', help='The working directory to launch the subprocess at.')
+        arguments.add_argument('--logfile', help='Path to a file to write stdout, stderr, and test logs to.')
+        arguments.add_argument('--logfile-amend',
+                               default=False,
+                               help=textwrap.dedent('''
+                               If True then the logfile will be amended otherwise it will be overwritten
+                               (the default)
+                               ''').strip())
+        arguments.add_argument('--logfile-format',
+                               default='%(asctime)s %(levelname)s %(name)s: %(message)s',
+                               help='Logger format to use for the logfile.')
+        arguments.add_argument('--logfile-date-format',
+                               default='%Y-%m-%d %H:%M:%S',
+                               help='Logger date format to use for the logfile.')
 
     async def on_gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
         """
-        +--------------+---------------------------+-----------------------------------------------+
-        | **Returned Artifacts**                                                                   |
-        +--------------+---------------------------+-----------------------------------------------+
-        | key          | type                      | Notes                                         |
-        +==============+===========================+===============================================+
-        | logfile      | Optional[str]             | A file to log to. Set this in                 |
-        |              |                           | on_construct_command and this baseclass will  |
-        |              |                           | multiplex all stdout and stderr to the file.  |
-        +--------------+---------------------------+-----------------------------------------------+
-        | stderr       | Optional[str]             | Capture of stderr                             |
-        +--------------+---------------------------+-----------------------------------------------+
-        | stdout       | Optional[str]             | Capture of stdout                             |
-        +--------------+---------------------------+-----------------------------------------------+
+        +--------------+---------------------------+-------------------------------------------------------------------+
+        | **Artifacts**                                                                                                |
+        |                                                                                                              |
+        +--------------+---------------------------+-------------------------------------------------------------------+
+        | key          | type                      | Notes                                                             |
+        +==============+===========================+===================================================================+
+        | ``logfile``  | Optional[pathlib.Path]    | A file containing stdout, stderr, and test logs                   |
+        +--------------+---------------------------+-------------------------------------------------------------------+
+        | ``stderr``   | Optional[str]             | Capture of stderr                                                 |
+        |              |                           | (`deprecated <https://tinyurl.com/yxz842ab>`_)                    |
+        +--------------+---------------------------+-------------------------------------------------------------------+
+        | ``stdout``   | Optional[str]             | Capture of stdout                                                 |
+        |              |                           | (`deprecated <https://tinyurl.com/yxz842ab>`_)                    |
+        +--------------+---------------------------+-------------------------------------------------------------------+
         """
         artifacts = nanaimo.Artifacts()
 
         cmd = self.on_construct_command(args, artifacts)
 
         logfile_handler = None  # type: typing.Optional[logging.FileHandler]
-        if artifacts.logfile is not None:
-            logfile_handler = logging.FileHandler(filename=str(artifacts.logfile), mode='a')
-            file_formatter = logging.Formatter(fmt='%(asctime)s %(levelname)s %(name)s: %(message)s',
-                                               datefmt='%Y-%m-%d %H:%M:%S')
+
+        logfile = self.get_arg_covariant(args, 'logfile')
+        logfile_amend = bool(self.get_arg_covariant(args, 'logfile-amend'))
+        logfile_fmt = self.get_arg_covariant(args, 'logfile-format')
+        logfile_datefmt = self.get_arg_covariant(args, 'logfile-date-format')
+
+        cwd = self.get_arg_covariant(args, 'cwd')
+
+        if logfile is not None:
+            setattr(artifacts, 'logfile', logfile)
+            logfile_handler = logging.FileHandler(filename=str(logfile), mode=('a' if logfile_amend else 'w'))
+            file_formatter = logging.Formatter(fmt=logfile_fmt, datefmt=logfile_datefmt)
             logfile_handler.setFormatter(file_formatter)
             self._logger.addHandler(logfile_handler)
 
@@ -518,7 +557,8 @@ class SubprocessFixture(Fixture):
             proc = await asyncio.create_subprocess_shell(
                 cmd,
                 stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+                stderr=asyncio.subprocess.PIPE,
+                cwd=cwd
             )  # type: asyncio.subprocess.Process
 
             stdout, stderr = await self._wait_for_either_until_neither(

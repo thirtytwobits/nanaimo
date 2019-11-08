@@ -27,7 +27,7 @@ import nanaimo.pytest.plugin
 
 class Fixture(nanaimo.fixtures.SubprocessFixture):
     """
-    Fixture base type that accepts a string argument ``cmd`` and executes it as a subprocess.
+    Fixture that accepts a string argument ``cmd`` and executes it as a subprocess.
 
     .. invisible-code-block: python
 
@@ -64,6 +64,7 @@ class Fixture(nanaimo.fixtures.SubprocessFixture):
 
     @classmethod
     def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
+        super().on_visit_test_arguments(arguments)
         arguments.add_argument('--cmd-shell', '-C', help='A shell command to run as a subprocess.')
 
     # +-----------------------------------------------------------------------+

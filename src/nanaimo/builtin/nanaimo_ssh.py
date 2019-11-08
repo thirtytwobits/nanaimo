@@ -36,6 +36,7 @@ class Fixture(nanaimo.fixtures.SubprocessFixture):
 
     @classmethod
     def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
+        super().on_visit_test_arguments(arguments)
         arguments.add_argument('--ssh-target',
                                help='The IP or hostname for the target system.')
         arguments.add_argument('--ssh-as-user',

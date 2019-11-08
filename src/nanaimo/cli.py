@@ -99,7 +99,7 @@ def _make_parser(loop: typing.Optional[asyncio.AbstractEventLoop] = None,
     parser = argparse.ArgumentParser(
         description='Run tests against hardware.',
         epilog=epilog,
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        formatter_class=argparse.RawTextHelpFormatter)
 
     from nanaimo.version import __version__
 
@@ -148,6 +148,8 @@ def main() -> int:
 
     loop = asyncio.get_event_loop()
     defaults = nanaimo.config.ArgumentDefaults.create_defaults_with_early_rc_config()
+
+    nanaimo.config.set_subprocess_environment_from_defaults(defaults)
 
     parser = _make_parser(loop, defaults)
     argcomplete.autocomplete(parser)
