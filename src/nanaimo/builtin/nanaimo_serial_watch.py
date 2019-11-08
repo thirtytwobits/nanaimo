@@ -101,9 +101,10 @@ class Fixture(nanaimo.fixtures.Fixture):
         artifacts = nanaimo.Artifacts()
         pattern = re.compile(args.lw_pattern)
 
-        self._logger.debug('Starting to look for pattern : %s', str(pattern))
+        self._logger.info('Starting to look for pattern : %s', str(pattern))
         while True:
             result = await monitor.get_line()
+            self._logger.debug(result)
             match = pattern.search(result)
             if match:
                 setattr(artifacts, 'match', match)
