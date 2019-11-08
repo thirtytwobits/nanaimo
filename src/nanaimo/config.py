@@ -65,6 +65,46 @@ class ArgumentDefaults:
 
         return ArgumentDefaults(args)
 
+    @classmethod
+    def as_dict(cls, config_value: str) -> typing.Mapping[str, str]:
+        """
+        Where a value is set as a map this method is used to parse the resulting string into
+        a Python dictionary::
+
+            [nanaimo]
+            foo =
+                a = 1
+                b = 2
+                c = 3
+
+        Given the above configuration the value of ``foo`` can be read as a dictionary as such:
+
+        .. invisible-code-block: python
+
+            from nanaimo.config import ArgumentDefaults
+
+            config = dict()
+            config['foo'] = '''
+                a = 1
+                b=2
+                c= 3
+            '''
+
+        .. code-block:: python
+
+            foo_dict = ArgumentDefaults.as_dict(config['foo'])
+
+            assert foo_dict['b'] == '2'
+
+        """
+        dict_val = dict()
+        if config_value is not None:
+            as_list = config_value.strip().split('\n')
+            for pair_string in as_list:
+                kv = pair_string.split('=')
+                dict_val[kv[0].strip()] = kv[1].strip()
+        return dict_val
+
     def __init__(self, args: typing.Optional[typing.Any] = None) -> None:
         self._env_variable_index = weakref.WeakKeyDictionary()  # type: weakref.WeakKeyDictionary
         self._configparser = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation())
@@ -195,3 +235,11 @@ class ArgumentDefaults:
             inout_kwargs['help'] = inout_kwargs['help'] + '\n' + additional_help
         except KeyError:
             inout_kwargs['help'] = additional_help
+
+
+def set_subprocess_environment_from_defaults(defaults: ArgumentDefaults) -> None:
+    """
+    Updates :data:`os.environ` from values set as ``nanaimo.environ`` in the provided defaults.
+    """
+    nanaimo_env = ArgumentDefaults.as_dict(defaults['environ'])
+    os.environ.update(nanaimo_env)

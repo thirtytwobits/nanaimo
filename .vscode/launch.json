@@ -9,7 +9,7 @@
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/src/nait",
-            "cwd": "${workspaceFolder}/src",
+            "cwd": "${workspaceFolder}",
             "args": ["--version"]
         },
         {
@@ -19,7 +19,7 @@
             "module": "pytest",
             "args": ["${file}"],
             "console": "internalConsole",
-            "cwd": "${workspaceFolder}/test"
+            "cwd": "${workspaceFolder}"
         },
         {
             "name": "Pytest: all tests",
@@ -28,7 +28,7 @@
             "module": "pytest",
             "args": ["--log-cli-level=INFO"],
             "console": "internalConsole",
-            "cwd": "${workspaceFolder}/test"
+            "cwd": "${workspaceFolder}"
         },
         {
             "name": "Pytest: all tests",
@@ -36,7 +36,7 @@
             "request": "launch",
             "module": "pytest",
             "console": "internalConsole",
-            "cwd": "${workspaceFolder}/test"
+            "cwd": "${workspaceFolder}"
         },
     ]
 }

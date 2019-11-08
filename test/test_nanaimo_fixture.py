@@ -186,24 +186,27 @@ async def test_subprocess_fixture() -> None:
 @pytest.mark.asyncio
 async def test_subprocess_fixture_logfile(build_output: pathlib.Path) -> None:
     """
-    Verify the subprocess fixture base class.
+    Verify the subprocess fixture base class properly creates a logfile.
     """
     import nanaimo.version
 
     logfile = build_output / pathlib.Path('test_subprocess_fixture_logfile').with_suffix('.log')
     class SubprocessTestHarness(nanaimo.fixtures.SubprocessFixture):
 
+        argument_prefix = 'test-subprocess-fixture'
+
         @classmethod
         def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
-            pass
+            super().on_visit_test_arguments(arguments)
 
         def on_construct_command(self, arguments: nanaimo.Namespace, inout_artifacts: nanaimo.Artifacts) -> str:
-
-            setattr(inout_artifacts, 'logfile', str(logfile))
             return 'nait --version'
 
     subject = SubprocessTestHarness(nanaimo.fixtures.FixtureManager())
-    artifacts = await subject.gather()
+    artifacts = await subject.gather(
+        test_subprocess_fixture_logfile=str(logfile),
+        test_subprocess_fixture_logfile_amend=False
+    )
 
     assert artifacts.result_code == 0
 
@@ -216,3 +219,30 @@ async def test_subprocess_fixture_logfile(build_output: pathlib.Path) -> None:
                 break
 
     assert found
+
+
+@pytest.mark.asyncio
+async def test_subprocess_fixture_environment(build_output: pathlib.Path) -> None:
+    """
+    Verify that the subprocess environment is populated from configuration.
+    """
+    class SubprocessTestHarness(nanaimo.fixtures.SubprocessFixture):
+
+        @classmethod
+        def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
+            super().on_visit_test_arguments(arguments)
+
+        def on_construct_command(self, arguments: nanaimo.Namespace, inout_artifacts: nanaimo.Artifacts) -> str:
+            # NANAIMO_UNITTEST is set in our setup.cfg
+            return 'echo ${NANAIMO_UNITTEST}'
+
+    subject = SubprocessTestHarness(nanaimo.fixtures.FixtureManager())
+    artifacts = await subject.gather()
+
+    assert artifacts.result_code == 0
+
+    defaults = nanaimo.config.ArgumentDefaults.create_defaults_with_early_rc_config()
+
+    nanaimo_environ = nanaimo.config.ArgumentDefaults.as_dict(defaults['environ'])
+    assert 'NANAIMO_UNITTEST' in nanaimo_environ
+    assert nanaimo_environ['NANAIMO_UNITTEST'] == artifacts.stdout

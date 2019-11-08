@@ -92,6 +92,12 @@ def _get_default_fixture_manager() -> nanaimo.fixtures.FixtureManager:
     global _fixture_manager
     if _fixture_manager is None:
         _fixture_manager = nanaimo.fixtures.nanaimo.fixtures.PluggyFixtureManager()
+
+        # Since we are activating our use of Nanaimo we'll take this opportunity to
+        # properly set the subprocess environment from configuration.
+        defaults = nanaimo.config.ArgumentDefaults.create_defaults_with_early_rc_config()
+        nanaimo.config.set_subprocess_environment_from_defaults(defaults)
+
     return _fixture_manager
 
 
