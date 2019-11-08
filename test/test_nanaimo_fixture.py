@@ -164,6 +164,8 @@ async def test_subprocess_fixture() -> None:
     """
     Verify the subprocess fixture base class.
     """
+    import nanaimo.version
+
     class SubprocessTestHarness(nanaimo.fixtures.SubprocessFixture):
 
         @classmethod
@@ -178,6 +180,7 @@ async def test_subprocess_fixture() -> None:
     artifacts = await subject.gather()
 
     assert 'bar' == artifacts.foo
+    assert artifacts.stdout == nanaimo.version.__version__
 
 
 @pytest.mark.asyncio

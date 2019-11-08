@@ -24,6 +24,7 @@ is that any fixture can be a pytest fixture or can be awaited directly using :re
 """
 import abc
 import asyncio
+import io
 import logging
 import math
 import typing
@@ -490,7 +491,13 @@ class SubprocessFixture(Fixture):
         +--------------+---------------------------+-----------------------------------------------+
         | key          | type                      | Notes                                         |
         +==============+===========================+===============================================+
-        | logfile      | Optional[str]             | A file to log to                              |
+        | logfile      | Optional[str]             | A file to log to. Set this in                 |
+        |              |                           | on_construct_command and this baseclass will  |
+        |              |                           | multiplex all stdout and stderr to the file.  |
+        +--------------+---------------------------+-----------------------------------------------+
+        | stderr       | Optional[str]             | Capture of stderr                             |
+        +--------------+---------------------------+-----------------------------------------------+
+        | stdout       | Optional[str]             | Capture of stdout                             |
         +--------------+---------------------------+-----------------------------------------------+
         """
         artifacts = nanaimo.Artifacts()
@@ -499,7 +506,7 @@ class SubprocessFixture(Fixture):
 
         logfile_handler = None  # type: typing.Optional[logging.FileHandler]
         if artifacts.logfile is not None:
-            logfile_handler = logging.FileHandler(filename=str(artifacts.logfile), mode='w')
+            logfile_handler = logging.FileHandler(filename=str(artifacts.logfile), mode='a')
             file_formatter = logging.Formatter(fmt='%(asctime)s %(levelname)s %(name)s: %(message)s',
                                                datefmt='%Y-%m-%d %H:%M:%S')
             logfile_handler.setFormatter(file_formatter)
@@ -514,13 +521,16 @@ class SubprocessFixture(Fixture):
                 stderr=asyncio.subprocess.PIPE
             )  # type: asyncio.subprocess.Process
 
-            await self._wait_for_either_until_neither(
+            stdout, stderr = await self._wait_for_either_until_neither(
                 (proc.stdout if proc.stdout is not None else self._NoopStreamReader()),
                 (proc.stderr if proc.stderr is not None else self._NoopStreamReader()))
 
             await proc.wait()
 
             self._logger.debug('command "%s" exited with %i', cmd, proc.returncode)
+
+            setattr(artifacts, 'stdout', stdout)
+            setattr(artifacts, 'stderr', stderr)
 
             artifacts.result_code = proc.returncode
             return artifacts
@@ -559,11 +569,16 @@ class SubprocessFixture(Fixture):
     async def _wait_for_either_until_neither(self,
                                              stdout: asyncio.StreamReader,
                                              stderr: asyncio.StreamReader) \
-            -> None:
+            -> typing.Tuple[str, str]:
         """
         Wait for a line of data from either stdout or stderr and log this data as received.
         When both are EOF then exit.
+
+        :returns: Tuple of stdout, stderr
         """
+        stdout_buffer = io.StringIO()
+        stderr_buffer = io.StringIO()
+
         future_out = asyncio.ensure_future(stdout.readline())
         future_err = asyncio.ensure_future(stderr.readline())
 
@@ -580,11 +595,14 @@ class SubprocessFixture(Fixture):
                     if future_done == future_err:
                         future_err = asyncio.ensure_future(stderr.readline())
                         pending.add(future_err)
+                        stderr_buffer.write(line)
                         self._logger.error(line)
                     else:
                         future_out = asyncio.ensure_future(stdout.readline())
                         pending.add(future_out)
+                        stdout_buffer.write(line)
                         self._logger.info(line.strip())
+        return (stdout_buffer.getvalue(), stderr_buffer.getvalue())
 
 
 # +---------------------------------------------------------------------------+
