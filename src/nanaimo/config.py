@@ -237,9 +237,19 @@ class ArgumentDefaults:
             inout_kwargs['help'] = additional_help
 
 
-def set_subprocess_environment_from_defaults(defaults: ArgumentDefaults) -> None:
+def set_subprocess_environment_from_defaults(defaults: ArgumentDefaults) -> bool:
     """
-    Updates :data:`os.environ` from values set as ``nanaimo.environ`` in the provided defaults.
+    Updates :data:`os.environ` from values set as ``environ`` in the provided arguments.
+
+    :param defaults: A defaults object to load the environment from. The map of values in this key are
+        added to any subsequent subprocess started but can be overridden by ``env`` arguments to
+        subprocess constructors like :class:`subprocess.Popen`
+    :type defaults: ArgumentDefaults
+    :returns: True if an ``environ`` key was found else False.
     """
-    nanaimo_env = ArgumentDefaults.as_dict(defaults['environ'])
-    os.environ.update(nanaimo_env)
+    try:
+        nanaimo_env = ArgumentDefaults.as_dict(defaults['environ'])
+        os.environ.update(nanaimo_env)
+        return True
+    except KeyError:
+        return False
