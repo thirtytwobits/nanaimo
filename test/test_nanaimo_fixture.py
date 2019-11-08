@@ -2,8 +2,9 @@
 # Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # This software is distributed under the terms of the MIT License.
 #
-import asyncio
 import argparse
+import asyncio
+import pathlib
 
 import pytest
 
@@ -163,8 +164,6 @@ async def test_subprocess_fixture() -> None:
     """
     Verify the subprocess fixture base class.
     """
-    import nanaimo.version
-
     class SubprocessTestHarness(nanaimo.fixtures.SubprocessFixture):
 
         @classmethod
@@ -178,5 +177,39 @@ async def test_subprocess_fixture() -> None:
     subject = SubprocessTestHarness(nanaimo.fixtures.FixtureManager())
     artifacts = await subject.gather()
 
-    assert nanaimo.version.__version__ == artifacts.stdout.strip()
     assert 'bar' == artifacts.foo
+
+
+@pytest.mark.asyncio
+async def test_subprocess_fixture_logfile(build_output: pathlib.Path) -> None:
+    """
+    Verify the subprocess fixture base class.
+    """
+    import nanaimo.version
+
+    logfile = build_output / pathlib.Path('test_subprocess_fixture_logfile').with_suffix('.log')
+    class SubprocessTestHarness(nanaimo.fixtures.SubprocessFixture):
+
+        @classmethod
+        def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
+            pass
+
+        def on_construct_command(self, arguments: nanaimo.Namespace, inout_artifacts: nanaimo.Artifacts) -> str:
+
+            setattr(inout_artifacts, 'logfile', str(logfile))
+            return 'nait --version'
+
+    subject = SubprocessTestHarness(nanaimo.fixtures.FixtureManager())
+    artifacts = await subject.gather()
+
+    assert artifacts.result_code == 0
+
+    found = False
+    with open(str(artifacts.logfile), 'r') as logfile_io:
+        for line in logfile_io:
+            print(line)
+            if line.find(nanaimo.version.__version__) != -1:
+                found = True
+                break
+
+    assert found

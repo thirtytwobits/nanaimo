@@ -69,6 +69,7 @@ async def test_program_while_monitoring(mock_JLinkExe: pathlib.Path,
             assert 2 == len(results)
 
             for result in results:
+                # TODO: this can fail. Fruity test. Fixme
                 assert 0 == result
             uploads += 1
     assert uploads > 1

@@ -490,36 +490,43 @@ class SubprocessFixture(Fixture):
         +--------------+---------------------------+-----------------------------------------------+
         | key          | type                      | Notes                                         |
         +==============+===========================+===============================================+
-        | stdout       | Optional[str]             | Contents of stdout captured from the          |
-        |              |                           | subprocess                                    |
-        +--------------+---------------------------+-----------------------------------------------+
-        | stderr       | Optional[str]             | Contents of stderr captured from the          |
-        |              |                           | subprocess                                    |
+        | logfile      | Optional[str]             | A file to log to                              |
         +--------------+---------------------------+-----------------------------------------------+
         """
         artifacts = nanaimo.Artifacts()
 
         cmd = self.on_construct_command(args, artifacts)
 
-        self._logger.debug('About to execute command "%s" in a subprocess shell', cmd)
+        logfile_handler = None  # type: typing.Optional[logging.FileHandler]
+        if artifacts.logfile is not None:
+            logfile_handler = logging.FileHandler(filename=str(artifacts.logfile), mode='w')
+            file_formatter = logging.Formatter(fmt='%(asctime)s %(levelname)s %(name)s: %(message)s',
+                                               datefmt='%Y-%m-%d %H:%M:%S')
+            logfile_handler.setFormatter(file_formatter)
+            self._logger.addHandler(logfile_handler)
 
-        proc = await asyncio.create_subprocess_shell(
-            cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )  # type: asyncio.subprocess.Process
+        try:
+            self._logger.debug('About to execute command "%s" in a subprocess shell', cmd)
 
-        stdout, stderr = await proc.communicate()
+            proc = await asyncio.create_subprocess_shell(
+                cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )  # type: asyncio.subprocess.Process
 
-        self._logger.debug('command "%s" exited with %i', cmd, proc.returncode)
+            await self._wait_for_either_until_neither(
+                (proc.stdout if proc.stdout is not None else self._NoopStreamReader()),
+                (proc.stderr if proc.stderr is not None else self._NoopStreamReader()))
 
-        if stdout:
-            setattr(artifacts, 'stdout', stdout.decode())
-        if stderr:
-            setattr(artifacts, 'stderr', stderr.decode())
+            await proc.wait()
 
-        artifacts.result_code = proc.returncode
-        return artifacts
+            self._logger.debug('command "%s" exited with %i', cmd, proc.returncode)
+
+            artifacts.result_code = proc.returncode
+            return artifacts
+        finally:
+            if logfile_handler is not None:
+                self._logger.removeHandler(logfile_handler)
 
     # +-----------------------------------------------------------------------+
     # | ABSTRACT METHODS
@@ -538,6 +545,47 @@ class SubprocessFixture(Fixture):
         :return: The command to run in a subprocess shell.
         """
         ...
+
+    # +-----------------------------------------------------------------------+
+    # | PRIVATE METHODS
+    # +-----------------------------------------------------------------------+
+
+    class _NoopStreamReader(asyncio.StreamReader):
+
+        def __init__(self) -> None:
+            super().__init__()
+            self.feed_eof()
+
+    async def _wait_for_either_until_neither(self,
+                                             stdout: asyncio.StreamReader,
+                                             stderr: asyncio.StreamReader) \
+            -> None:
+        """
+        Wait for a line of data from either stdout or stderr and log this data as received.
+        When both are EOF then exit.
+        """
+        future_out = asyncio.ensure_future(stdout.readline())
+        future_err = asyncio.ensure_future(stderr.readline())
+
+        pending = set([future_out, future_err])
+
+        while len(pending) > 0:
+
+            done, pending = await asyncio.wait(pending)
+
+            for future_done in done:
+                result = future_done.result().strip()
+                if len(result) > 0:
+                    line = result.decode()
+                    if future_done == future_err:
+                        future_err = asyncio.ensure_future(stderr.readline())
+                        pending.add(future_err)
+                        self._logger.error(line)
+                    else:
+                        future_out = asyncio.ensure_future(stdout.readline())
+                        pending.add(future_out)
+                        self._logger.info(line.strip())
+
 
 # +---------------------------------------------------------------------------+
 
