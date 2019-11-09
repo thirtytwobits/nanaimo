@@ -60,7 +60,7 @@ async def test_observe_tasks(dummy_nanaimo_fixture: nanaimo.fixtures.Fixture) ->
         return 1
 
     result = await dummy_nanaimo_fixture.observe_tasks_assert_not_done(evaluating(),
-                                                                       0,
+                                                                       None,
                                                                        running())
     assert len(result) == 1
     should_be_running = result.pop()
@@ -89,7 +89,7 @@ async def test_observe_tasks_failure(dummy_nanaimo_fixture: nanaimo.fixtures.Fix
 
     with pytest.raises(nanaimo.AssertionError):
         await dummy_nanaimo_fixture.observe_tasks_assert_not_done(evaluating(),
-                                                                  0,
+                                                                  None,
                                                                   running())
 
 
@@ -112,7 +112,7 @@ async def test_observe_tasks_failure_no_assert(dummy_nanaimo_fixture: nanaimo.fi
         return 1
 
     result = await dummy_nanaimo_fixture.observe_tasks(evaluating(),
-                                                       0,
+                                                       None,
                                                        running())
 
     assert 0 == len(result)
@@ -177,10 +177,14 @@ async def test_subprocess_fixture() -> None:
             return 'nait --version'
 
     subject = SubprocessTestHarness(nanaimo.fixtures.FixtureManager())
+
+    filter = nanaimo.fixtures.SubprocessFixture.SubprocessMessageAccumulator()
+    subject.stdout_filter = filter
+
     artifacts = await subject.gather()
 
     assert 'bar' == artifacts.foo
-    assert artifacts.stdout == nanaimo.version.__version__
+    assert filter.getvalue() == nanaimo.version.__version__
 
 
 @pytest.mark.asyncio
@@ -237,6 +241,9 @@ async def test_subprocess_fixture_environment(build_output: pathlib.Path) -> Non
             return 'echo ${NANAIMO_UNITTEST}'
 
     subject = SubprocessTestHarness(nanaimo.fixtures.FixtureManager())
+    filter = nanaimo.fixtures.SubprocessFixture.SubprocessMessageAccumulator()
+    subject.stdout_filter = filter
+
     artifacts = await subject.gather()
 
     assert artifacts.result_code == 0
@@ -245,4 +252,4 @@ async def test_subprocess_fixture_environment(build_output: pathlib.Path) -> Non
 
     nanaimo_environ = nanaimo.config.ArgumentDefaults.as_dict(defaults['environ'])
     assert 'NANAIMO_UNITTEST' in nanaimo_environ
-    assert nanaimo_environ['NANAIMO_UNITTEST'] == artifacts.stdout
+    assert nanaimo_environ['NANAIMO_UNITTEST'] == filter.getvalue()

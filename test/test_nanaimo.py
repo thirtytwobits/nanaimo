@@ -54,6 +54,7 @@ async def test_program_uploader_failure(mock_JLinkExe: pathlib.Path,
 
 
 @pytest.mark.asyncio
+@pytest.mark.timeout(60)
 async def test_program_while_monitoring(mock_JLinkExe: pathlib.Path,
                                         s32K144_jlink_scripts: typing.Iterator[pathlib.Path],
                                         serial_simulator_type: typing.Type) -> None:
@@ -71,7 +72,6 @@ async def test_program_while_monitoring(mock_JLinkExe: pathlib.Path,
             assert 2 == len(results)
 
             for result in results:
-                # TODO: this can fail. Fruity test. Fixme
                 assert 0 == result
             uploads += 1
     assert uploads > 1

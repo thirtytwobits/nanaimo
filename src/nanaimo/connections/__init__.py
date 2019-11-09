@@ -103,7 +103,7 @@ class AbstractAsyncSerial(AbstractSerial):
     # +-----------------------------------------------------------------------+
     # | ASYNC OPERATIONS
     # +-----------------------------------------------------------------------+
-    async def get_line(self, timeout_seconds: float = 0) -> TimestampedLine:
+    async def get_line(self, timeout_seconds:  typing.Optional[float] = None) -> TimestampedLine:
         """
         Get a line of text.
 
@@ -120,11 +120,11 @@ class AbstractAsyncSerial(AbstractSerial):
             except queue.Empty:
                 if not self._queues_are_running:
                     raise
-                if timeout_seconds > 0 and self.time() - start_time > timeout_seconds:
+                if timeout_seconds is not None and self.time() - start_time > timeout_seconds:
                     raise asyncio.TimeoutError()
                 await asyncio.sleep(0.001)
 
-    async def put_line(self, input_line: str, timeout_seconds: float = 0) -> float:
+    async def put_line(self, input_line: str, timeout_seconds: typing.Optional[float] = None) -> float:
         """
         Put a line of text to the serial device.
 
@@ -142,7 +142,7 @@ class AbstractAsyncSerial(AbstractSerial):
                 self._write_buffer.put_nowait(input_line)
                 return start_of_put
             except queue.Full:
-                if timeout_seconds > 0 and self.time() - start_time > timeout_seconds:
+                if timeout_seconds is not None and self.time() - start_time > timeout_seconds:
                     raise asyncio.TimeoutError()
                 await asyncio.sleep(0.001)
         return self.time()

@@ -171,9 +171,9 @@ class Fixture(metaclass=abc.ABCMeta):
             self._loop = None
         if 'gather_timeout_seconds' in kwargs:
             gather_timeout_seconds = typing.cast(typing.Optional[float], kwargs['gather_timeout_seconds'])
-            self._gather_timeout_seconds = (gather_timeout_seconds if gather_timeout_seconds is not None else 0)
+            self._gather_timeout_seconds = gather_timeout_seconds
         else:
-            self._gather_timeout_seconds = 0
+            self._gather_timeout_seconds = None
 
     async def gather(self, *args: typing.Any, **kwargs: typing.Any) -> nanaimo.Artifacts:
         """
@@ -190,7 +190,7 @@ class Fixture(metaclass=abc.ABCMeta):
         self._args = self._args.merge(**kwargs)
         try:
             routine = self.on_gather(self._args)
-            if self._gather_timeout_seconds > 0:
+            if self._gather_timeout_seconds is not None:
                 done, pending = await asyncio.wait([asyncio.ensure_future(routine)],
                                                    loop=self.manager.loop,
                                                    timeout=self._gather_timeout_seconds,
@@ -252,7 +252,7 @@ class Fixture(metaclass=abc.ABCMeta):
         return self._args
 
     @property
-    def gather_timeout_seconds(self) -> float:
+    def gather_timeout_seconds(self) -> typing.Optional[float]:
         """
         The timeout in fractional seconds to wait for :meth:`on_gather` to complete before raising
         a :class:`asyncio.TimeoutError`.
@@ -316,7 +316,7 @@ class Fixture(metaclass=abc.ABCMeta):
 
     async def observe_tasks_assert_not_done(self,
                                             observer_co_or_f: typing.Union[typing.Coroutine, asyncio.Future],
-                                            timeout_seconds: float,
+                                            timeout_seconds: typing.Optional[float],
                                             *persistent_tasks: typing.Union[typing.Coroutine, asyncio.Future]) \
             -> typing.Set[asyncio.Future]:
         """
@@ -326,7 +326,7 @@ class Fixture(metaclass=abc.ABCMeta):
         :param observer_co_or_f: The task that is expected to complete in less than ``timeout_seconds``.
         :type observer_co_or_f: typing.Union[typing.Coroutine, asyncio.Future]
         :param float timeout_seconds: Time in seconds to observe for before raising :class:`asyncio.TimeoutError`.
-            Set to 0 to disable.
+            Set to None to disable.
         :param persistent_tasks: Iterable of tasks that must remain active or :class:`AssertionError` will be raised.
         :type persistent_tasks: typing.Union[typing.Coroutine, asyncio.Future]
 
@@ -343,7 +343,7 @@ class Fixture(metaclass=abc.ABCMeta):
 
     async def observe_tasks(self,
                             observer_co_or_f: typing.Union[typing.Coroutine, asyncio.Future],
-                            timeout_seconds: float,
+                            timeout_seconds: typing.Optional[float],
                             *persistent_tasks: typing.Union[typing.Coroutine, asyncio.Future]) \
             -> typing.Set[asyncio.Future]:
         """
@@ -354,7 +354,7 @@ class Fixture(metaclass=abc.ABCMeta):
         :param observer_co_or_f: The task that is expected to complete in less than ``timeout_seconds``.
         :type observer_co_or_f: typing.Union[typing.Coroutine, asyncio.Future]
         :param float timeout_seconds: Time in seconds to observe for before raising :class:`asyncio.TimeoutError`.
-            Set to 0 to disable.
+            Set to None to disable.
         :param persistent_tasks: Iterable of tasks that may remain active.
         :type persistent_tasks: typing.Union[typing.Coroutine, asyncio.Future]
 
@@ -370,7 +370,7 @@ class Fixture(metaclass=abc.ABCMeta):
 
     async def gate_tasks(self,
                          gate_co_or_f: typing.Union[typing.Coroutine, asyncio.Future],
-                         timeout_seconds: float,
+                         timeout_seconds: typing.Optional[float],
                          *gated_tasks: typing.Union[typing.Coroutine, asyncio.Future]) \
             -> typing.Tuple[asyncio.Future, typing.List[asyncio.Future]]:
         """
@@ -399,7 +399,7 @@ class Fixture(metaclass=abc.ABCMeta):
 
                 any_fixture = nanaimo_bar.Fixture(manager)
 
-                gate_future, gated_futures = await any_fixture.gate_tasks(gate_task(), 0, gated_task())
+                gate_future, gated_futures = await any_fixture.gate_tasks(gate_task(), None, gated_task())
 
                 assert not gate_future.cancelled()
                 assert 'gate passed' == gate_future.result()
@@ -413,7 +413,7 @@ class Fixture(metaclass=abc.ABCMeta):
         :param gate_co_or_f: The task that is expected to complete in less than ``timeout_seconds``.
         :type gate_co_or_f: typing.Union[typing.Coroutine, asyncio.Future]
         :param float timeout_seconds: Time in seconds to wait for the gate for before raising
-            :class:`asyncio.TimeoutError`. Set to 0 to disable.
+            :class:`asyncio.TimeoutError`. Set to None to disable.
         :param persistent_tasks: Iterable of tasks that may remain active.
         :type persistent_tasks: typing.Union[typing.Coroutine, asyncio.Future]
 
@@ -441,7 +441,7 @@ class Fixture(metaclass=abc.ABCMeta):
 
     async def _observe_tasks(self,
                              observer_co_or_f: typing.Union[typing.Coroutine, asyncio.Future],
-                             timeout_seconds: float,
+                             timeout_seconds: typing.Optional[float],
                              cancel_remaining: bool,
                              *args: typing.Union[typing.Coroutine, asyncio.Future]) -> \
             typing.Tuple[asyncio.Future, typing.List[asyncio.Future],
@@ -460,12 +460,11 @@ class Fixture(metaclass=abc.ABCMeta):
             observed_futures.append(o)
 
         start_time = self.loop.time()
-        wait_timeout = (timeout_seconds if timeout_seconds > 0 else None)
 
         while True:
             done, pending = await asyncio.wait(
                 the_children_are_our_futures,
-                timeout=wait_timeout,
+                timeout=timeout_seconds,
                 return_when=asyncio.FIRST_COMPLETED)
 
             for d in done:
@@ -475,7 +474,7 @@ class Fixture(metaclass=abc.ABCMeta):
             if observer_future.done():
                 break
 
-            if wait_timeout is not None and self.loop.time() - start_time > wait_timeout:
+            if timeout_seconds is not None and self.loop.time() - start_time > timeout_seconds:
                 did_timeout = True
                 break
 
@@ -496,7 +495,69 @@ class Fixture(metaclass=abc.ABCMeta):
 class SubprocessFixture(Fixture):
     """
     Fixture base type that accepts a string argument ``cmd`` and executes it as a subprocess.
+
+    :param stdout_filter: A :class:`logging.Filter` used when gathering the subprocess.
+    :param stderr_filter: A :class:`logging.Filter` used when gathering the subprocess.
     """
+
+    class SubprocessMessageAccumulator(logging.Filter, io.StringIO):
+        """
+        Helper class for working with :meth:`SubprocessFixture.stdout_filter` or
+        :meth:`SubprocessFixture.stderr_filter`. This implementation will simply
+        write all log messages (i.e. :meth:`logging.LogRecord.getMessage()`) to
+        its internal buffer. Use :meth:`getvalue()` to get a reference to the
+        buffer.
+
+        You can also subclass this method and override its :meth:`logging.Filter.filter`
+        method to customize your filter criteria.
+
+        :param minimum_level: The minimum loglevel to accumulate messages for.
+        """
+
+        def __init__(self, minimum_level: int = logging.INFO):
+            logging.Filter.__init__(self)
+            io.StringIO.__init__(self)
+            self._minimum_level = minimum_level
+
+        def filter(self, record: logging.LogRecord) -> bool:
+            if record.levelno >= self._minimum_level:
+                self.write(record.getMessage())
+            return True
+
+    def __init__(self,
+                 manager: 'FixtureManager',
+                 args: typing.Optional[nanaimo.Namespace] = None,
+                 **kwargs: typing.Any):
+        super().__init__(manager, args, **kwargs)
+        self._stdout_filter = None  # type: typing.Optional[logging.Filter]
+        self._stderr_filter = None  # type: typing.Optional[logging.Filter]
+        if 'stdout_filter' in kwargs:
+            self._stdout_filter = kwargs['stdout_filter']
+        if 'stderr_filter' in kwargs:
+            self._stderr_filter = kwargs['stderr_filter']
+
+    @property
+    def stdout_filter(self) -> typing.Optional[logging.Filter]:
+        """
+        A filter used when logging the stdout stream with the subprocess.
+        """
+        return self._stdout_filter
+
+    @stdout_filter.setter
+    def stdout_filter(self, filter: typing.Optional[logging.Filter]) -> None:
+        self._stdout_filter = filter
+
+    @property
+    def stderr_filter(self) -> typing.Optional[logging.Filter]:
+        """
+        A filter used when logging the stderr stream with the subprocess.
+        """
+        return self._stderr_filter
+
+    @stderr_filter.setter
+    def stderr_filter(self, filter: typing.Optional[logging.Filter]) -> None:
+        self._stderr_filter = filter
+
     @classmethod
     def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
         arguments.add_argument('--cwd', help='The working directory to launch the subprocess at.')
@@ -524,12 +585,6 @@ class SubprocessFixture(Fixture):
         +==============+===========================+===================================================================+
         | ``logfile``  | Optional[pathlib.Path]    | A file containing stdout, stderr, and test logs                   |
         +--------------+---------------------------+-------------------------------------------------------------------+
-        | ``stderr``   | Optional[str]             | Capture of stderr                                                 |
-        |              |                           | (`deprecated <https://tinyurl.com/yxz842ab>`_)                    |
-        +--------------+---------------------------+-------------------------------------------------------------------+
-        | ``stdout``   | Optional[str]             | Capture of stdout                                                 |
-        |              |                           | (`deprecated <https://tinyurl.com/yxz842ab>`_)                    |
-        +--------------+---------------------------+-------------------------------------------------------------------+
         """
         artifacts = nanaimo.Artifacts()
 
@@ -551,6 +606,14 @@ class SubprocessFixture(Fixture):
             logfile_handler.setFormatter(file_formatter)
             self._logger.addHandler(logfile_handler)
 
+        stdout_filter = self._stdout_filter
+        stderr_filter = self._stderr_filter
+
+        if stdout_filter is not None:
+            self._logger.addFilter(stdout_filter)
+        if stderr_filter is not None:
+            self._logger.addFilter(stderr_filter)
+
         try:
             self._logger.debug('About to execute command "%s" in a subprocess shell', cmd)
 
@@ -561,7 +624,7 @@ class SubprocessFixture(Fixture):
                 cwd=cwd
             )  # type: asyncio.subprocess.Process
 
-            stdout, stderr = await self._wait_for_either_until_neither(
+            await self._wait_for_either_until_neither(
                 (proc.stdout if proc.stdout is not None else self._NoopStreamReader()),
                 (proc.stderr if proc.stderr is not None else self._NoopStreamReader()))
 
@@ -569,12 +632,13 @@ class SubprocessFixture(Fixture):
 
             self._logger.debug('command "%s" exited with %i', cmd, proc.returncode)
 
-            setattr(artifacts, 'stdout', stdout)
-            setattr(artifacts, 'stderr', stderr)
-
             artifacts.result_code = proc.returncode
             return artifacts
         finally:
+            if stderr_filter is not None:
+                self._logger.removeFilter(stderr_filter)
+            if stdout_filter is not None:
+                self._logger.removeFilter(stdout_filter)
             if logfile_handler is not None:
                 self._logger.removeHandler(logfile_handler)
 
@@ -608,17 +672,13 @@ class SubprocessFixture(Fixture):
 
     async def _wait_for_either_until_neither(self,
                                              stdout: asyncio.StreamReader,
-                                             stderr: asyncio.StreamReader) \
-            -> typing.Tuple[str, str]:
+                                             stderr: asyncio.StreamReader) -> None:
         """
         Wait for a line of data from either stdout or stderr and log this data as received.
         When both are EOF then exit.
 
         :returns: Tuple of stdout, stderr
         """
-        stdout_buffer = io.StringIO()
-        stderr_buffer = io.StringIO()
-
         future_out = asyncio.ensure_future(stdout.readline())
         future_err = asyncio.ensure_future(stderr.readline())
 
@@ -635,14 +695,11 @@ class SubprocessFixture(Fixture):
                     if future_done == future_err:
                         future_err = asyncio.ensure_future(stderr.readline())
                         pending.add(future_err)
-                        stderr_buffer.write(line)
                         self._logger.error(line)
                     else:
                         future_out = asyncio.ensure_future(stdout.readline())
                         pending.add(future_out)
-                        stdout_buffer.write(line)
                         self._logger.info(line.strip())
-        return (stdout_buffer.getvalue(), stderr_buffer.getvalue())
 
 
 # +---------------------------------------------------------------------------+
