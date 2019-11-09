@@ -167,7 +167,7 @@ class CharacterDisplay(nanaimo.fixtures.Fixture):
     def _create_display(cls, args: typing.Optional[nanaimo.Namespace]) -> _CharacterDisplayInterface:
         if args is None:
             defaults = nanaimo.config.ArgumentDefaults.create_defaults_with_early_rc_config()
-            args = nanaimo.Namespace(overrides=defaults)
+            args = nanaimo.Namespace(defaults=defaults)
         try:
             return _CharacterDisplayAdafruitSerialBackpack(args)
         except serial.SerialException:

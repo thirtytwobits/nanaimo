@@ -66,7 +66,7 @@ class ArgumentDefaults:
         return ArgumentDefaults(args)
 
     @classmethod
-    def as_dict(cls, config_value: str) -> typing.Mapping[str, str]:
+    def as_dict(cls, config_value: typing.Union[str, typing.List[str]]) -> typing.Mapping[str, str]:
         """
         Where a value is set as a map this method is used to parse the resulting string into
         a Python dictionary::
@@ -98,8 +98,15 @@ class ArgumentDefaults:
 
         """
         dict_val = dict()
-        if config_value is not None:
-            as_list = config_value.strip().split('\n')
+        if isinstance(config_value, list):
+            value_list = config_value
+        elif config_value is not None:
+            value_list = [str(config_value)]
+        else:
+            value_list = []
+
+        for value in value_list:
+            as_list = value.strip().split('\n')
             for pair_string in as_list:
                 kv = pair_string.split('=')
                 dict_val[kv[0].strip()] = kv[1].strip()
@@ -235,21 +242,3 @@ class ArgumentDefaults:
             inout_kwargs['help'] = inout_kwargs['help'] + '\n' + additional_help
         except KeyError:
             inout_kwargs['help'] = additional_help
-
-
-def set_subprocess_environment_from_defaults(defaults: ArgumentDefaults) -> bool:
-    """
-    Updates :data:`os.environ` from values set as ``environ`` in the provided arguments.
-
-    :param defaults: A defaults object to load the environment from. The map of values in this key are
-        added to any subsequent subprocess started but can be overridden by ``env`` arguments to
-        subprocess constructors like :class:`subprocess.Popen`
-    :type defaults: ArgumentDefaults
-    :returns: True if an ``environ`` key was found else False.
-    """
-    try:
-        nanaimo_env = ArgumentDefaults.as_dict(defaults['environ'])
-        os.environ.update(nanaimo_env)
-        return True
-    except KeyError:
-        return False

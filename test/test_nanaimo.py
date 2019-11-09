@@ -19,7 +19,7 @@ import nanaimo.connections
 import nanaimo.connections.uart
 import nanaimo.instruments.jlink
 import nanaimo.parsers.gtest
-from nanaimo.config import set_subprocess_environment_from_defaults
+from nanaimo import set_subprocess_environment
 
 
 @pytest.mark.timeout(10)
@@ -126,11 +126,11 @@ def test_require_prefix(required_prefix, test_positional_args, test_expected_arg
     parser.add_argument.assert_called_once_with(*test_expected_args)
 
 
-def test_set_subprocess_environment_from_defaults_no_environ() -> None:
+def test_set_subprocess_environment_no_environ() -> None:
     """
     Verify that no exceptions are thrown if the defaults config lacks an ``environ`` key.
     """
     defaults = MagicMock(spec=nanaimo.config.ArgumentDefaults)
     defaults.__getitem__ = MagicMock(side_effect=KeyError())
 
-    assert not set_subprocess_environment_from_defaults(defaults)
+    set_subprocess_environment(nanaimo.Namespace(defaults))
