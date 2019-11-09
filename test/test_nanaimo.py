@@ -133,4 +133,15 @@ def test_set_subprocess_environment_no_environ() -> None:
     defaults = MagicMock(spec=nanaimo.config.ArgumentDefaults)
     defaults.__getitem__ = MagicMock(side_effect=KeyError())
 
-    set_subprocess_environment(nanaimo.Namespace(defaults))
+    set_subprocess_environment(nanaimo.Namespace(defaults=defaults))
+
+
+def test_get_as_merged_dict() -> None:
+    """
+    Verify that no exceptions are thrown if the defaults config lacks an ``environ`` key
+    when using Namespace.get_as_merged_dict()
+    """
+    defaults = MagicMock(spec=nanaimo.config.ArgumentDefaults)
+    defaults.__getitem__ = MagicMock(side_effect=KeyError())
+
+    nanaimo.Namespace(defaults=defaults).get_as_merged_dict('environ')

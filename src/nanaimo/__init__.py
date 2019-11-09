@@ -319,7 +319,10 @@ class Namespace:
         """
         result = dict()  # type: typing.Dict[str, typing.Any]
         if self._defaults is not None:
-            result.update(ArgumentDefaults.as_dict(self._defaults[key]))
+            try:
+                result.update(ArgumentDefaults.as_dict(self._defaults[key]))
+            except KeyError:
+                pass
         try:
             result.update(ArgumentDefaults.as_dict(self.__dict__[key]))
         except KeyError:
