@@ -105,9 +105,8 @@ class Fixture(nanaimo.fixtures.Fixture):
         while True:
             result = await monitor.get_line()
             result_stripped = result.rstrip()
-            if result_stripped.endswith('\n'):
-                result_stripped = result_stripped[:-1]
-            self._logger.debug(result_stripped)
+            if len(result_stripped) > 0:
+                self._logger.debug(result_stripped)
             match = pattern.search(result)
             if match:
                 setattr(artifacts, 'match', match)
