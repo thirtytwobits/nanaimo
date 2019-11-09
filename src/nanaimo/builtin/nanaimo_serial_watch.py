@@ -77,7 +77,7 @@ class Fixture(nanaimo.fixtures.Fixture):
         with self._uart_factory(args.lw_port, args.lw_port_speed) as monitor:
 
             match_future, _ = await self.gate_tasks(self._matcher(args, monitor),
-                                                    0.0,
+                                                    None,
                                                     self._agitator(args, monitor),
                                                     self._updater(args))
 

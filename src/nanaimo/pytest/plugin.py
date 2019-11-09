@@ -372,6 +372,11 @@ def _get_display() -> nanaimo.display.CharacterDisplay:
 
 
 def pytest_addoption(parser) -> None:  # type: ignore
+    """
+    See :func:`_pytest.hookspec.pytest_addoption` for documentation.
+    Also see the "`Writing Plugins <https://docs.pytest.org/en/latest/writing_plugins.html>`_"
+    guide.
+    """
     manager = _get_default_fixture_manager()
     nanaimo_defaults = nanaimo.config.ArgumentDefaults.create_defaults_with_early_rc_config()
     nanaimo_options = parser.getgroup('nanaimo')
@@ -384,6 +389,11 @@ def pytest_addoption(parser) -> None:  # type: ignore
 
 
 def pytest_sessionstart(session: _pytest.main.Session) -> None:
+    """
+    See :func:`_pytest.hookspec.pytest_sessionstart` for documentation.
+    Also see the "`Writing Plugins <https://docs.pytest.org/en/latest/writing_plugins.html>`_"
+    guide.
+    """
     args = session.config.option
     args_ns = nanaimo.Namespace(args, nanaimo.config.ArgumentDefaults(args), allow_none_values=False)
     nanaimo.set_subprocess_environment(args_ns)
@@ -391,12 +401,22 @@ def pytest_sessionstart(session: _pytest.main.Session) -> None:
 
 
 def pytest_runtest_setup(item: typing.Any) -> None:
+    """
+    See :func:`_pytest.hookspec.pytest_runtest_setup` for documentation.
+    Also see the "`Writing Plugins <https://docs.pytest.org/en/latest/writing_plugins.html>`_"
+    guide.
+    """
     display = _get_display()
     display.clear(display_default_message=False)
     display.write(item.name)
 
 
 def pytest_sessionfinish(session: _pytest.main.Session, exitstatus: int) -> None:
+    """
+    See :func:`_pytest.hookspec.pytest_sessionfinish` for documentation.
+    Also see the "`Writing Plugins <https://docs.pytest.org/en/latest/writing_plugins.html>`_"
+    guide.
+    """
     display = _get_display()
     display.clear(display_default_message=True)
     if exitstatus == 0:
