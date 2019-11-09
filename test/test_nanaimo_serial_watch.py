@@ -25,7 +25,7 @@ async def test_default_match(nanaimo_serial_watch: nanaimo.builtin.nanaimo_seria
     def uart_factory(*args: typing.Any) -> nanaimo.connections.uart.ConcurrentUart:
         return nanaimo.connections.uart.ConcurrentUart(simulated_serial)
     nanaimo_serial_watch._uart_factory = uart_factory
-    artifacts = await nanaimo_serial_watch.gather()
+    artifacts = await nanaimo_serial_watch.gather(lw_port='foo')
     assert artifacts.matched_line == 'one'
 
 
@@ -53,6 +53,6 @@ async def test_realistic_match(nanaimo_serial_watch: nanaimo.builtin.nanaimo_ser
     def uart_factory(*args: typing.Any) -> nanaimo.connections.uart.ConcurrentUart:
         return nanaimo.connections.uart.ConcurrentUart(simulated_serial)
     nanaimo_serial_watch._uart_factory = uart_factory
-    artifacts = await nanaimo_serial_watch.gather(lw_pattern=r'LINUX\s+Distribution\s+(\d+\.\d+)')
+    artifacts = await nanaimo_serial_watch.gather(lw_port='foo', lw_pattern=r'LINUX\s+Distribution\s+(\d+\.\d+)')
     assert artifacts.matched_line == line_to_match
     assert artifacts.match.group(1) == '7.5'

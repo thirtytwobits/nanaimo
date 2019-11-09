@@ -64,7 +64,9 @@ class AbstractSerial:
         arguments.add_argument('--port',
                                help='The port to monitor.')
 
-        arguments.add_argument('--port-speed', help='the speed of the port (e.g. baud rate for serial ports).')
+        arguments.add_argument('--port-speed',
+                               default=9600,
+                               help='the speed of the port (e.g. baud rate for serial ports).')
 
 
 class AbstractAsyncSerial(AbstractSerial):

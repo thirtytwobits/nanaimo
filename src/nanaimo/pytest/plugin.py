@@ -381,11 +381,12 @@ def pytest_addoption(parser) -> None:  # type: ignore
     nanaimo_defaults = nanaimo.config.ArgumentDefaults.create_defaults_with_early_rc_config()
     nanaimo_options = parser.getgroup('nanaimo')
     nanaimo_options.addoption('--environ', action='append', help='Environment variables to provide to subprocesses')
+    nanaimo_arguments = nanaimo.Arguments(nanaimo_options, defaults=nanaimo_defaults, filter_duplicates=True)
+
     for fixture_type in manager.fixture_types():
         group = parser.getgroup(fixture_type.get_canonical_name())
-        fixture_type.on_visit_test_arguments(nanaimo.Arguments(group,
-                                                               nanaimo_defaults,
-                                                               fixture_type.get_argument_prefix()))
+        nanaimo_arguments.set_inner_arguments(group)
+        fixture_type.visit_test_arguments(nanaimo_arguments)
 
 
 def pytest_sessionstart(session: _pytest.main.Session) -> None:

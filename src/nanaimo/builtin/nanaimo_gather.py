@@ -78,18 +78,21 @@ class Fixture(nanaimo.fixtures.Fixture):
 
     @classmethod
     def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
-        arguments.add_argument('--gather-coroutine', action='append')
+        arguments.add_argument('--coroutine', action='append')
 
     async def on_gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
         """
         Multi-plex fixture
         """
         fixture_list = []  # type: typing.List[typing.Coroutine]
-        for arg in args.gather_coroutine:
+        gather_coroutine = self.get_arg_covariant_or_fail(args, 'coroutine')
+
+        for arg in gather_coroutine:
             if asyncio.iscoroutine(arg):
                 fixture_list.append(arg)
             else:
                 fixture_list.append(self.manager.create_fixture(arg, args).gather())
+
         results = await asyncio.gather(*fixture_list, loop=self.loop)
         return nanaimo.Artifacts.combine(*results)
 

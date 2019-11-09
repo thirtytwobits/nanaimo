@@ -116,6 +116,7 @@ class ArgumentDefaults:
         self._env_variable_index = weakref.WeakKeyDictionary()  # type: weakref.WeakKeyDictionary
         self._configparser = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation())
         self._logger = logging.getLogger(__name__)
+        self._value_types = dict()  # type: typing.Dict[str, typing.Type]
         if args is not None:
             self.set_args(args)
         else:
@@ -134,12 +135,13 @@ class ArgumentDefaults:
 
     def __getitem__(self, key: str) -> typing.Any:
         namespaced_key = key.split('_')
+        type_cast = typing.cast(typing.Type, (str if key not in self._value_types else self._value_types[key]))
         # Try once with nanaimo prefix (more specific)
         for x in range(len(namespaced_key)-1, 0, -1):
             try:
                 group = '_'.join(namespaced_key[:x])
                 value_key = '_'.join(namespaced_key[x:])
-                return self._configparser['nanaimo:' + group][value_key]
+                return type_cast(self._configparser['nanaimo:' + group][value_key])
             except KeyError:
                 pass
 
@@ -148,11 +150,11 @@ class ArgumentDefaults:
             try:
                 group = '_'.join(namespaced_key[:x])
                 value_key = '_'.join(namespaced_key[x:])
-                return self._configparser[group][value_key]
+                return type_cast(self._configparser[group][value_key])
             except KeyError:
                 pass
 
-        return self._configparser['nanaimo'][key]
+        return type_cast(self._configparser['nanaimo'][key])
 
     def __contains__(self, key: str) -> bool:
         try:
@@ -172,7 +174,9 @@ class ArgumentDefaults:
             from_config = self[derived_key]
             if from_config is not None:
                 if 'type' in inout_kwargs:
-                    inout_kwargs['default'] = inout_kwargs['type'](from_config)
+                    type_cast = inout_kwargs['type']
+                    self._value_types[derived_key] = type_cast
+                    inout_kwargs['default'] = type_cast(from_config)
                 else:
                     inout_kwargs['default'] = from_config
                 self._logger.debug('Setting the default for %s to %s (type %s) from a config file.',

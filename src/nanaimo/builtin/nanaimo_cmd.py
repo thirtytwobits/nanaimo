@@ -65,7 +65,7 @@ class Fixture(nanaimo.fixtures.SubprocessFixture):
     @classmethod
     def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
         super().on_visit_test_arguments(arguments)
-        arguments.add_argument('--cmd-shell', '-C', help='A shell command to run as a subprocess.')
+        arguments.add_argument('--shell', '-C', help='A shell command to run as a subprocess.')
 
     # +-----------------------------------------------------------------------+
     # | SubprocessFixture
@@ -82,12 +82,7 @@ class Fixture(nanaimo.fixtures.SubprocessFixture):
         :type inout_artifacts: nanaimo.Artifacts
         :return: The command to run in a subprocess shell.
         """
-        optional_command = arguments.cmd_shell
-
-        if isinstance(optional_command, str):
-            return optional_command
-        else:
-            raise ValueError('No command provided (--cmd-shell, -C)')
+        return str(self.get_arg_covariant_or_fail(arguments, 'shell'))
 
 
 @nanaimo.fixtures.PluggyFixtureManager.type_factory

@@ -51,16 +51,70 @@ class Arguments:
     :type defaults: typing.Optional[ArgumentDefaults]
     :param str required_prefix: If provided :meth:`add_argument` will rewrite arguments to enure they have the required
         prefix.
+    :param bool filter_duplicates: If true then this class will track keys provided to the :meth:`add_argument` method
+        and will not call the inner object if duplicates are detected. If false then all calls to :meth:`add_argument`
+        are always forwarded to the inner object. This filter is tracked per instance so duplicates provided to
+        different instances are not filtered.
     """
 
     def __init__(self,
                  inner_arguments: typing.Any,
                  defaults: typing.Optional[ArgumentDefaults] = None,
-                 required_prefix: typing.Optional[str] = None):
+                 required_prefix: typing.Optional[str] = None,
+                 filter_duplicates: bool = False):
         self._inner = inner_arguments
         self._defaults = defaults
-        self._required_prefix = required_prefix
+        self._required_prefix = (required_prefix.replace('_', '-') if required_prefix is not None else None)
         self._logger = logging.getLogger(__name__)
+        self._key_set = (set() if filter_duplicates else None)  # type: typing.Optional[typing.Set[str]]
+
+    @property
+    def required_prefix(self) -> typing.Optional[str]:
+        return self._required_prefix
+
+    @required_prefix.setter
+    def required_prefix(self, value: typing.Optional[str]) -> None:
+        self._required_prefix = value
+
+    def set_inner_arguments(self, inner_arguments: typing.Any) -> None:
+        """
+        Reset the inner argument object this object wraps. This method allows a single instance to filter
+        all arguments preventing duplicates from reading the inner objects.
+
+        .. invisible-code-block: python
+            from nanaimo import Arguments
+            from unittest.mock import MagicMock
+            import argparse
+
+            parser = MagicMock(spec=argparse.ArgumentParser)
+            parser.add_argument = MagicMock()
+
+            my_other_parser = MagicMock(spec=argparse.ArgumentParser)
+            my_other_parser.add_argument = MagicMock()
+
+        .. code-block:: python
+
+            a = Arguments(parser, filter_duplicates=True)
+            a.add_argument('--foo')
+
+            # This second call will not make it to the parser
+            # object we set above.
+            a.add_argument('--foo')
+
+            # If we set another parser on the same Arguments instance...
+            a.inner_arguments = my_other_parser
+
+            # then the same filter will continue to apply for this new
+            # inner argument object.
+            a.add_argument('--foo')
+
+        .. invisible-code-block: python
+
+            parser.add_argument.assert_called_once_with('--foo')
+            my_other_parser.add_argument.assert_not_called()
+
+        """
+        self._inner = inner_arguments
 
     def add_argument(self, *args: typing.Any, **kwargs: typing.Any) -> None:
         """
@@ -134,6 +188,18 @@ class Arguments:
         if self._required_prefix is not None:
             args = self._rewrite_with_prefix(args)
 
+        if self._key_set is not None:
+            # Pytest has a bug where the ValueError thrown from
+            # addoption leaves their parser in an inconsistent state.
+            # The only way to handle duplicate resolution with pytest
+            # is to intercept duplicates before they reach their
+            # option parser.
+            long_form_index, long_form = self._preparse_args(args)
+            if long_form in self._key_set:
+                self._logger.debug('Filtering duplicate key %s', long_form)
+                return
+            self._key_set.add(long_form)
+
         if self._defaults is not None:
             self._defaults.populate_default(self._inner, args, kwargs)
 
@@ -145,25 +211,30 @@ class Arguments:
     # +-----------------------------------------------------------------------+
     # | PRIVATE
     # +-----------------------------------------------------------------------+
-
-    def _rewrite_with_prefix(self, inout_args: typing.Tuple) -> typing.Tuple:
-        if len(inout_args) == 0:
+    @classmethod
+    def _preparse_args(cls, args: typing.Tuple) -> typing.Tuple[int, str]:
+        if len(args) == 0:
             raise AttributeError('No positional args provided?')
 
         long_form_index = -1
-        for i in range(0, len(inout_args)):
-            if inout_args[i].startswith('--'):
+        for i in range(0, len(args)):
+            if args[i].startswith('--'):
                 long_form_index = i
                 break
 
+        return (long_form_index, args[long_form_index])
+
+    def _rewrite_with_prefix(self, inout_args: typing.Tuple) -> typing.Tuple:
+
+        long_form_index, long_form = self._preparse_args(inout_args)
+
         if long_form_index >= 0 and not inout_args[long_form_index].startswith('--{}'.format(self._required_prefix)):
             as_list = list(inout_args)
-            long_form = as_list[long_form_index]
             rewritten = '--{}{}'.format(self._required_prefix, long_form[1:])
-            self._logger.info('Rewriting argument {} to {} because it was missing required prefix "{}".'
-                              .format(long_form,
-                                      rewritten,
-                                      self._required_prefix))
+            self._logger.debug('Rewriting argument {} to {} because it was missing required prefix "{}".'
+                               .format(long_form,
+                                       rewritten,
+                                       self._required_prefix))
             return tuple(as_list[:long_form_index] + [rewritten] + as_list[long_form_index + 1:])
         else:
             return inout_args

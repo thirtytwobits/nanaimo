@@ -145,17 +145,41 @@ class Fixture(metaclass=abc.ABCMeta):
         return str(getattr(cls, 'argument_prefix', cls.get_canonical_name().replace('_', '-')))
 
     @classmethod
-    def get_arg_covariant(cls, args: nanaimo.Namespace, base_name: str) -> typing.Optional[typing.Any]:
+    def get_arg_covariant(cls,
+                          args: nanaimo.Namespace,
+                          base_name: str,
+                          default_value: typing.Optional[typing.Any] = None) -> typing.Any:
         """
         When called by a baseclass this method will return the most specalized argument value
         available.
+
+        :param args: The arguments to search.
+        :param base_name: The base name. For example ``foo`` for ``--prefix-bar``.
+        :param default_value: The value to use if the argument could not be found.
         """
 
         prefix = cls.get_argument_prefix().replace('-', '_')
         if len(prefix) > 0:
             prefix += '_'
         full_key = '{}{}'.format(prefix, base_name.replace('-', '_'))
-        return getattr(args, full_key)
+        result = getattr(args, full_key)
+        if result is None:
+            return default_value
+        else:
+            return result
+
+    @classmethod
+    def get_arg_covariant_or_fail(cls, args: nanaimo.Namespace, base_name: str) -> typing.Any:
+        """
+        Calls :meth:`get_arg_covariant` but raises :class:`ValueError` if the result is `None`.
+
+        :raises ValueError: if no value could be found for the argument.
+        """
+        optional_result = cls.get_arg_covariant(args, base_name)
+        if optional_result is None:
+            raise ValueError('{base_name} argument not provided (--[argument prefix]-{base_name}'
+                             .format(base_name=base_name))
+        return optional_result
 
     def __init__(self,
                  manager: 'FixtureManager',
@@ -262,6 +286,18 @@ class Fixture(metaclass=abc.ABCMeta):
     @gather_timeout_seconds.setter
     def gather_timeout_seconds(self, gather_timeout_seconds: float) -> None:
         self._gather_timeout_seconds = gather_timeout_seconds
+
+    @classmethod
+    def visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
+        """
+        Visit this fixture's :meth:`on_visit_test_arguments` but with the
+        proper :data:`nanaimo.Arguments.required_prefix` set.
+        """
+
+        previous_required_prefix = arguments.required_prefix
+        arguments.required_prefix = cls.get_argument_prefix().replace('_', '-')
+        cls.on_visit_test_arguments(arguments)
+        arguments.required_prefix = previous_required_prefix
 
     # +-----------------------------------------------------------------------+
     # | ABSTRACT METHODS
