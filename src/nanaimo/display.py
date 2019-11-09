@@ -246,7 +246,7 @@ def get_fixture_type() -> typing.Type['nanaimo.fixtures.Fixture']:
 
 
 @pytest.fixture
-def nanaimo_instr_bk_precision(request: typing.Any) -> nanaimo.fixtures.Fixture:
+def nanaimo_character_display(request: typing.Any) -> nanaimo.fixtures.Fixture:
     """
     Provides a :class:`nanaimo.display.CharacterDisplay` fixture to pytest. See
     `this Adafruit product <https://www.adafruit.com/product/782>`_ for an example of the display
