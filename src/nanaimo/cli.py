@@ -28,8 +28,8 @@ import typing
 import argcomplete
 
 import nanaimo
-import nanaimo.fixtures
 import nanaimo.config
+import nanaimo.fixtures
 
 
 class CreateAndGatherFunctor:
@@ -116,6 +116,18 @@ def _make_parser(loop: typing.Optional[asyncio.AbstractEventLoop] = None,
                             A gather timeout in fractional seconds to use for all fixtures.
                             If not provided then Fixture.gather will not timeout.''').lstrip())
 
+    parser.add_argument('--environ', action='append', help=textwrap.dedent('''
+                            Environment variables to provide to subprocesses''').lstrip())
+
+    parser.add_argument('--environ-shell', '-s', action='store_true', help=textwrap.dedent('''
+                            Dump environment variables to stdout as a set of shell commands.
+                            Use this to export the subprocess environment for a system to a user
+                            shell. For example::
+
+                                eval $(nait -s)
+
+                        ''').lstrip())
+
     subparsers = parser.add_subparsers(dest='fixture', help='Available fixtures.')
 
     pm = nanaimo.fixtures.PluggyFixtureManager()
@@ -149,8 +161,6 @@ def main() -> int:
     loop = asyncio.get_event_loop()
     defaults = nanaimo.config.ArgumentDefaults.create_defaults_with_early_rc_config()
 
-    nanaimo.config.set_subprocess_environment_from_defaults(defaults)
-
     parser = _make_parser(loop, defaults)
     argcomplete.autocomplete(parser)
     args = parser.parse_args()
@@ -158,9 +168,15 @@ def main() -> int:
 
     args_ns = nanaimo.Namespace(args, defaults, allow_none_values=False)
 
-    _setup_logging(args_ns)
+    nanaimo.set_subprocess_environment(args_ns)
 
-    if hasattr(args, 'func'):
+    if args_ns.environ_shell:
+        for key, value in args_ns.get_as_merged_dict('environ').items():
+            print('export {}="{}";'.format(key, value), end='')
+        return 0
+    elif hasattr(args, 'func'):
+        _setup_logging(args_ns)
+
         result = loop.run_until_complete(args.func(args_ns, args_ns.gather_timeout_seconds))
         try:
             return int(result)

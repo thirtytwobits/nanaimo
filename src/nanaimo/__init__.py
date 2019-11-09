@@ -23,6 +23,7 @@ This module contains the common types used by Nanaimo.
 """
 import argparse
 import logging
+import os
 import typing
 
 from .config import ArgumentDefaults
@@ -272,8 +273,8 @@ class Namespace:
 
     :param parent: A namespace-like object to inherit attributes from.
     :type parent: typing.Optional[typing.Any]
-    :param overrides: Defaults to use if a requested attribute is not available on this object.
-    :type overrides: typing.Optional[ArgumentDefaults]
+    :param defaults: Defaults to use if a requested attribute is not available on this object.
+    :type defaults: typing.Optional[ArgumentDefaults]
     :param allow_none_values: If True then an attribute with a None value is considered valid otherwise
         any attribute that is None will cause the Namespace to search for a non-None value in the defaults.
     :type allow_none_values: bool
@@ -281,9 +282,9 @@ class Namespace:
 
     def __init__(self,
                  parent: typing.Optional[typing.Any] = None,
-                 overrides: typing.Optional[ArgumentDefaults] = None,
+                 defaults: typing.Optional[ArgumentDefaults] = None,
                  allow_none_values: bool = True):
-        self._overrides = overrides
+        self._defaults = defaults
         if parent is not None:
             for key in vars(parent):
                 parent_value = getattr(parent, key)
@@ -294,20 +295,36 @@ class Namespace:
         try:
             return self.__dict__[key]
         except KeyError:
-            if self._overrides is None:
+            if self._defaults is None:
                 return None
         try:
-            return self._overrides[key]
+            return self._defaults[key]
         except KeyError:
             return None
 
     def __contains__(self, key: str) -> typing.Any:
         if key in self.__dict__:
             return True
-        elif self._overrides is None:
+        elif self._defaults is None:
             return False
         else:
-            return key in self._overrides
+            return key in self._defaults
+
+    def get_as_merged_dict(self, key: str) -> typing.Mapping[str, typing.Any]:
+        """
+        Expect the value to be a dictionary. In this case also load the defaults into
+        the dictionary.
+
+        :param key: The key to load the dictionary from.
+        """
+        result = dict()  # type: typing.Dict[str, typing.Any]
+        if self._defaults is not None:
+            result.update(ArgumentDefaults.as_dict(self._defaults[key]))
+        try:
+            result.update(ArgumentDefaults.as_dict(self.__dict__[key]))
+        except KeyError:
+            pass
+        return result
 
     T = typing.TypeVar('T')
 
@@ -337,7 +354,7 @@ class Namespace:
         :return: A new namespace with the contents of this object and any values provided as
             kwargs overwriting the values in this instance where the keys are the same.
         """
-        merged = self.__class__(parent=self, overrides=self._overrides)
+        merged = self.__class__(parent=self, defaults=self._defaults)
         for key in kwargs:
             setattr(merged, key, kwargs[key])
         return typing.cast('Namespace.T', merged)
@@ -351,8 +368,8 @@ class Artifacts(Namespace):
     :param result_code: The value to report as the status of the activity that gathered the artifacts.
     :param parent: A namespace-like object to inherit attributes from.
     :type parent: typing.Optional[typing.Any]
-    :param overrides: Defaults to use if a requested attribute is not available on this object.
-    :type overrides: typing.Optional[ArgumentDefaults]
+    :param defaults: Defaults to use if a requested attribute is not available on this object.
+    :type defaults: typing.Optional[ArgumentDefaults]
     :param allow_none_values: If True then an attribute with a None value is considered valid otherwise
         any attribute that is None will cause the Artifacts to search for a non-None value in the defaults.
     :type allow_none_values: bool
@@ -432,9 +449,9 @@ class Artifacts(Namespace):
     def __init__(self,
                  result_code: int = 0,
                  parent: typing.Optional[typing.Any] = None,
-                 overrides: typing.Optional[ArgumentDefaults] = None,
+                 defaults: typing.Optional[ArgumentDefaults] = None,
                  allow_none_values: bool = True):
-        super().__init__(parent=parent, overrides=overrides, allow_none_values=allow_none_values)
+        super().__init__(parent=parent, defaults=defaults, allow_none_values=allow_none_values)
         self._result_code = result_code
 
     @property
@@ -573,3 +590,15 @@ def assert_success_if(artifacts: Artifacts, conditional: typing.Callable[[Artifa
     assert artifacts.result_code == 0
     assert conditional(artifacts)
     return artifacts
+
+
+def set_subprocess_environment(args: Namespace) -> None:
+    """
+    Updates :data:`os.environ` from values set as ``environ`` in the provided arguments.
+
+    :param args: A namespace to load the environment from. The map of values in this key are
+        added to any subsequent subprocess started but can be overridden by ``env`` arguments to
+        subprocess constructors like :class:`subprocess.Popen`
+    :type defaults: Namespace
+    """
+    os.environ.update(args.get_as_merged_dict('environ'))

@@ -93,11 +93,6 @@ def _get_default_fixture_manager() -> nanaimo.fixtures.FixtureManager:
     if _fixture_manager is None:
         _fixture_manager = nanaimo.fixtures.nanaimo.fixtures.PluggyFixtureManager()
 
-        # Since we are activating our use of Nanaimo we'll take this opportunity to
-        # properly set the subprocess environment from configuration.
-        defaults = nanaimo.config.ArgumentDefaults.create_defaults_with_early_rc_config()
-        nanaimo.config.set_subprocess_environment_from_defaults(defaults)
-
     return _fixture_manager
 
 
@@ -130,16 +125,6 @@ def create_pytest_fixture(pytest_request: typing.Any,
     args = pytest_request.config.option
     args_ns = nanaimo.Namespace(args, nanaimo.config.ArgumentDefaults(args), allow_none_values=False)
     return fm.create_fixture(canonical_name, args_ns)
-
-
-def pytest_addoption(parser) -> None:  # type: ignore
-    manager = _get_default_fixture_manager()
-    nanaimo_defaults = nanaimo.config.ArgumentDefaults.create_defaults_with_early_rc_config()
-    for fixture_type in manager.fixture_types():
-        group = parser.getgroup(fixture_type.get_canonical_name())
-        fixture_type.on_visit_test_arguments(nanaimo.Arguments(group,
-                                                               nanaimo_defaults,
-                                                               fixture_type.get_argument_prefix()))
 
 
 @pytest.fixture
@@ -381,8 +366,27 @@ def _get_display() -> nanaimo.display.CharacterDisplay:
                                          _get_default_fixture_manager().create_fixture('character_display'))
     return _display_singleton
 
+# +---------------------------------------------------------------------------+
+# | PYTEST HOOKS
+# +---------------------------------------------------------------------------+
+
+
+def pytest_addoption(parser) -> None:  # type: ignore
+    manager = _get_default_fixture_manager()
+    nanaimo_defaults = nanaimo.config.ArgumentDefaults.create_defaults_with_early_rc_config()
+    nanaimo_options = parser.getgroup('nanaimo')
+    nanaimo_options.addoption('--environ', action='append', help='Environment variables to provide to subprocesses')
+    for fixture_type in manager.fixture_types():
+        group = parser.getgroup(fixture_type.get_canonical_name())
+        fixture_type.on_visit_test_arguments(nanaimo.Arguments(group,
+                                                               nanaimo_defaults,
+                                                               fixture_type.get_argument_prefix()))
+
 
 def pytest_sessionstart(session: _pytest.main.Session) -> None:
+    args = session.config.option
+    args_ns = nanaimo.Namespace(args, nanaimo.config.ArgumentDefaults(args), allow_none_values=False)
+    nanaimo.set_subprocess_environment(args_ns)
     _get_display().set_bg_colour(0, 0, 255)
 
 
