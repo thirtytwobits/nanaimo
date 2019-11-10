@@ -37,22 +37,28 @@ class Fixture(nanaimo.fixtures.SubprocessFixture):
     @classmethod
     def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
         super().on_visit_test_arguments(arguments)
-        arguments.add_argument('--ssh-target',
+        arguments.add_argument('--target',
                                help='The IP or hostname for the target system.')
-        arguments.add_argument('--ssh-as-user',
+        arguments.add_argument('--as-user',
                                help='The user to upload as.')
-        arguments.add_argument('--ssh-command',
+        arguments.add_argument('--command',
                                help='The command to run.')
-        arguments.add_argument('--ssh-identity',
+        arguments.add_argument('--identity',
                                help='The identify file to use')
 
     def on_construct_command(self, args: nanaimo.Namespace, inout_artifacts: nanaimo.Artifacts) -> str:
-        cmd = 'ssh {port} {ident} {user}@{target} \'{command}\''.format(
-            port='-P {}'.format(args.ssh_port) if args.ssh_port is not None else '',
-            command=str(args.ssh_command),
-            user=args.ssh_as_user,
-            target=args.ssh_target,
-            ident='-i {}'.format(args.ssh_identity) if args.ssh_identity is not None else ''
+        ssh_command = self.get_arg_covariant_or_fail(args, 'command')
+        ssh_port = self.get_arg_covariant(args, 'port')
+        ssh_as_user = self.get_arg_covariant(args, 'as_user')
+        ssh_target = self.get_arg_covariant_or_fail(args, 'target')
+        ssh_identity = self.get_arg_covariant(args, 'identity')
+
+        cmd = 'ssh {port} {ident} {user}{target} \'{command}\''.format(
+            port='-P {}'.format(ssh_port) if ssh_port is not None else '',
+            command=str(ssh_command),
+            user=('{}@'.format(ssh_as_user) if ssh_as_user is not None else ''),
+            target=ssh_target,
+            ident='-i {}'.format(ssh_identity) if ssh_identity is not None else ''
         )
         return cmd
 

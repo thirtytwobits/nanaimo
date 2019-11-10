@@ -49,23 +49,30 @@ class Fixture(nanaimo.fixtures.Fixture):
     def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
         nanaimo.connections.uart.ConcurrentUart.on_visit_test_arguments(arguments)
         nanaimo.instruments.jlink.ProgramUploaderJLink.on_visit_test_arguments(arguments)
-        arguments.add_argument('--gtest-timeout',
+        arguments.add_argument('--timeout',
                                default=30.0,
                                type=float,
                                help='Time to wait for the gtest to complete in seconds.')
 
     async def on_gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
 
+        gtest_timeout = self.get_arg_covariant(args, 'timeout', None)
+        gtest_port = self.get_arg_covariant_or_fail(args, 'port')
+        gtest_port_speed = self.get_arg_covariant_or_fail(args, 'port_speed')
+        gtest_upload_timeout_seconds = self.get_arg_covariant(args, 'upload_timeout_seconds')
+        gtest_base_path = self.get_arg_covariant_or_fail(args, 'base_path')
+        gtest_jlink_scripts = self.get_arg_covariant_or_fail(args, 'jlink_scripts')
+
         uploader = nanaimo.instruments.jlink.ProgramUploaderJLink()
-        jlink_scripts = pathlib.Path(args.base_path).glob(args.jlink_scripts)
-        parser = nanaimo.parsers.gtest.Parser(args.gtest_timeout)
+        jlink_scripts = pathlib.Path(gtest_base_path).glob(gtest_jlink_scripts)
+        parser = nanaimo.parsers.gtest.Parser(gtest_timeout)
 
         result = 0
-        with nanaimo.connections.uart.ConcurrentUart.new_default(args.port, args.port_speed) as monitor:
+        with nanaimo.connections.uart.ConcurrentUart.new_default(gtest_port, gtest_port_speed) as monitor:
             for script in jlink_scripts:
                 if result != 0:
                     break
-                result = await asyncio.wait_for(uploader.upload(script), timeout=args.upload_timeout_seconds)
+                result = await asyncio.wait_for(uploader.upload(script), timeout=gtest_upload_timeout_seconds)
                 if result != 0:
                     break
                 result = await parser.read_test(monitor)

@@ -39,7 +39,7 @@ def to_namespace(fixture_type: typing.Type[nanaimo.fixtures.Fixture],
                  command: str,
                  nanaimo_defaults: nanaimo.config.ArgumentDefaults) -> nanaimo.Namespace:
     parser = argparse.ArgumentParser()
-    fixture_type.on_visit_test_arguments(nanaimo.Arguments(parser, nanaimo_defaults))
+    fixture_type.visit_test_arguments(nanaimo.Arguments(parser, nanaimo_defaults))
     return nanaimo.Namespace(parser.parse_args(args=['--bk-port', 'dummy_port', '--bk-command', command]))
 
 

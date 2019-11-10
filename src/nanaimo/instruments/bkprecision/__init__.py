@@ -104,25 +104,25 @@ class Series1900BUart(nanaimo.fixtures.Fixture):
 
     @classmethod
     def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
-        arguments.add_argument('--bk-port',
+        arguments.add_argument('--port',
                                enable_default_from_environ=True,
                                required=True,
                                help='The port the BK Precision power supply is connected to.')
-        arguments.add_argument('--bk-command', '--BC',
+        arguments.add_argument('--command', '--BC',
                                help='command', default='?')
-        arguments.add_argument('--bk-command-timeout',
+        arguments.add_argument('--command-timeout',
                                enable_default_from_environ=True,
                                help='time out for individual commands.', default=4.0)
-        arguments.add_argument('--bk-target-voltage',
+        arguments.add_argument('--target-voltage',
                                enable_default_from_environ=True,
                                type=float,
                                help='The target voltage')
-        arguments.add_argument('--bk-target-voltage-threshold-rising',
+        arguments.add_argument('--target-voltage-threshold-rising',
                                enable_default_from_environ=True,
                                type=float,
                                default=0.2,
                                help='Voltage offset from the target voltage to trigger on when the voltage is rising.')
-        arguments.add_argument('--bk-target-voltage-threshold-falling',
+        arguments.add_argument('--target-voltage-threshold-falling',
                                enable_default_from_environ=True,
                                type=float,
                                default=0.01,
@@ -145,8 +145,8 @@ class Series1900BUart(nanaimo.fixtures.Fixture):
             | '?'     | Read the front panel display     | Display voltage, current, and status (ON or OFF) |
             +---------+----------------------------------+--------------------------------------------------+
         """
-
-        with self._uart_factory(args.bk_port) as bk_uart:
+        bk_port = self.get_arg_covariant_or_fail(args, 'port')
+        with self._uart_factory(bk_port) as bk_uart:
             artifacts = await self._do_command_from_args(bk_uart, args)
 
         return artifacts
@@ -155,9 +155,14 @@ class Series1900BUart(nanaimo.fixtures.Fixture):
         """
         Return if a given voltage is above the configured threshold for the
         high/on/rising voltage for this fixture.
+
+        :raises ValueError: if no target voltage could be determined.
         """
-        rising_threshold_voltage = \
-            self.fixture_arguments.bk_target_voltage - self.fixture_arguments.bk_target_voltage_threshold_rising
+        bk_target_voltage_threshold_rising = self.get_arg_covariant(self.fixture_arguments,
+                                                                    'target_voltage_threshold_rising',
+                                                                    0)
+        bk_target_voltage = self.get_arg_covariant_or_fail(self.fixture_arguments, 'target_voltage')
+        rising_threshold_voltage = bk_target_voltage - bk_target_voltage_threshold_rising
         return (True if voltage > rising_threshold_voltage else False)
 
     def is_volage_below_off_threshold(self, voltage: float) -> bool:
@@ -165,7 +170,9 @@ class Series1900BUart(nanaimo.fixtures.Fixture):
         Return if a given voltage is below the configured threshold for the
         low/off/falling voltage for this fixture.
         """
-        falling_threshold_voltage = self.fixture_arguments.bk_target_voltage_threshold_falling
+        falling_threshold_voltage = self.get_arg_covariant(self.fixture_arguments,
+                                                           'target_voltage_threshold_falling',
+                                                           0)
         return (True if voltage < falling_threshold_voltage else False)
 
     # +-----------------------------------------------------------------------+
@@ -173,7 +180,8 @@ class Series1900BUart(nanaimo.fixtures.Fixture):
     # +-----------------------------------------------------------------------+
     async def _get_display(self,
                            uart: AbstractAsyncSerial,
-                           command_timeout: float) -> typing.Tuple[typing.Tuple[float, float, int], int]:
+                           command_timeout: typing.Optional[float]) \
+            -> typing.Tuple[typing.Tuple[float, float, int], int]:
         display, status = await self._do_command(uart, self.CommandGetDisplay, command_timeout)
         if status != 0 or display is None or len(display) < 8:
             return ((0, 0, self.ModeInvalid), status)
@@ -201,7 +209,8 @@ class Series1900BUart(nanaimo.fixtures.Fixture):
                                                                 (self.CommandTurnOn if is_up else self.CommandTurnOff),
                                                                 args.bk_command_timeout)
         if inout_artifacts.result_code == 0 and args.bk_target_voltage is not None:
-            wait_timeout = max(0, args.bk_command_timeout - (uart.time() - start_time))
+            wait_timeout = (None if args.bk_command_timeout is None
+                            else max(0, args.bk_command_timeout - (uart.time() - start_time)))
             inout_artifacts.result_code = await self._wait_for_voltage(uart,
                                                                        wait_timeout,
                                                                        is_up)
@@ -232,18 +241,18 @@ class Series1900BUart(nanaimo.fixtures.Fixture):
                                  uart: AbstractAsyncSerial,
                                  command: str,
                                  puttime_secs: float,
-                                 command_timeout: float) -> typing.Tuple[str, int]:
+                                 command_timeout: typing.Optional[float]) -> typing.Tuple[str, int]:
         start_time = uart.time()
         previous_line = None
         status = 1
         while True:
             now = uart.time()
-            if command_timeout > 0 and now - start_time > command_timeout:
+            if command_timeout is not None and now - start_time > command_timeout:
                 raise asyncio.TimeoutError()
             if self._debug:
                 self.logger.debug('Waiting for response to command %s put before time %f seconds',
                                   command, puttime_secs)
-            get_line_timeout_seconds = (command_timeout - (now - start_time) if command_timeout > 0 else 0)
+            get_line_timeout_seconds = (command_timeout - (now - start_time) if command_timeout is not None else None)
             received_line = await uart.get_line(get_line_timeout_seconds)
             if self._debug:
                 self.logger.debug('At %f Got line: %s', received_line.timestamp_seconds, received_line)
@@ -260,7 +269,7 @@ class Series1900BUart(nanaimo.fixtures.Fixture):
     async def _do_command(self,
                           uart: AbstractAsyncSerial,
                           command: str,
-                          command_timeout: float) -> typing.Tuple[str, int]:
+                          command_timeout: typing.Optional[float]) -> typing.Tuple[str, int]:
         try:
             command_help = self.CommandHelp[command]
             is_command = True
@@ -277,11 +286,11 @@ class Series1900BUart(nanaimo.fixtures.Fixture):
 
     async def _wait_for_voltage(self,
                                 uart: AbstractAsyncSerial,
-                                command_timeout: float,
+                                command_timeout: typing.Optional[float],
                                 is_rising: bool) -> int:
         start_time = uart.time()
         while True:
-            if uart.time() - start_time > command_timeout:
+            if command_timeout is not None and uart.time() - start_time > command_timeout:
                 raise asyncio.TimeoutError()
             display_tuple, result = await self._get_display(uart, command_timeout)
             voltage = display_tuple[0]

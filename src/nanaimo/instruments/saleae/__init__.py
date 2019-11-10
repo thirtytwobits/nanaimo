@@ -40,18 +40,21 @@ class Fixture(nanaimo.fixtures.Fixture):
 
     @classmethod
     def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
-        arguments.add_argument('--saleae-port',
+        arguments.add_argument('--port',
                                enable_default_from_environ=True,
                                default='10429',
                                help='TCP port for the logic socket server.')
-        arguments.add_argument('--saleae-host',
+        arguments.add_argument('--host',
                                enable_default_from_environ=True,
                                default='localhost',
                                help='hostname for the logic socket server.')
 
     async def on_gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
-        self.logger.info('about to connect to {}:{}'.format(args.saleae_host, args.saleae_port))
-        reader, writer = await asyncio.open_connection(host=args.saleae_host, port=args.saleae_port, loop=self.loop)
+        saleae_host = self.get_arg_covariant_or_fail(args, 'saleae_host')
+        saleae_port = self.get_arg_covariant_or_fail(args, 'saleae_port')
+
+        self.logger.info('about to connect to {}:{}'.format(saleae_host, saleae_port))
+        reader, writer = await asyncio.open_connection(host=saleae_host, port=saleae_port, loop=self.loop)
 
         writer.write('GET_ALL_SAMPLE_RATES\0'.encode('utf-8'))
 

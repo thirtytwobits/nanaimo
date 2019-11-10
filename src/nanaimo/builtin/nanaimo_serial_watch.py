@@ -19,6 +19,7 @@
 #
 import asyncio
 import re
+import textwrap
 import typing
 
 import pytest
@@ -52,13 +53,28 @@ class Fixture(nanaimo.fixtures.Fixture):
     @classmethod
     def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
         nanaimo.connections.uart.ConcurrentUart.on_visit_test_arguments(arguments)
-        arguments.add_argument('--lw-pattern',
+        arguments.add_argument('--pattern',
                                default='.*',
                                enable_default_from_environ=True,
-                               help='A python regular expression to search for')
-        arguments.add_argument('--lw-disruption', default='\r\n')
-        arguments.add_argument('--lw-disturb-rate', type=float)
-        arguments.add_argument('--lw-update-period', type=float, default=1.0, help='Fractional time in seconds')
+                               help=textwrap.dedent('''
+                A Python regular expression that will be matched against each line of
+                serial input received. This fixture gathers input until either this
+                pattern is matched or the gather times out.''').lstrip())
+        arguments.add_argument('--disruption', default='\r\n', help=textwrap.dedent('''
+                Characters to send periodically on the serial link in an attempt to wake
+                up connected hosts and get a default response.''').lstrip())
+        arguments.add_argument('--disturb-rate', type=float, help=textwrap.dedent('''
+                The rate at which the watcher will input the disruption characters to try
+                to get the device on the other end of the serial pipe to respond
+                (in fractional seconds)''').lstrip())
+        arguments.add_argument('--update-period',
+                               type=float,
+                               help=textwrap.dedent('''
+                The rate at which a message is logged when waiting for a log time. This
+                provides feedback that the fixture is still active but that the pattern
+                has not yet been matched. Omit to squelch the update message.
+                (This argument is in fractional seconds).
+                            ''').lstrip())
 
     async def on_gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
         """
@@ -74,7 +90,10 @@ class Fixture(nanaimo.fixtures.Fixture):
         | matched_line | str                       | The full line matched if result_code is 0     |
         +--------------+---------------------------+-----------------------------------------------+
         """
-        with self._uart_factory(args.lw_port, args.lw_port_speed) as monitor:
+        lw_port = self.get_arg_covariant_or_fail(args, 'port')
+        lw_port_speed = self.get_arg_covariant_or_fail(args, 'port_speed')
+
+        with self._uart_factory(lw_port, lw_port_speed) as monitor:
 
             match_future, _ = await self.gate_tasks(self._matcher(args, monitor),
                                                     None,
@@ -89,9 +108,10 @@ class Fixture(nanaimo.fixtures.Fixture):
     # | PRIVATE
     # +-----------------------------------------------------------------------+
     async def _updater(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
-        if args.lw_update_period is not None:
+        lw_update_period = self.get_arg_covariant(args, 'update_period')
+        if lw_update_period is not None:
             while True:
-                await asyncio.sleep(args.lw_update_period)
+                await asyncio.sleep(lw_update_period)
                 self._logger.info('still waiting...')
 
         return nanaimo.Artifacts()
@@ -99,9 +119,10 @@ class Fixture(nanaimo.fixtures.Fixture):
     async def _matcher(self, args: nanaimo.Namespace,
                        monitor: nanaimo.connections.uart.ConcurrentUart) -> nanaimo.Artifacts:
         artifacts = nanaimo.Artifacts()
-        pattern = re.compile(args.lw_pattern)
+        lw_pattern = self.get_arg_covariant_or_fail(args, 'pattern')
+        pattern = re.compile(lw_pattern)
 
-        self._logger.info('Starting to look for pattern : %s', str(pattern))
+        self._logger.info('Starting to look for pattern : %s', str(lw_pattern))
         while True:
             result = await monitor.get_line()
             result_stripped = result.rstrip()
@@ -117,11 +138,13 @@ class Fixture(nanaimo.fixtures.Fixture):
 
     async def _agitator(self, args: nanaimo.Namespace,
                         monitor: nanaimo.connections.uart.ConcurrentUart) -> nanaimo.Artifacts:
-        if args.lw_disturb_rate is not None:
+        lw_disturb_rate = self.get_arg_covariant(args, 'disturb_rate')
+        lw_disruption = self.get_arg_covariant_or_fail(args, 'disruption')
+        if lw_disturb_rate is not None:
             while True:
-                await asyncio.sleep(args.lw_disturb_rate)
+                await asyncio.sleep(lw_disturb_rate)
                 self._logger.debug('About to disturb the uart...')
-                await monitor.put_line(args.lw_disruption)
+                await monitor.put_line(lw_disruption)
         return nanaimo.Artifacts()
 
 

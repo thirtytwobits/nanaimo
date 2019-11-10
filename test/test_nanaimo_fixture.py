@@ -5,13 +5,14 @@
 import argparse
 import asyncio
 import pathlib
+import typing
 
 import pytest
 
 import nanaimo
 import nanaimo.builtin
 import nanaimo.fixtures
-from nanaimo.builtin import nanaimo_gather
+from nanaimo.builtin import nanaimo_bar, nanaimo_cmd, nanaimo_gather
 
 
 class CanonicallyNamed(nanaimo.fixtures.Fixture):
@@ -31,7 +32,7 @@ def test_canonical_name(dummy_nanaimo_fixture: nanaimo.fixtures.Fixture) -> None
 async def test_gather_coroutines(nanaimo_fixture_manager: nanaimo.fixtures.FixtureManager) -> None:
 
     parser = argparse.ArgumentParser()
-    nanaimo_gather.Fixture.on_visit_test_arguments(nanaimo.Arguments(parser))
+    nanaimo_gather.Fixture.on_visit_test_arguments(nanaimo.Arguments(parser, required_prefix='gather'))
     args = nanaimo.Namespace(parser.parse_args(['--gather-coroutine', 'nanaimo_bar',
                                                 '--gather-coroutine', 'nanaimo_bar']))
 
@@ -253,3 +254,47 @@ async def test_subprocess_fixture_environment(build_output: pathlib.Path) -> Non
     nanaimo_environ = nanaimo.config.ArgumentDefaults.as_dict(defaults['environ'])
     assert 'NANAIMO_UNITTEST' in nanaimo_environ
     assert nanaimo_environ['NANAIMO_UNITTEST'] == filter.getvalue()
+
+
+@pytest.mark.asyncio
+@pytest.mark.skip(reason='https://github.com/thirtytwobits/nanaimo/issues/84')
+async def test_composite_fixture(event_loop: asyncio.AbstractEventLoop) -> None:
+    """
+    Test creation of a composite fixture.
+    """
+
+    class Composite(nanaimo_bar.Fixture, nanaimo_cmd.Fixture):
+
+        fixture_name = 'test_composite_fixture'
+        argument_prefix = 'tcf'
+
+        def __init__(self, manager: nanaimo.fixtures.FixtureManager,
+                     args: nanaimo.Namespace,
+                     **kwargs: typing.Any) -> None:
+            nanaimo_bar.Fixture.__init__(self, manager, args, **kwargs)
+            nanaimo_cmd.Fixture.__init__(self, manager, args, **kwargs)
+            self._gather = nanaimo_gather.Fixture(manager, args, **kwargs)
+
+        @classmethod
+        def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
+            nanaimo_bar.Fixture.visit_test_arguments(arguments)
+            nanaimo_cmd.Fixture.visit_test_arguments(arguments)
+
+        async def on_gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
+            coroutines = [
+                nanaimo_bar.Fixture.on_gather(self, args),
+                nanaimo_cmd.Fixture.on_gather(self, args)
+            ]
+            return await self._gather.gather(gather_coroutine=coroutines)
+
+    composite = Composite(nanaimo.fixtures.FixtureManager(),
+                          nanaimo.Namespace(),
+                          loop=event_loop)
+
+    filter = nanaimo.fixtures.SubprocessFixture.SubprocessMessageAccumulator()
+    composite.stdout_filter = filter
+
+    results = await composite.gather(tcf_shell='nait --version')
+
+    results.eat()
+    assert filter.getvalue() == nanaimo.version.__version__

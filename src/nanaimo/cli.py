@@ -74,8 +74,9 @@ def _visit_argparse(manager: nanaimo.fixtures.FixtureManager,
                     defaults: typing.Optional[nanaimo.config.ArgumentDefaults]) -> None:
     for fixture_type in manager.fixture_types():
         subparser = subparsers.add_parser(fixture_type.get_canonical_name(),
+                                          conflict_handler='resolve',
                                           help=_auto_brief(fixture_type))  # type: 'argparse.ArgumentParser'
-        fixture_type.on_visit_test_arguments(nanaimo.Arguments(subparser, defaults, fixture_type.get_argument_prefix()))
+        fixture_type.visit_test_arguments(nanaimo.Arguments(subparser, defaults))
         subparser.set_defaults(func=CreateAndGatherFunctor(fixture_type, manager, loop))
 
 
@@ -99,6 +100,7 @@ def _make_parser(loop: typing.Optional[asyncio.AbstractEventLoop] = None,
     parser = argparse.ArgumentParser(
         description='Run tests against hardware.',
         epilog=epilog,
+        conflict_handler='resolve',
         formatter_class=argparse.RawTextHelpFormatter)
 
     from nanaimo.version import __version__
