@@ -7,7 +7,7 @@ Using Nanaimo
 To illustrate how to use Nanaimo we are going to work with specific scenario. We'll be writing
 tests to verify an I2C driver for a microcontroller
 
-.. figure:: https://thirtytwobits.github.io/nanaimo/images/example.png
+.. figure:: https://thirtytwobits.github.io/nanaimo/static/images/example.png
    :alt: Example scenario using Nanaimo to test an I2C driver for a microcontroller.
 
    Example scenario using Nanaimo to test an I2C driver for a microcontroller.

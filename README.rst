@@ -10,7 +10,7 @@ Nanaimo: Hardware-In-the-Loop Unit Testing
     bumping the version number to 0.1.x. For now we provide this repo to let you follow along and
     comment but we suggest you hold off relying on any version < 0.1.x.
 
-.. figure:: https://thirtytwobits.github.io/nanaimo/images/nanaimo.png
+.. figure:: https://thirtytwobits.github.io/nanaimo/static/images/nanaimo.png
    :alt: A delicious Nanaimo bar
 
    A delicious Python treat that makes on-target testing sweet and satisfying.
@@ -19,7 +19,7 @@ Nanaimo is a set of utilities and plugins designed to enable integration of hard
 with pytest. This can allow on-target tests to run as part of continuous integration pipelines like
 `Buildkite`_, `Bamboo`_, or `Jenkins`_.
 
-.. figure:: https://thirtytwobits.github.io/nanaimo/images/pifarm.jpeg
+.. figure:: https://thirtytwobits.github.io/nanaimo/static/images/pifarm.jpeg
    :alt: S32K evaluation boards attached to Raspberry PIs.
 
    Example of S32K dev boards attached to Raspberry PI CI workers running the `Buildkite`_ agent and using Nanaimo.
@@ -29,7 +29,7 @@ provide pre-integration verification of software interfaces and behavioral contr
 asynchronous control and monitoring of these components to fit familiar testing idioms
 (e.g. x-unit testing) using the popular python test framework, `pytest`_.
 
-.. figure:: https://thirtytwobits.github.io/nanaimo/images/block.png
+.. figure:: https://thirtytwobits.github.io/nanaimo/static/images/block.png
    :alt: Block diagram of Nanaimo's relationship to other components of a typical software build and test pipeline.
 
    Block diagram of Nanaimo's relationship to other components of a typical software build and test pipeline.
@@ -42,7 +42,7 @@ Nanaimo abstractions provide async interfaces to hardware either directly using 
 (e.g. serial or IP networks) or by invoking a CLI provided by the instrument vendor. Because of this latter use case some
 instruments will require additional programs be available in a test environment.
 
-.. figure:: https://thirtytwobits.github.io/nanaimo/images/example.png
+.. figure:: https://thirtytwobits.github.io/nanaimo/static/images/example.png
    :alt: Example scenario using Nanaimo to test an I2C driver for a microcontroller.
 
    Example scenario using Nanaimo to test an I2C driver for a microcontroller.
@@ -54,7 +54,7 @@ responsible only for unit-testing and Software-In-the-Loop (SIL) simulation of t
 software engineers to also provide hardware integration tests by enabling Hardware-In-the-Loop
 `continuous-integration <https://en.wikipedia.org/wiki/Continuous_integration>`_ (HIL-CI, perhaps?).
 
-.. figure:: https://thirtytwobits.github.io/nanaimo/images/test_triangle.png
+.. figure:: https://thirtytwobits.github.io/nanaimo/static/images/test_triangle.png
    :alt: Hierarchy of system testing.
 
    Hierarchy of system testing. Nanaimo focuses on part and subassembly testing.

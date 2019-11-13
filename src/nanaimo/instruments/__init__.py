@@ -31,7 +31,7 @@ CLI for the Nanaimo automation to use.
 
 .. _jlink-example:
 
-.. figure:: https://thirtytwobits.github.io/nanaimo/images/jlink_example.png
+.. figure:: https://thirtytwobits.github.io/nanaimo/static/images/jlink_example.png
    :alt: Example block diagram of a Nanaimo instrument using a vendor CLI.
 
    Example of a Nanaimo Segger JLink instrument using the JLinkExe CLI as a Python
