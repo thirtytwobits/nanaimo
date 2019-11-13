@@ -1,56 +1,7 @@
-.. _guide:
-
-#####################
-Using Nanaimo
-#####################
-
-To illustrate how to use Nanaimo we are going to work with specific scenario. We'll be writing
-tests to verify an I2C driver for a microcontroller
-
-.. figure:: https://thirtytwobits.github.io/nanaimo/images/example.png
-   :alt: Example scenario using Nanaimo to test an I2C driver for a microcontroller.
-
-   Example scenario using Nanaimo to test an I2C driver for a microcontroller.
-
-Our first task is to design the test. For our example we'll use a psedo framework to demonstrate how
-a naive test firmware might be written.
-
-.. code-block:: c
-
-    void setup()
-    {
-        init_swo(1);
-        init_i2c();
-    }
-
-    void loop()
-    {
-        SWO.println("**test i2c: start**\r\n")
-        I2C.write(0x42, encode("hello world\n", "utf-8"))
-        SWO.println("**test i2c: end**\r\n")
-        while (1)
-        {
-            low_power()
-        }
-    }
-
-Here we have a firmware that prints a "start" and "end" message to the Serial Wire Output between which it sends a string of bytes on
-the I2C bus.
-
-Our test will run the following steps:
-
-1. Upload the firmware using the JLink
-2. Start monitoring the SWO bus for the expected start and end test strings.
-3. Start a capture session with the Saleae.
-4. Reset the microcontroller.
-5. When the end string is received stop the Saleae capture session.
-6. Provide the captured I2C data as structured :class:`nanaimo.Artifacts` for analysis in pytest tests.
-
-.. note::
-    TODO: Finish this document.
+.. _fixtures_reference:
 
 ############################################
-Fixture Reference
+Fixtures Reference
 ############################################
 
 This page provides a reference for the available fixtures in Nanaimo. While the
@@ -127,10 +78,10 @@ Builtin Subprocess Fixtures
 .. autofunction:: nanaimo.pytest.plugin.nanaimo_fixture_manager
     :noindex:
 
-.. |pytest logo| image:: docs/images/pytest1.png
+.. |pytest logo| image:: static/images/pytest1.png
   :width: 100
   :alt: Pytest logo
 
-.. |nanaimo logo| image:: docs/images/nanaimo_logo.svg
+.. |nanaimo logo| image:: static/images/nanaimo_logo.svg
   :width: 100
   :alt: Nanaimo logo
