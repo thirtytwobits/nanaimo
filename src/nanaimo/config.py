@@ -40,7 +40,7 @@ class ArgumentDefaults:
     wire up the defaults, arguments, and namespaces for you.
     """
 
-    _default_read_locations = ['~/nanaimo.cfg', '/etc/nanaimo.cfg', 'setup.cfg']
+    _default_read_locations = ['~/nanaimo.cfg', '/etc/nanaimo.cfg', 'setup.cfg', 'tox.ini']
     """
     These are all the locations that Nanaimo configuration files will be searched for.
     Configuration merge rules are as defined by :meth:`configparser.ConfigParser.read`.
@@ -60,7 +60,7 @@ class ArgumentDefaults:
 
         for x in range(0, len(sys.argv) - 1):
             if sys.argv[x] == '--rcfile':
-                setattr(args, 'rcfile', sys.argv[x+1])
+                setattr(args, 'rcfile', sys.argv[x + 1])
                 break
 
         return ArgumentDefaults(args)
@@ -137,7 +137,7 @@ class ArgumentDefaults:
         namespaced_key = key.split('_')
         type_cast = typing.cast(typing.Type, (str if key not in self._value_types else self._value_types[key]))
         # Try once with nanaimo prefix (more specific)
-        for x in range(len(namespaced_key)-1, 0, -1):
+        for x in range(len(namespaced_key) - 1, 0, -1):
             try:
                 group = '_'.join(namespaced_key[:x])
                 value_key = '_'.join(namespaced_key[x:])
@@ -146,7 +146,7 @@ class ArgumentDefaults:
                 pass
 
         # Try again without the prefix
-        for x in range(len(namespaced_key)-1, 0, -1):
+        for x in range(len(namespaced_key) - 1, 0, -1):
             try:
                 group = '_'.join(namespaced_key[:x])
                 value_key = '_'.join(namespaced_key[x:])

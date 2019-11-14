@@ -97,7 +97,8 @@ def _get_default_fixture_manager() -> nanaimo.fixtures.FixtureManager:
 
 
 def create_pytest_fixture(pytest_request: typing.Any,
-                          canonical_name: str) -> nanaimo.fixtures.Fixture:
+                          canonical_name_or_type: typing.Union[str, typing.Type['nanaimo.fixtures.Fixture']]) \
+        -> nanaimo.fixtures.Fixture:
     """
     Create a fixture for a `pytest.fixture` request. This method ensures the fixture is created through
     the default :class:`FixtureManager`. For example, using :class:`nanaimo.fixtures.PluggyFixtureManager`
@@ -115,16 +116,24 @@ def create_pytest_fixture(pytest_request: typing.Any,
 
     :param pytest_request: The request object passed into the pytest fixture factory.
     :type pytest_request: _pytest.fixtures.FixtureRequest
-    :param canonical_name: The canonical name of the fixture to create
-        (see :meth:`nanaimo.fixtures.Fixture.get_canonical_name`).
+    :param canonical_name_or_type: The canonical name of the fixture to create
+        (see :meth:`nanaimo.fixtures.Fixture.get_canonical_name`) or the fixture type to create.
     :return: Either a new fixture or a fixture of the same name that was already created for the default
         :class:`FixtureManager`.
-    :raises KeyError: if ``fixture_type`` was not a registered nanaimo fixture.
+    :raises KeyError: if ``fixture_type`` was not a registered nanaimo fixture and canonical_name_or_type was
+        a string.
     """
     fm = _get_default_fixture_manager()
     args = pytest_request.config.option
     args_ns = nanaimo.Namespace(args, nanaimo.config.ArgumentDefaults(args), allow_none_values=False)
-    return fm.create_fixture(canonical_name, args_ns)
+    canonical_name = (canonical_name_or_type if isinstance(canonical_name_or_type, str)
+                      else canonical_name_or_type.get_canonical_name())
+    try:
+        return fm.create_fixture(canonical_name, args_ns)
+    except KeyError:
+        if isinstance(canonical_name_or_type, str):
+            raise
+    return canonical_name_or_type(fm, args_ns)
 
 
 @pytest.fixture

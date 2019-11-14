@@ -29,12 +29,12 @@ import pytest
 import nanaimo
 import nanaimo.connections
 import nanaimo.connections.uart
+import nanaimo.fixtures
 import nanaimo.instruments
 import nanaimo.instruments.jlink
 import nanaimo.parsers
 import nanaimo.parsers.gtest
 import nanaimo.pytest.plugin
-import nanaimo.fixtures
 
 
 class Fixture(nanaimo.fixtures.Fixture):

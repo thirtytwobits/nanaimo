@@ -24,8 +24,8 @@ import typing
 import pytest
 
 import nanaimo
-import nanaimo.pytest.plugin
 import nanaimo.fixtures
+import nanaimo.pytest.plugin
 
 
 class Fixture(nanaimo.fixtures.Fixture):
@@ -70,4 +70,7 @@ def get_fixture_type() -> typing.Type['Fixture']:
 
 @pytest.fixture
 def nanaimo_bar(request: typing.Any) -> nanaimo.fixtures.Fixture:
+    """
+    A trivial plugin. Returns an callable artifact named "eat" that logs a yummy info message when invoked.
+    """
     return nanaimo.pytest.plugin.create_pytest_fixture(request, Fixture.get_canonical_name())

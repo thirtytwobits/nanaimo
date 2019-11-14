@@ -45,8 +45,8 @@ extensions = [
     'sphinx.ext.imgmath',
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
-    'sphinxarg.ext',
-    'sphinx.ext.intersphinx'
+    'sphinx.ext.intersphinx',
+    'sphinxarg.ext'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -187,12 +187,12 @@ epub_exclude_files = ['search.html']
 # -- Options for intersphinx extension ---------------------------------------
 
 # Example configuration for intersphinx: refer to the Python standard library.
-# intersphinx_mapping = {
-#     'python': ('https://docs.python.org/3', None),
-#     'pytest': ('https://pytest.readthedocs.io/en/stable/', None),
-#     'pyserial': ('https://pyserial.readthedocs.io/en/latest/', None),
-#     'pluggy': ('https://pluggy.readthedocs.io/en/latest/', None)
-# }
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3', None),
+    'pytest': ('https://pytest.readthedocs.io/en/stable/', None),
+    'pyserial': ('https://pyserial.readthedocs.io/en/latest/', None),
+    'pluggy': ('https://pluggy.readthedocs.io/en/latest/', None)
+}
 
 # -- Options for todo extension ----------------------------------------------
 

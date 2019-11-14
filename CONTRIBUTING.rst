@@ -14,25 +14,27 @@ your dev environment setup.
 Tools
 ************************************************
 
-virtualenv
+tox
 ================================================
 
-I highly recommend using a virtual environment when doing python development. It'll save you
-hours of lost productivity the first time it keeps you from pulling in an unexpected dependency
-from your global python environment. You can install virtualenv from brew on osx or apt-get on
-linux. I'd recommend the following environment for vscode::
+I highly recommend using a virtual environment when doing python development and we use tox to
+manage this for us. This'll save you hours of lost productivity the first time it keeps you from
+pulling in an unexpected dependency from your global python environment. You can install tox from
+brew on osx or apt-get on Linux. Here's how to use tox for local development::
 
-    virtualenv -p python3.7 .pyenv
-    source .pyenv/bin/activate
-    pip install -r requirements.txt
-    pip -e install .
+    tox -e local
+    source .tox/local/bin/activate
 
+.. note::
+
+    Did your lint rule in tox fail? You can use ``tox -e autoformat`` to automatically correct formatting
+    errors but **be careful!** This will modify your files in-place.
 
 Visual Studio Code
 ================================================
 
 Provided is a .vscode folder with recommended extensions and settings to get you started. Cd into the
-Nanaimo repository, source your virtualenv (see virtualenv_) and then launch vscode using `code .`.
+Nanaimo repository, source your virtualenv (see tox_) and then launch vscode using `code .`.
 
 
 ************************************************
@@ -63,14 +65,20 @@ These take the form of docstrings with a structure like thus::
 
     .. invisible-code-block: python
 
-        from foo import bar
+        from fnmatch import fnmatch
 
     .. code-block:: python
 
-        # Use bar method to transform baz
+        # Use fnmatch to filter
+        files = [
+            'one.py',
+            'two.rst',
+            'three.png',
+            'four.py'
+        ]
 
-    >>> bar('baz')  # noqa : F821
-    'braz'
+    >>> [fnmatch(f, '*.py') for f in files]  # noqa : F821
+    [True, False, False, True]
 
 The invisible code block is executed but not displayed in the generated documentation and,
 conversely, ``code-block`` is both rendered using proper syntax formatting in the documentation

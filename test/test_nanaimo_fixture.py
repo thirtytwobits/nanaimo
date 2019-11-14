@@ -161,34 +161,6 @@ async def test_gather_timeout(gather_timeout_fixture: nanaimo.fixtures.Fixture) 
 
 
 @pytest.mark.asyncio
-async def test_subprocess_fixture() -> None:
-    """
-    Verify the subprocess fixture base class.
-    """
-    import nanaimo.version
-
-    class SubprocessTestHarness(nanaimo.fixtures.SubprocessFixture):
-
-        @classmethod
-        def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
-            pass
-
-        def on_construct_command(self, arguments: nanaimo.Namespace, inout_artifacts: nanaimo.Artifacts) -> str:
-            setattr(inout_artifacts, 'foo', 'bar')
-            return 'nait --version'
-
-    subject = SubprocessTestHarness(nanaimo.fixtures.FixtureManager())
-
-    filter = nanaimo.fixtures.SubprocessFixture.SubprocessMessageAccumulator()
-    subject.stdout_filter = filter
-
-    artifacts = await subject.gather()
-
-    assert 'bar' == artifacts.foo
-    assert filter.getvalue() == nanaimo.version.__version__
-
-
-@pytest.mark.asyncio
 async def test_subprocess_fixture_logfile(build_output: pathlib.Path) -> None:
     """
     Verify the subprocess fixture base class properly creates a logfile.

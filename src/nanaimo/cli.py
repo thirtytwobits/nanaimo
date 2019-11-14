@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# PYTHON_ARGCOMPLETE_OK
 #
 # Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # This software is distributed under the terms of the MIT License.
@@ -24,8 +23,6 @@ import asyncio
 import logging
 import textwrap
 import typing
-
-import argcomplete
 
 import nanaimo
 import nanaimo.config
@@ -87,12 +84,12 @@ def _make_parser(loop: typing.Optional[asyncio.AbstractEventLoop] = None,
     support sphinx-argparse documentation.
     """
 
-    epilog = '''**Example Usage**::
+    epilog = textwrap.dedent('''
+    **Example Usage**::
 
-    python -m nanaimo -vv nanaimo_bar
+        python -m nanaimo -vv nanaimo_bar
 
-----
-'''
+    '''.lstrip())
 
     if defaults is None:
         defaults = nanaimo.config.ArgumentDefaults()
@@ -164,7 +161,6 @@ def main() -> int:
     defaults = nanaimo.config.ArgumentDefaults.create_defaults_with_early_rc_config()
 
     parser = _make_parser(loop, defaults)
-    argcomplete.autocomplete(parser)
     args = parser.parse_args()
     defaults.set_args(args)
 

@@ -106,7 +106,6 @@ class Series1900BUart(nanaimo.fixtures.Fixture):
     def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
         arguments.add_argument('--port',
                                enable_default_from_environ=True,
-                               required=True,
                                help='The port the BK Precision power supply is connected to.')
         arguments.add_argument('--command', '--BC',
                                help='command', default='?')

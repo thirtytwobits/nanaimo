@@ -531,6 +531,56 @@ class Fixture(metaclass=abc.ABCMeta):
 class SubprocessFixture(Fixture):
     """
     Fixture base type that accepts a string argument ``cmd`` and executes it as a subprocess.
+    Because some subprocess commands might result in huge amounts of data being sent to stdout
+    and/or stderr this class does not capture this data by default. Instead, tests are encouraged
+    to either filter the subprocess pipes or use the ``--logfile`` argument to write the output
+    to a file in persistent storage.
+
+    Filtering is accomplished using the :data:`stdout_filter <nanaimo.fixtures.SubprocessFixture.stdout_filter>`
+    or :data:`stderr_filter <nanaimo.fixtures.SubprocessFixture.stderr_filter>` property of this class.
+    For example:
+
+    .. invisible-code-block: python
+        import nanaimo.version
+        import asyncio
+
+        loop = asyncio.get_event_loop()
+        manager = nanaimo.fixtures.FixtureManager(loop=loop)
+
+    .. code-block:: python
+
+        class MySubprocessFixture(nanaimo.fixtures.SubprocessFixture):
+            '''
+            Subprocess test fixture that simply calls "nait --version"
+            '''
+
+            @classmethod
+            def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
+                pass
+
+            def on_construct_command(self, arguments: nanaimo.Namespace, inout_artifacts: nanaimo.Artifacts) -> str:
+                return 'nait --version'
+
+
+        async def example(manager):
+
+            subject = MySubprocessFixture(manager)
+
+            # The accumulator does capture all stdout. Only use this if you know
+            # the subprocess will produce a managable and bounded amount of output.
+            filter = nanaimo.fixtures.SubprocessFixture.SubprocessMessageAccumulator()
+            subject.stdout_filter = filter
+
+            artifacts = await subject.gather()
+
+            # In our example the subprocess produces only and exactly the Nanaimo
+            # version number
+            assert filter.getvalue() == nanaimo.version.__version__
+
+    .. invisible-code-block: python
+
+        loop.run_until_complete(example(manager))
+
 
     :param stdout_filter: A :class:`logging.Filter` used when gathering the subprocess.
     :param stderr_filter: A :class:`logging.Filter` used when gathering the subprocess.
