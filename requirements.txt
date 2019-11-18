@@ -1,5 +1,8 @@
 # This is needed for read-the-docs. Please use tox -e local to install developer dependencies.
 
+pyserial
+pytest
+pytest-asyncio
 sphinx
 sphinx-argparse
 sphinx_rtd_theme
