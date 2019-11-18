@@ -23,8 +23,8 @@ import typing
 import pytest
 
 import nanaimo
-import nanaimo.pytest.plugin
 import nanaimo.fixtures
+import nanaimo.pytest.plugin
 
 
 class Fixture(nanaimo.fixtures.Fixture):

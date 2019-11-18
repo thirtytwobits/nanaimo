@@ -6,15 +6,30 @@
 Enable pytest integration of doctests in source and/or in documentation.
 """
 
+import fnmatch
+
 from sybil import Sybil
 from sybil.parsers.codeblock import CodeBlockParser
 from sybil.parsers.doctest import DocTestParser
 
-pytest_collect_file = Sybil(
+s = Sybil(
     parsers=[
         DocTestParser(),
         CodeBlockParser(),
     ],
-    pattern='*.py',
-    excludes=['test/fixtues/*']
-).pytest()
+    excludes=['test/fixtues/*'],
+)
+
+
+class _ReplacementSybilFilter:
+    """
+    Sybil's matcher isn't very good so we replace it with our own.
+    """
+
+    def __call__(self: Sybil, filename: str) -> bool:
+        return fnmatch.fnmatch(filename, '*.rst') or fnmatch.fnmatch(filename, '*.py')
+
+
+s.should_test_filename = _ReplacementSybilFilter()
+
+pytest_collect_file = s.pytest()

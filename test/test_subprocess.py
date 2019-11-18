@@ -29,7 +29,7 @@ class DummyProtocol(asyncio.SubprocessProtocol):
 @pytest.mark.asyncio
 @pytest.mark.timeout(15)
 async def test_continuous_subprocess(paths_for_test: material.Paths, event_loop: asyncio.AbstractEventLoop) -> None:
-    exit_future = asyncio.Future(loop=event_loop)  # type: typing.Future
+    exit_future = asyncio.Future(loop=event_loop)  # type: typing.Any
 
     code = """
 import sys

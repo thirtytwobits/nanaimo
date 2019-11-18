@@ -547,11 +547,14 @@ class Artifacts(Namespace):
         :param logger:  The logger to use.
         :param log_level: The log level to dump the object as.
         """
-        import yaml
         try:
-            logger.log(log_level, yaml.dump(vars(self)))
-        except TypeError:
-            logger.log(log_level, '(failed to serialize Artifacts)')
+            import yaml
+            try:
+                logger.log(log_level, yaml.dump(vars(self)))
+            except TypeError:
+                logger.log(log_level, '(failed to serialize Artifacts)')
+        except ImportError:
+            logger.log(log_level, str(vars(self)))
 
     def __int__(self) -> int:
         """

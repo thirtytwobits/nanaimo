@@ -8,10 +8,10 @@ import typing
 import pytest
 
 import nanaimo
-import nanaimo.connections
-import nanaimo.connections.uart
 import nanaimo.builtin
 import nanaimo.builtin.nanaimo_serial_watch
+import nanaimo.connections
+import nanaimo.connections.uart
 
 
 @pytest.mark.asyncio

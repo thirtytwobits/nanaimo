@@ -11,7 +11,6 @@ import typing
 import nanaimo
 import nanaimo.fixtures
 
-
 FAKE_TEST_SUCCESS = '''[==========] Running 140 tests from 7 test suites.
 [----------] Global test environment set-up.
 [----------] 20 tests from SaturatedMathTest/0 (unsigned 1), where TypeParam = <type>
@@ -348,8 +347,9 @@ class Paths:
         self.test_name = test_file_path.parent.stem
         self.test_dir = test_file_path.parent
         self.root_dir = self.test_dir.resolve().parent
-        self.fixtures_dir = self.test_dir / pathlib.Path('fixtures')
+        self.fixtures_dir = self.test_dir / pathlib.Path('material')
         self.long_text = self.fixtures_dir / pathlib.Path('pg1636.txt')
+        self.imu_text = self.fixtures_dir / pathlib.Path('imu.txt')
 
         self._build_dir = None  # type: typing.Optional[pathlib.Path]
         self._out_dir = None  # type: typing.Optional[pathlib.Path]

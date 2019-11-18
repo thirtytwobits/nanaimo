@@ -105,7 +105,7 @@ class AbstractAsyncSerial(AbstractSerial):
     # +-----------------------------------------------------------------------+
     # | ASYNC OPERATIONS
     # +-----------------------------------------------------------------------+
-    async def get_line(self, timeout_seconds:  typing.Optional[float] = None) -> TimestampedLine:
+    async def get_line(self, timeout_seconds: typing.Optional[float] = None) -> TimestampedLine:
         """
         Get a line of text.
 

@@ -18,6 +18,7 @@
 #  nanaimo                                   (@&&&&####@@*
 #
 import typing
+
 import pytest
 
 import nanaimo
