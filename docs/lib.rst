@@ -140,6 +140,14 @@ Nanaimo (library)
    :members:
    :show-inheritance:
 
+**************************************
+:mod:`nanaimo.instruments.ykush`
+**************************************
+
+.. automodule:: nanaimo.instruments.ykush
+   :members:
+   :show-inheritance:
+
 *************************************
 :mod:`nanaimo.parsers`
 *************************************

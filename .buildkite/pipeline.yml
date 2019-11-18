@@ -9,6 +9,7 @@ steps:
       - ".tox/flake8/tmp/*"
       - ".tox/dist/*.zip"
       - ".tox/py*-test/tmp/xunit-result.xml"
+      - ".tox/py*-test/log/*.log"
     plugins:
       - docker#v3.3.0:
           workdir: /repo
