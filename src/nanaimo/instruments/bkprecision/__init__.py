@@ -152,6 +152,13 @@ class Series1900BUart(nanaimo.fixtures.Fixture):
 
     def is_volage_above_on_threshold(self, voltage: float) -> bool:
         """
+        Deprecated misspelling. See :meth:`is_voltage_above_on_threshold`
+        for correct method.
+        """
+        return self.is_voltage_above_on_threshold(voltage)
+
+    def is_voltage_above_on_threshold(self, voltage: float) -> bool:
+        """
         Return if a given voltage is above the configured threshold for the
         high/on/rising voltage for this fixture.
 
@@ -165,6 +172,12 @@ class Series1900BUart(nanaimo.fixtures.Fixture):
         return (True if voltage > rising_threshold_voltage else False)
 
     def is_volage_below_off_threshold(self, voltage: float) -> bool:
+        """
+        Deprecated misspelling. See :meth:`is_voltage_below_off_threshold` for correct method.
+        """
+        return self.is_voltage_above_on_threshold(voltage)
+
+    def is_voltage_below_off_threshold(self, voltage: float) -> bool:
         """
         Return if a given voltage is below the configured threshold for the
         low/off/falling voltage for this fixture.
@@ -294,10 +307,10 @@ class Series1900BUart(nanaimo.fixtures.Fixture):
             display_tuple, result = await self._get_display(uart, command_timeout)
             voltage = display_tuple[0]
             if result == 0:
-                if is_rising and self.is_volage_above_on_threshold(voltage):
+                if is_rising and self.is_voltage_above_on_threshold(voltage):
                     self.logger.debug('---------------POWER SUPPLY UP----------------')
                     break
-                elif not is_rising and self.is_volage_below_off_threshold(voltage):
+                elif not is_rising and self.is_voltage_below_off_threshold(voltage):
                     self.logger.debug('--------------POWER SUPPLY DOWN---------------')
                     break
             await asyncio.sleep(.01)
