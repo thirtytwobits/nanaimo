@@ -4,7 +4,7 @@
 Using Nanaimo
 ###################################################################################################
 
-To illustrate how to use Nanaimo we are going to work with specific scenario. We'll be writing
+To illustrate how to use Nanaimo we are going to work with a specific scenario. We'll be writing
 tests to verify an IMU using a pan-tilt test rig.
 
 .. _figure-pantilt:
@@ -92,7 +92,7 @@ environment to promote consistency and reliability.
     A quick note on "instruments" which is another taxonomic term found in Nanaimo. A Nanaimo
     instrument is simply a flavor of Fixture that either manipulates or measures a test subject.
     Like the :abbr:`UTM (Universal Testing Machine)` in :numref:`figure {number} <figure-utm>`,
-    instrument fixtures sometimes need other fixtures which is why Nanaimo
+    instruments sometimes need other fixtures which is why Nanaimo
     :class:`Fixtures <nanaimo.fixtures.Fixture>` are composable.
 
 
@@ -890,7 +890,7 @@ Also note in our previous fixture example that the prefix ``fwr`` was omitted fr
 
 This is done on purpose. Nanaimo will prepend the prefix based on the value of ``argument_prefix``
 for a given fixture. What's useful about this is it allows fixtures to be composed out of other fixtures.
-For example, if you compose ``MyOtherUpdateFixture`` fixture out of ``MyOtherUpdateFixture`` like this::
+For example, if you compose ``MyOtherUpdateFixture`` fixture out of ``FirmwareUpdateFixture`` like this::
 
     class MyOtherUpdateFixture(FirmwareUpdateFixture):
         ...
