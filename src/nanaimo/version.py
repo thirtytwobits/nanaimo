@@ -18,6 +18,6 @@
 #  nanaimo                                   (@&&&&####@@*
 #
 
-__version__ = '0.0.51'
+__version__ = '0.0.52'
 
 __license__ = 'MIT'

@@ -76,6 +76,7 @@ class Fixture(nanaimo.fixtures.Fixture):
 
         writer.close()
         await writer.wait_closed()
+        return nanaimo.Artifacts()
 
 
 @nanaimo.fixtures.PluggyFixtureManager.type_factory
