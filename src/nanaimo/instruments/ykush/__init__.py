@@ -51,16 +51,83 @@ class Fixture(nanaimo.fixtures.SubprocessFixture):
         arguments.add_argument('--serial',
                                help='A serial number of the board to send the command to.')
         arguments.add_argument('--command',
-                               help='Simple pass through of arguments to ')
+                               help='Simple pass through of arguments to {}'.format(cls.ykush_cmd))
+        arguments.add_argument('--all-on',
+                               action='store_true',
+                               help='Turn on power to all ports (--{}-command will be ignored)'
+                               .format(cls.argument_prefix))
+        arguments.add_argument('--all-off',
+                               action='store_true',
+                               help='Turn on power to all ports (--{}-command will be ignored)'
+                               .format(cls.argument_prefix))
 
     def on_construct_command(self, arguments: nanaimo.Namespace, inout_artifacts: nanaimo.Artifacts) -> str:
+        """
+        .. invisible-code-block: python
+
+            from nanaimo.fixtures import FixtureManager
+            from nanaimo import Namespace, Arguments, Artifacts
+            from nanaimo.instruments import ykush
+
+            import os
+            import asyncio
+
+            loop = asyncio.get_event_loop()
+            manager = FixtureManager(loop=loop)
+
+            cmd = ykush.Fixture(manager)
+
+            ns = Namespace()
+            artifacts = Artifacts()
+
+            command = cmd.on_construct_command(ns, artifacts)
+            assert command.find('-h') > 0
+
+            setattr(ns, '{}_all_off'.format(ykush.Fixture.get_argument_prefix()), True)
+            command = cmd.on_construct_command(ns, artifacts)
+            assert command.find('-d a') > 0
+            setattr(ns, '{}_all_off'.format(ykush.Fixture.get_argument_prefix()), None)
+
+            setattr(ns, '{}_all_on'.format(ykush.Fixture.get_argument_prefix()), True)
+            command = cmd.on_construct_command(ns, artifacts)
+            assert command.find('-u a') > 0
+
+            # off takes precedence
+            setattr(ns, '{}_all_off'.format(ykush.Fixture.get_argument_prefix()), True)
+            command = cmd.on_construct_command(ns, artifacts)
+            assert command.find('-d a') > 0
+            setattr(ns, '{}_all_off'.format(ykush.Fixture.get_argument_prefix()), None)
+            setattr(ns, '{}_all_on'.format(ykush.Fixture.get_argument_prefix()), None)
+
+            setattr(ns, '{}_command'.format(ykush.Fixture.get_argument_prefix()), 'foo')
+            command = cmd.on_construct_command(ns, artifacts)
+            assert command.find('foo') > 0
+
+        """
         serial_arg = self.get_arg_covariant(arguments, 'serial')
         serial = ('' if serial_arg is None else ' -s ' + serial_arg)
+
+        all_on = self.get_arg_covariant(arguments, 'all_on', False)
+        all_off = self.get_arg_covariant(arguments, 'all_off', False)
+        pass_thru = self.get_arg_covariant(arguments, 'command')
+
+        if all_off:
+            self._logger.debug('Turning all ports off.')
+            command = '-d a'
+        elif all_on:
+            self._logger.debug('Turning all ports on.')
+            command = '-u a'
+        elif pass_thru is not None:
+            command = str(pass_thru)
+            self._logger.debug('Passing through command {}'.format(pass_thru))
+        else:
+            command = '-h'
+
         return '{ykush_cmd} {board}{serial} {command}'.format(
             ykush_cmd=self.ykush_cmd,
             board=self.get_arg_covariant(arguments, 'model', ''),
             serial=serial,
-            command=self.get_arg_covariant(arguments, 'command')
+            command=command
         )
 
 
