@@ -36,6 +36,23 @@ class Fixture(nanaimo.fixtures.SubprocessFixture):
     Fixture for controlling Yepkit USB hubs with switchable power. For example
     the `YKUSH3 <https://www.yepkit.com/product/300110/YKUSH3>`_ is a 3-port
     USB-3 hub that allows individual control of the power rails for each port.
+
+    This is a subprocess fixture that requires the ``ykushcmd`` program is available in the subprocess
+    environment (see Yepkit's documentation for how to build this from source). All arguments can be
+    overridden via the fixtures gather method. The supported commands are:
+
+    +-----------------+--------------------------------------------------------+----------------------------+
+    | command         | example                                                | Description                |
+    +=================+========================================================+============================+
+    | ``yku-all-on``  | ``await nanaimo_instr_ykush.gather(yku_all_on=True)``  | Turn on power to all ports |
+    |                 |                                                        | on the YKUSH.              |
+    +-----------------+--------------------------------------------------------+----------------------------+
+    | ``yku-all-off`` | ``await nanaimo_instr_ykush.gather(yku_all_off=True)`` | Turn off power to all      |
+    |                 |                                                        | ports on the YKUSH.        |
+    +-----------------+--------------------------------------------------------+----------------------------+
+    | ``yku-command`` | ``await nanaimo_instr_ykush.gather(yku_command='-l')`` | Pass-through any command   |
+    |                 |                                                        | to ykushcmd.               |
+    +-----------------+--------------------------------------------------------+----------------------------+
     """
 
     fixture_name = 'nanaimo_ykush'

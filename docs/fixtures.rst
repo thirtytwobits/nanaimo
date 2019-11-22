@@ -27,6 +27,12 @@ Builtin Fixtures |nanaimo logo|
     :show-inheritance:
     :noindex:
 
+.. autoclass:: nanaimo.instruments.ykush.Fixture
+    :members:
+    :show-inheritance:
+    :noindex:
+
+
 Builtin Subprocess Fixtures
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -55,6 +61,9 @@ Builtin Subprocess Fixtures
 -------------------------------------------------
 
 .. autofunction:: nanaimo.instruments.bkprecision.nanaimo_instr_bk_precision
+    :noindex:
+
+.. autofunction:: nanaimo.instruments.bkprecision.nanaimo_instr_ykush
     :noindex:
 
 .. autofunction:: nanaimo.builtin.nanaimo_gather.nanaimo_gather

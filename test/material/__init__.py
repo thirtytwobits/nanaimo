@@ -350,6 +350,8 @@ class Paths:
         self.fixtures_dir = self.test_dir / pathlib.Path('material')
         self.long_text = self.fixtures_dir / pathlib.Path('pg1636.txt')
         self.imu_text = self.fixtures_dir / pathlib.Path('imu.txt')
+        self.unicode_py = self.fixtures_dir / pathlib.Path('unicode.py')
+        self.unicode_big = self.fixtures_dir / pathlib.Path('unicodebig.txt')
 
         self._build_dir = None  # type: typing.Optional[pathlib.Path]
         self._out_dir = None  # type: typing.Optional[pathlib.Path]

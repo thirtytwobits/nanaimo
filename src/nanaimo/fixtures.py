@@ -777,7 +777,7 @@ class SubprocessFixture(Fixture):
             for future_done in done:
                 result = future_done.result().strip()
                 if len(result) > 0:
-                    line = result.decode()
+                    line = result.decode(errors='replace')
                     if future_done == future_err:
                         future_err = asyncio.ensure_future(stderr.readline())
                         pending.add(future_err)
