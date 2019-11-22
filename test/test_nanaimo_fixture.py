@@ -12,6 +12,7 @@ import pytest
 import nanaimo
 import nanaimo.builtin
 import nanaimo.fixtures
+from nanaimo import assert_success
 from nanaimo.builtin import nanaimo_bar, nanaimo_cmd, nanaimo_gather
 
 
@@ -270,3 +271,30 @@ async def test_composite_fixture(event_loop: asyncio.AbstractEventLoop) -> None:
 
     results.eat()
     assert filter.getvalue() == nanaimo.version.__version__
+
+
+@pytest.mark.asyncio
+async def test_subprocess_read_illegal_encoding(paths_for_test: typing.Any) -> None:
+    """
+    Verify the subprocess fixture base class can handle unknown input without 'sploding.
+    """
+    import nanaimo.version
+
+    class SubprocessTestHarness(nanaimo.fixtures.SubprocessFixture):
+
+        argument_prefix = 'test-subprocess-fixture'
+
+        @classmethod
+        def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
+            super().on_visit_test_arguments(arguments)
+
+        def on_construct_command(self, arguments: nanaimo.Namespace, inout_artifacts: nanaimo.Artifacts) -> str:
+            return 'export PYTHONIOENCODING=utf_16_be && python {} {}'.format(
+                str(paths_for_test.unicode_py), str(paths_for_test.unicode_big))
+
+    stdout = nanaimo.fixtures.SubprocessFixture.SubprocessMessageAccumulator()
+    stderr = nanaimo.fixtures.SubprocessFixture.SubprocessMessageAccumulator()
+    subject = SubprocessTestHarness(nanaimo.fixtures.FixtureManager())
+    subject.stdout_filter = stdout
+    subject.stderr_filter = stderr
+    assert_success(await subject.gather())
