@@ -30,8 +30,6 @@ import math
 import textwrap
 import typing
 
-import pluggy
-
 import nanaimo
 
 
@@ -213,12 +211,13 @@ class Fixture(metaclass=abc.ABCMeta):
         pushed_args = self._args
         self._args = self._args.merge(**kwargs)
         try:
-            routine = self.on_gather(self._args)
+            routine = self.on_gather(self._args)  # type: typing.Coroutine
             if self._gather_timeout_seconds is not None:
                 done, pending = await asyncio.wait([asyncio.ensure_future(routine)],
                                                    loop=self.manager.loop,
                                                    timeout=self._gather_timeout_seconds,
-                                                   return_when=asyncio.ALL_COMPLETED)
+                                                   return_when=asyncio.ALL_COMPLETED)  \
+                    # type: typing.Set[asyncio.Future], typing.Set[asyncio.Future]
                 if len(pending) > 0:
                     pending.pop().cancel()
                     raise asyncio.TimeoutError('{} gather was cancelled after waiting for {} seconds'
@@ -309,8 +308,7 @@ class Fixture(metaclass=abc.ABCMeta):
         Called by the environment before instantiating any :class:`nanaimo.fixtures.Fixture` instances to register
         arguments supported by each type. These arguments should be portable between both :mod:`argparse`
         and ``pytest``. The fixture is registered for this callback by returning a reference to its
-        type from a :attr:`PluggyFixtureManager.type_factory` annotated function registered as an
-        entrypoint in the Python application.
+        type from a ``pytest_nanaimo_fixture_type`` hook in your fixture's pytest plugin module.
         """
         ...
 
@@ -501,7 +499,7 @@ class Fixture(metaclass=abc.ABCMeta):
             done, pending = await asyncio.wait(
                 the_children_are_our_futures,
                 timeout=timeout_seconds,
-                return_when=asyncio.FIRST_COMPLETED)
+                return_when=asyncio.FIRST_COMPLETED)  # type: typing.Set[asyncio.Future], typing.Set[asyncio.Future]
 
             for d in done:
                 the_children_are_our_futures.remove(d)
@@ -768,7 +766,8 @@ class SubprocessFixture(Fixture):
         future_out = asyncio.ensure_future(stdout.readline())
         future_err = asyncio.ensure_future(stderr.readline())
 
-        pending = set([future_out, future_err])
+        pending = set([future_out, future_err])  # type: typing.Set[asyncio.Future]
+        done = set()  # type: typing.Set[asyncio.Future]
 
         while len(pending) > 0:
 
@@ -813,13 +812,6 @@ class FixtureManager:
             raise RuntimeError('No running event loop was found!')
         return self._loop
 
-    def fixture_types(self) -> typing.Generator:
-        """
-        Yields each fixture type registered with this object.
-        """
-        if False:
-            yield
-
     def create_fixture(self,
                        canonical_name: str,
                        args: typing.Optional[nanaimo.Namespace] = None,
@@ -837,52 +829,18 @@ class FixtureManager:
         raise NotImplementedError('The base class is an incomplete implementation.')
 
 
-class PluggyFixtureManager(FixtureManager):
+class PluggyFixtureManager:
     """
-    Object that scopes a set of :class:`nanaimo.fixtures.Fixture` objects discovered using
-    `pluggy <https://pluggy.readthedocs.io/en/latest/>`_.
+    DEPRECATED. Do not use.
     """
 
-    plugin_name = 'nanaimo'
+    @staticmethod
+    def type_factory(type_getter: typing.Callable[[], typing.Type['nanaimo.fixtures.Fixture']]) \
+            -> typing.Callable[[], typing.Type['nanaimo.fixtures.Fixture']]:
+        raise DeprecationWarning('DEPRECATED: do not use the PluggyFixtureManager.type_factory annotation anymore.'
+                                 'Remove this annotation from your get_fixture_type method and change the name of '
+                                 'this hook to "pytest_nanaimo_fixture_type".')
 
-    type_factory_spec = pluggy.HookspecMarker(plugin_name)
-    type_factory = pluggy.HookimplMarker(plugin_name)
-
-    def __init__(self) -> None:
-        super().__init__()
-        self._logger = logging.getLogger(__name__)
-        self._pluginmanager = pluggy.PluginManager(self.plugin_name)
-
-        class PluginNamespace:
-            @self.type_factory_spec
-            def get_fixture_type(self) -> typing.Type['Fixture']:
-                raise NotImplementedError()
-
-        self._pluginmanager.add_hookspecs(PluginNamespace)
-        self._pluginmanager.load_setuptools_entrypoints(self.plugin_name)
-
-        prefix_map = dict()  # type: typing.Dict
-        self._blacklist = set()  # type: typing.Set
-        for fixture_type in self._pluginmanager.hook.get_fixture_type():
-            fap = fixture_type.get_argument_prefix()
-            if fap in prefix_map:
-                self._blacklist.add(fixture_type.get_canonical_name())
-                self._logger.error('Argument prefix {} was already registered by {}! Fixture {} will not be available.'
-                                   .format(fap, prefix_map[fap], fixture_type.get_canonical_name()))
-            else:
-                prefix_map[fap] = fixture_type.get_canonical_name()
-
-    def fixture_types(self) -> typing.Generator:
-        for fixture_type in self._pluginmanager.hook.get_fixture_type():
-            if fixture_type.get_canonical_name() not in self._blacklist:
-                yield fixture_type
-
-    def create_fixture(self,
-                       canonical_name: str,
-                       args: typing.Optional[nanaimo.Namespace] = None,
-                       loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> Fixture:
-        for fixture_type in self.fixture_types():
-            if fixture_type.get_canonical_name() == canonical_name:
-                fixture = typing.cast(Fixture, fixture_type(self, args, loop=loop))
-                return fixture
-        raise KeyError(canonical_name)
+    def __init__(self):
+        raise DeprecationWarning('PluggyFixtureManager has been removed. See '
+                                 'nanaimo.pytest.plugin.PytestFixtureManager for replacement.')

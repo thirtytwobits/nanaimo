@@ -8,9 +8,10 @@
             "name": "Python: nait",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/src/nait",
+            "program": "${workspaceFolder}/.tox/local/bin/nait",
             "cwd": "${workspaceFolder}",
-            "args": ["--version"]
+            "args": ["nanaimo_bar"],
+            "justMyCode": false
         },
         {
             "name": "Pytest: current test",
@@ -19,7 +20,8 @@
             "module": "pytest",
             "args": ["${file}"],
             "console": "internalConsole",
-            "cwd": "${workspaceFolder}"
+            "cwd": "${workspaceFolder}",
+            "justMyCode": false
         },
         {
             "name": "Pytest: all tests",
@@ -28,15 +30,19 @@
             "module": "pytest",
             "args": ["--log-cli-level=INFO"],
             "console": "internalConsole",
-            "cwd": "${workspaceFolder}"
+            "cwd": "${workspaceFolder}",
+            "justMyCode": false
         },
         {
-            "name": "Pytest: all tests",
+            "name": "Pytest: stepwise",
             "type": "python",
             "request": "launch",
             "module": "pytest",
             "console": "internalConsole",
-            "cwd": "${workspaceFolder}"
+            "cwd": "${workspaceFolder}",
+            "args": ["--stepwise",
+                     "--log-cli-level=INFO"],
+            "justMyCode": false
         },
     ]
 }

@@ -21,8 +21,6 @@ import functools
 import time
 import typing
 
-import pytest
-
 import nanaimo
 import nanaimo.fixtures
 import nanaimo.pytest.plugin
@@ -63,14 +61,5 @@ class Fixture(nanaimo.fixtures.Fixture):
         return artifacts
 
 
-@nanaimo.fixtures.PluggyFixtureManager.type_factory
-def get_fixture_type() -> typing.Type['Fixture']:
+def pytest_nanaimo_fixture_type() -> typing.Type['nanaimo.fixtures.Fixture']:
     return Fixture
-
-
-@pytest.fixture
-def nanaimo_bar(request: typing.Any) -> nanaimo.fixtures.Fixture:
-    """
-    A trivial plugin. Returns an callable artifact named "eat" that logs a yummy info message when invoked.
-    """
-    return nanaimo.pytest.plugin.create_pytest_fixture(request, Fixture.get_canonical_name())

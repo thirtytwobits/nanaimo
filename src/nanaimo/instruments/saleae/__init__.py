@@ -25,8 +25,6 @@ strings. They don't seem to be documented anywhere else.
 import asyncio
 import typing
 
-import pytest
-
 import nanaimo
 import nanaimo.fixtures
 import nanaimo.pytest.plugin
@@ -34,12 +32,15 @@ import nanaimo.pytest.plugin
 
 class Fixture(nanaimo.fixtures.Fixture):
     """
+    This fixture controls a `Saleae logic analyser <https://www.saleae.com/>`_
+    attached to the system via USB.
+
     .. Warning:: Stubbed-out implementation
         This fixture doesn't do anything yet either then the most naive query possible of the Saleae.
         This would be a great first contribution to the Nanaimo project.
     """
 
-    fixture_name = 'nanaimo_saleae'
+    fixture_name = 'nanaimo_instr_saleae'
     argument_prefix = 'sae'
 
     @classmethod
@@ -79,21 +80,5 @@ class Fixture(nanaimo.fixtures.Fixture):
         return nanaimo.Artifacts()
 
 
-@nanaimo.fixtures.PluggyFixtureManager.type_factory
-def get_fixture_type() -> typing.Type['Fixture']:
+def pytest_nanaimo_fixture_type() -> typing.Type['Fixture']:
     return Fixture
-
-
-@pytest.fixture
-def nanaimo_instr_saleae(request: typing.Any) -> nanaimo.fixtures.Fixture:
-    """
-    Provides a :class:`nanaimo.instruments.saleae.Fixture` fixture to a pytest.
-    This fixture controls a `Saleae logic analyser <https://www.saleae.com/>`_
-    attached to the system via USB.
-
-    :param pytest_request: The request object passed into the pytest fixture factory.
-    :type pytest_request: _pytest.fixtures.FixtureRequest
-    :return: A fixture providing control of a Saleae logic analyser.
-    :rtype: nanaimo.instruments.saleae.Fixture
-    """
-    return nanaimo.pytest.plugin.create_pytest_fixture(request, Fixture.get_canonical_name())

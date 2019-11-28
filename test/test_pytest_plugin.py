@@ -7,15 +7,7 @@ import pytest
 
 import nanaimo
 import nanaimo.fixtures
-
-
-def test_nanaimo_fixture_manager(nanaimo_fixture_manager: nanaimo.fixtures.FixtureManager) -> None:
-    """
-    Ensure the fixture manager ... er; fixture works as expected.
-    """
-    assert isinstance(nanaimo_fixture_manager, nanaimo.fixtures.nanaimo.fixtures.PluggyFixtureManager)
-    gtest_fixture = nanaimo_fixture_manager.create_fixture('gtest_over_jlink', nanaimo.Namespace())
-    assert isinstance(gtest_fixture, nanaimo.fixtures.Fixture)
+from nanaimo.pytest.plugin import assert_success
 
 
 @pytest.mark.asyncio
@@ -56,3 +48,8 @@ async def test_another_nanaimo_bar(nanaimo_fixture_manager: nanaimo.fixtures.Fix
 @pytest.mark.xfail
 def test_assert_success() -> None:
     nanaimo.pytest.plugin.assert_success(nanaimo.Artifacts(1))
+
+
+@pytest.mark.asyncio
+async def test_plugin_from_conftest(nanaimo_bar_from_conftest: nanaimo.fixtures.Fixture) -> None:
+    assert_success(await nanaimo_bar_from_conftest.gather())

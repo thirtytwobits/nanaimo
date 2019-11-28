@@ -267,14 +267,14 @@ See `the nanaimo-bar example <#example-nanaimo-bar>`_ above for this example. Yo
 
 If you configured the tox pytest section for logging you'll see this output::
 
-    -------------------------------------------------------- live log sessionstart -----------------------------------
+    ------------------- live log sessionstart -------------------
     collected 1 item
 
     test/test_foo.py::test_eating_dessert
-    ----------------------------------------------------------- live log setup ---------------------------------------
+    ----------------------- live log setup -----------------------
     2019-11-18 10:28:58 DEBUG asyncio: Using selector: KqueueSelector
     2019-11-18 10:28:58 DEBUG asyncio: Using selector: KqueueSelector
-    ------------------------------------------------------------ live log call ---------------------------------------
+    ----------------------- live log call ------------------------
     2019-11-18 10:28:58 INFO nanaimo_bar: don't forget to eat your dessert.
     2019-11-18 10:28:58 INFO nanaimo_bar: Nanaimo bars are yummy.
     PASSED
@@ -285,41 +285,48 @@ Now list your available pytest fixtures::
 
 You'll see sections with titles like ``fixtures defined from nanaimo...``. For example::
 
-    -------------------------- fixtures defined from nanaimo.instruments.bkprecision -----------------
-    nanaimo_instr_bk_precision -- .pyenv/lib/python3.7/site-packages/nanaimo/instruments/bkprecision/__init__.py:314
-        Provides a :class:`nanaimo.instruments.bkprecision.Series1900BUart` fixture to a pytest.
-        This fixture controls a `BK Precision 1900B series power supply <https://bit.ly/34jeSz2>`_
-        attached to the system via UART.
+    ----------------------- fixtures defined from nanaimo.pytest.plugin ------------------------
+    nanaimo_fixture_manager
+        Provides a default :class:`FixtureManager <nanaimo.fixtures.FixtureManager>` to a test.
+
+        .. invisible-code-block: python
+
+            import nanaimo
+            import nanaimo.fixtures
+
+        .. code-block:: python
+
+            def test_example(nanaimo_fixture_manager: nanaimo.Namespace) -> None:
+                common_loop = nanaimo_fixture_manager.loop
 
         :param pytest_request: The request object passed into the pytest fixture factory.
         :type pytest_request: _pytest.fixtures.FixtureRequest
-        :return: A fixture providing control of a Series 1900 BK Precision power supply via UART.
-        :rtype: nanaimo.instruments.bkprecision.Series1900BUart
+        :param event_loop: The event loop used by the fixture manager and its fixtures.
+        :type event_loop: asyncio.AbstractEventLoop
+        :return: A new fixture manager.
+        :rtype: nanaimo.fixtures.FixtureManager
+
 
 If you do ``pytest --help`` you'll see the arguments listed for your Nanaimo fixtures. For example ::
 
-    bkprecision:
-    --bk-port=BK_PORT     The port the BK Precision power supply is connected
-                            to. Set NANAIMO_BK_PORT in the environment to override
-                            default.
+    nanaimo_instr_bk_precision:
+    --bk-port=BK_PORT     The port the BK Precision power supply is connected to. Set
+                            NANAIMO_BK_PORT in the environment to override default.
     --bk-command=BK_COMMAND, --BC=BK_COMMAND
                             command
     --bk-command-timeout=BK_COMMAND_TIMEOUT
-                            time out for individual commands. Set
-                            NANAIMO_BK_COMMAND_TIMEOUT in the environment to
-                            override default.
+                            time out for individual commands. Set NANAIMO_BK_COMMAND_TIMEOUT in the
+                            environment to override default.
     --bk-target-voltage=BK_TARGET_VOLTAGE
-                            The target voltage Set NANAIMO_BK_TARGET_VOLTAGE in
-                            the environment to override default.
+                            The target voltage Set NANAIMO_BK_TARGET_VOLTAGE in the environment to
+                            override default.
     --bk-target-voltage-threshold-rising=BK_TARGET_VOLTAGE_THRESHOLD_RISING
-                            Voltage offset from the target voltage to trigger on
-                            when the voltage is rising. Set
-                            NANAIMO_BK_TARGET_VOLTAGE_THRESHOLD_RISING in the
+                            Voltage offset from the target voltage to trigger on when the voltage is
+                            rising. Set NANAIMO_BK_TARGET_VOLTAGE_THRESHOLD_RISING in the
                             environment to override default.
     --bk-target-voltage-threshold-falling=BK_TARGET_VOLTAGE_THRESHOLD_FALLING
-                            Voltage offset from the target voltage to trigger on
-                            when the voltage is falling. Set
-                            NANAIMO_BK_TARGET_VOLTAGE_THRESHOLD_FALLING in the
+                            Voltage offset from the target voltage to trigger on when the voltage is
+                            falling. Set NANAIMO_BK_TARGET_VOLTAGE_THRESHOLD_FALLING in the
                             environment to override default.
 
 These are defined by the Nanaimo fixture itself in the
@@ -680,6 +687,11 @@ file. Open that file in your favorite editor and add the following:
 
 
     class FirmwareUpdateFixture(nanaimo.builtin.nanaimo_cmd.Fixture):
+        """
+        You'll want to give your fixture a good class docstring since this is used by Nanaimo
+        as the help text in the --fixtures output (when using the redistributable form of a
+        fixture, see below)
+        """
 
         fixture_name = 'firmware_update'
         argument_prefix = 'fwr'
@@ -774,8 +786,8 @@ file. Open that file in your favorite editor and add the following:
 
 
     @pytest.fixture
-    def my_firmware_update(request: typing.Any) -> nanaimo.fixtures.Fixture:
-        return nanaimo.pytest.plugin.create_pytest_fixture(request, FirmwareUpdateFixture)
+    def firmware_update(nanaimo_fixture_manager, nanaimo_arguments) -> nanaimo.fixtures.Fixture:
+        return FirmwareUpdateFixture(nanaimo_fixture_manager, nanaimo_arguments)
 
 .. invisible-code-block: python
 
@@ -818,14 +830,22 @@ Now go back to your test file and change the ``test_upload_firmware_if_needed`` 
     from nanaimo import assert_success
 
     @pytest.mark.asyncio
-    async def test_upload_firmware(my_firmware_update):
-        assert_success(await my_firmware_update.gather(fwr_force=True))
+    async def test_upload_firmware(firmware_update):
+        assert_success(await firmware_update.gather(fwr_force=True))
+
+.. note ::
+    Note that the pytest fixture name should be the canonical name or ``fixture_name``
+    you defined for your fixture. When using setup.cfg to register redistributable plugins
+    this is done automatically. It's good form to follow this convention when defining the
+    plugin "manually" in a conftest.py. See the documentation for :mod:`nanaimo.pytest.plugin`
+    for more details on creating and registering your own :class:`Fixture <nanaimo.fixtures.Fixture>`
+    types.
 
 This is now a test that always runs to verify that the firmware update works. For all other tests we can
 reuse this fixture to ensure we are testing with the current firmware. For example::
 
     @pytest.mark.asyncio
-    async def test_imu(my_firmware_update,
+    async def test_imu(firmware_update,
                        nanaimo_arguments,
                        nanaimo_serial_watch,
                        nanaimo_serial,
@@ -835,7 +855,7 @@ reuse this fixture to ensure we are testing with the current firmware. For examp
         A test that verifies that our IMU is returning sensible data.
         """
 
-        assert_success(await my_firmware_update.gather())
+        assert_success(await firmware_update.gather())
 
         yepkit_port_for_pantilt = nanaimo_arguments.yep_pantilt_port
         yepkit_port_for_imu = nanaimo_arguments.yep_imu_port
@@ -904,13 +924,92 @@ For example, if you compose ``MyOtherUpdateFixture`` fixture out of ``FirmwareUp
 If you aggregate in a fixture instead (like ``FirmwareUpdateFixture`` does with ``nanaimo_cmd.Fixture``
 then the arguments will get their prefix from the aggregate.
 
+Redistributable
+===================================================================================================
+
+Let's say we like our firmware update fixture so much we want to package it up and make it available
+to other pytests using our package. To do this we'd change four things from our previous example:
+
+1. We need to add a setup.py and setup.cfg to allow `setuptools <https://pypi.org/project/setuptools/>`_
+to package up our python project for redistribution ::
+
+    + myproject
+    |
+    |   + src
+    |   |
+    |   + test
+    |   |   test_stuff.py
+    |   |   conftest.py
+    |
+    | tox.ini
+    | setup.py
+    | setup.cfg
+
+Feel free to use the `nanaimo github repository <https://github.com/thirtytwobits/nanaimo>`_ as an example if
+you like.
+
+2. Move our ``FirmwareUpdateFixture`` to its own module. Let's say we created a ``my_module.py``
+file and moved our fixture out of conftest.py to this file ::
+
+    + myproject
+    |
+    |   + src
+    |   |   my_module.py
+    |   |
+    |   + test
+    |   |   test_stuff.py
+    |   |   conftest.py
+    |
+    | tox.ini
+    | setup.py
+    | setup.cfg
+
+
+3. In ``my_module.py`` change these lines ::
+
+        # This is a quick-and-dirty way to create our module that works for conftest.py
+        # without any special configuration.
+        @pytest.fixture
+        def firmware_update(nanaimo_fixture_manager, nanaimo_arguments) -> nanaimo.fixtures.Fixture:
+            return FirmwareUpdateFixture(nanaimo_fixture_manager, nanaimo_arguments)
+
+  to this ::
+
+        # This extends the core Nanaimo pytest plugin with our own but we need to tell
+        # Nanaimo about it in our setup.cfg.
+        def pytest_nanaimo_fixture_type() -> typing.Type['nanaimo.fixtures.Fixture']:
+            return FirmwareUpdateFixture
+
+4. Finally list our new module in the pytest11 section of your setup.cfg ::
+
+    [options.entry_points]
+    pytest11 =
+        pytest_nanaimo = nanaimo.pytest.plugin
+        pytest_nanaimo_plugin_firmware_update = my_module
+
+Now your fixture is available in the same way it was before to tests but will also be available to
+any packages that depend on your package and the fixture will be available to :ref:`nait`. Furthermore,
+``pytest --help`` will now show your fixture arguments and ``pytest --fixtures`` will include the
+docstring for your fixture class. Finally, you can now distribute your fixture to your tests using
+`pypi <http://pypi.org>`_ or a similar distribution service.
+
 ***************************************************************************************************
 :ref:`nait`
 ***************************************************************************************************
 
-.. note ::
+Nanaimo comes with a CLI designed to allow direct interaction with one or more fixtures installed in
+your environment. This allows you to interactively test configuration or reset the state of a failed
+fixture. These fixtures will only be available to nait if they are specified in your setup.cfg (as we
+discussed in the previous section and as detailed in
+:mod:`Nanaimo's pytest plugin documentation <nanaimo.pytest.plugin>`). Using this guide's firmware update
+fixture example one might use nait to manually update a firmware like this ::
 
-    **TODO** Finish this section on using ``nait``.
+    nait firmware_update --fwr-firmware path/to/my/firmware.bin
+
+Nait will reuse all our configuration and will provide the exact same environment to the fixture as pytest
+since it's actually just a thin wrapper around :meth:`pytest.main`.
+
+See the :ref:`nait reference section <nait>` of this documentation for more detail.
 
 ---------------------------------------------------------------------------------------------------
 
