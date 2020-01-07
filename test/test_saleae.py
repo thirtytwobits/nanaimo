@@ -10,8 +10,8 @@ import nanaimo.fixtures
 
 
 @pytest.mark.asyncio
-async def test_saleae_exists(nanaimo_instr_saleae: nanaimo.fixtures.Fixture) -> None:
+async def test_saleae_exists(nanaimo_bar: nanaimo.fixtures.Fixture) -> None:
     """
     Just making sure the fixture exists. More when issue #16 is completed.
     """
-    assert nanaimo_instr_saleae.get_canonical_name() is not None
+    assert nanaimo_bar.get_canonical_name() is not None

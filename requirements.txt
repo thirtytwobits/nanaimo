@@ -4,5 +4,4 @@ pyserial
 pytest
 pytest-asyncio
 sphinx
-sphinx-argparse
 sphinx_rtd_theme

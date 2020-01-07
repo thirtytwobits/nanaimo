@@ -94,6 +94,11 @@ def build_output(request):  # type: ignore
     return builddir
 
 
+@pytest.fixture
+def nanaimo_bar_from_conftest(nanaimo_fixture_manager, nanaimo_arguments) -> 'nanaimo.fixtures.Fixture':
+    return nanaimo.builtin.nanaimo_bar.Fixture(nanaimo_fixture_manager, nanaimo_arguments)
+
+
 class GatherTimeoutFixture(nanaimo.fixtures.Fixture):
 
     @classmethod

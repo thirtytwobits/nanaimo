@@ -24,8 +24,6 @@ import asyncio
 import pathlib
 import typing
 
-import pytest
-
 import nanaimo
 import nanaimo.connections
 import nanaimo.connections.uart
@@ -80,11 +78,5 @@ class Fixture(nanaimo.fixtures.Fixture):
         return nanaimo.Artifacts(result)
 
 
-@nanaimo.fixtures.PluggyFixtureManager.type_factory
-def get_fixture_type() -> typing.Type['Fixture']:
+def pytest_nanaimo_fixture_type() -> typing.Type['Fixture']:
     return Fixture
-
-
-@pytest.fixture
-def gtest_over_jlink(request: typing.Any) -> nanaimo.fixtures.Fixture:
-    return nanaimo.pytest.plugin.create_pytest_fixture(request, Fixture.get_canonical_name())

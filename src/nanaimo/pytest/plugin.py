@@ -32,6 +32,9 @@ Nanaimo provides a collection of pytest fixtures all defined in this module.
 
     class MyTestFixture(nanaimo.fixtures.Fixture):
 
+        fixture_name = 'my_fixture_name'
+        argument_prefix = 'mfn'
+
         @classmethod
         def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
             pass
@@ -42,18 +45,11 @@ Nanaimo provides a collection of pytest fixtures all defined in this module.
             return artifacts
 
 
-    @nanaimo.fixtures.PluggyFixtureManager.type_factory
-    def get_fixture_type() -> typing.Type['nanaimo.fixtures.Fixture']:
+    def pytest_nanaimo_fixture_type() -> typing.Type['nanaimo.fixtures.Fixture']:
+        '''
+        This is required to provide the fixture to pytest as a fixture.
+        '''
         return MyTestFixture
-
-Individual fixtures can choose to present pytest fixtures directly using `pytest.fixture`
-and :func:`create_pytest_fixture`
-
-.. code-block:: python
-
-    @pytest.fixture
-    def my_test_fixture(request: typing.Any) -> nanaimo.fixtures.Fixture:
-        return nanaimo.pytest.plugin.create_pytest_fixture(request, MyTestFixture.get_canonical_name())
 
 
 In your setup.cfg you'll first need to register nanaimo with pytest ::
@@ -62,130 +58,94 @@ In your setup.cfg you'll first need to register nanaimo with pytest ::
         pytest11 =
             pytest_nanaimo = nanaimo.pytest.plugin
 
-then, if you do want to expose your fixture directly, you'll need to add your fixture's namespace::
+then you'll need to add your fixture's namespace::
 
     [options]
         pytest11 =
             pytest_nanaimo = nanaimo.pytest.plugin
-            pytest_my_plugin = my_namspace
+            pytest_nanaimo_plugin_my_fixture = my_namspace
+
+.. note ::
+    For Nanaimo the key for your plugin in the pytest11 map is unimportant. It must be unique but
+    nothing else about it will be visible to your tests unless you integrate more deeply with pytest.
+    The fixture you expose from your plugin via ``pytest_nanaimo_fixture_type`` will be
+    named for the canonical name of your :class:`Fixture <nanaimo.fixtures.Fixture>` (in this case,
+    "my_fixture_name").
+
+You can add as many additional nanaimo plugins as you want but you can only have one
+:class:`Fixture <nanaimo.fixtures.Fixture>` in each module.
+
+Where you don't need your Nanaimo fixture to be redistributable you may also use standard
+pytest fixture creation by using the :func:`nanaimo_fixture_manager <nanaimo.pytest.plugin.nanaimo_fixture_manager>`
+and :func:`nanaimo_arguments <nanaimo.pytest.plugin.nanaimo_arguments>` fixtures supplied by
+the core nanaimo pytest plugin. For example, assuming you have ``nanaimo.pytest.plugin`` in your setup.cfg
+(see above) you can do something like this in a ``conftest.py`` ::
+
+    @pytest.fixture
+    def my_fixture_name(nanaimo_fixture_manager, nanaimo_arguments) -> 'nanaimo.fixtures.Fixture':
+        '''
+        It is considered a best-practice to always name your pytest.fixture method the
+        same as your Fixture's canonical name (i.e. fixture_name).
+        '''
+        return MyTestFixture(nanaimo_fixture_manager, nanaimo_arguments)
 
 """
+import asyncio
 import logging
+import re
+import textwrap
 import typing
 
 import _pytest
+import py
 import pytest
 
 import nanaimo
 import nanaimo.config
-import nanaimo.display
 import nanaimo.fixtures
 
-_fixture_manager = None  # type: typing.Optional[nanaimo.fixtures.FixtureManager]
-"""
-Pytest plugin singleton. The first time our pytest plugin is invoked
-we populate to provide a peristent store of Nanaimo fixtures and artifacts.
-"""
 
-
-def _get_default_fixture_manager() -> nanaimo.fixtures.FixtureManager:
-    global _fixture_manager
-    if _fixture_manager is None:
-        _fixture_manager = nanaimo.fixtures.nanaimo.fixtures.PluggyFixtureManager()
-
-    return _fixture_manager
-
-
-def create_pytest_fixture(pytest_request: typing.Any,
-                          canonical_name_or_type: typing.Union[str, typing.Type['nanaimo.fixtures.Fixture']]) \
-        -> nanaimo.fixtures.Fixture:
+def create_pytest_fixture(request: typing.Any, fixture_name: str) -> 'nanaimo.fixtures.Fixture':
     """
-    Create a fixture for a `pytest.fixture` request. This method ensures the fixture is created through
-    the default :class:`FixtureManager`. For example, using :class:`nanaimo.fixtures.PluggyFixtureManager`
-    you must first register your fixture like thus::
-
-        @nanaimo.fixtures.PluggyFixtureManager.type_factory
-        def get_fixture_type() -> typing.Type['nanaimo.fixtures.Fixture']:
-            return MyFixtureType
-
-    Then you can register your fixture with pytest like this::
-
-        @pytest.fixture
-        def nanaimo_pytest_my_fixture(request: typing.Any) -> nanaimo.fixtures.Fixture:
-            return nanaimo.pytest.plugin.create_pytest_fixture(request, MyFixtureType.canonical_name())
-
-    :param pytest_request: The request object passed into the pytest fixture factory.
-    :type pytest_request: _pytest.fixtures.FixtureRequest
-    :param canonical_name_or_type: The canonical name of the fixture to create
-        (see :meth:`nanaimo.fixtures.Fixture.get_canonical_name`) or the fixture type to create.
-    :return: Either a new fixture or a fixture of the same name that was already created for the default
-        :class:`FixtureManager`.
-    :raises KeyError: if ``fixture_type`` was not a registered nanaimo fixture and canonical_name_or_type was
-        a string.
+    DEPRECATED. Use the appropriate :meth:`FixtureManager <nanaimo.fixtures.FixtureManager>`
+    and its
+    :meth:`FixtureManager.create_fixture <nanaimo.fixtures.FixtureManager.create_fixture>`
+    method instead.
     """
-    fm = _get_default_fixture_manager()
-    args = pytest_request.config.option
-    args_ns = nanaimo.Namespace(args, nanaimo.config.ArgumentDefaults(args), allow_none_values=False)
-    canonical_name = (canonical_name_or_type if isinstance(canonical_name_or_type, str)
-                      else canonical_name_or_type.get_canonical_name())
-    try:
-        return fm.create_fixture(canonical_name, args_ns)
-    except KeyError:
-        if isinstance(canonical_name_or_type, str):
-            raise
-    return canonical_name_or_type(fm, args_ns)
+    raise DeprecationWarning('This method has been removed. All fixtures must be created '
+                             'using a FixtureManager instance in this version and going forward.')
+
+
+# +---------------------------------------------------------------------------+
+# | NANAIMO PYTEST FIXTURES
+# |                  (not Nanaimo Fixture, fixtures. I know, just go with it)
+# +---------------------------------------------------------------------------+
 
 
 @pytest.fixture
-def nanaimo_fixture_manager(request: typing.Any) -> nanaimo.fixtures.FixtureManager:
+def nanaimo_fixture_manager(request: typing.Any, event_loop: asyncio.AbstractEventLoop) \
+        -> nanaimo.fixtures.FixtureManager:
     """
-    The default fixture for Nanaimo. Available as `nanaimo_fixture_manager`
+    Provides a default :class:`FixtureManager <nanaimo.fixtures.FixtureManager>` to a test.
 
     .. invisible-code-block: python
 
         import nanaimo
         import nanaimo.fixtures
-        import pytest
-        import asyncio
 
     .. code-block:: python
 
-        class MyFixture(nanaimo.fixtures.Fixture):
-
-            @classmethod
-            def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
-                pass
-
-            async def on_gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
-                return nanaimo.Artifacts()
-
-        def test_example(nanaimo_fixture_manager: nanaimo.fixtures.FixtureManager) -> None:
-
-            with pytest.raises(KeyError):
-                # If the fixture hasn't been registered with the manager
-                # this throws.
-                my_fixture = nanaimo_fixture_manager.create_fixture('my_fixture')
-
-            # Use this when creating new fixtures.
-            my_new_fixture = MyFixture(nanaimo_fixture_manager)
-
-    .. invisible-code-block: python
-
-        class DummyFixtureManager(nanaimo.fixtures.FixtureManager):
-            def create_fixture(self,
-                       fixture_name,
-                       args = None,
-                       loop = None):
-                raise KeyError()
-
-        test_example(DummyFixtureManager())
+        def test_example(nanaimo_fixture_manager: nanaimo.Namespace) -> None:
+            common_loop = nanaimo_fixture_manager.loop
 
     :param pytest_request: The request object passed into the pytest fixture factory.
     :type pytest_request: _pytest.fixtures.FixtureRequest
-    :return: A reference to the default fixture manager.
+    :param event_loop: The event loop used by the fixture manager and its fixtures.
+    :type event_loop: asyncio.AbstractEventLoop
+    :return: A new fixture manager.
     :rtype: nanaimo.fixtures.FixtureManager
     """
-    return _get_default_fixture_manager()
+    return PytestFixtureManager(request.config.pluginmanager, event_loop)
 
 
 @pytest.fixture
@@ -250,6 +210,10 @@ def nanaimo_log(request: typing.Any) -> logging.Logger:
     """
     return logging.getLogger(request.function.__name__)
 
+
+# +---------------------------------------------------------------------------+
+# | NANAIMO PYTEST HELPERS
+# +---------------------------------------------------------------------------+
 
 def assert_success(artifacts: nanaimo.Artifacts) -> nanaimo.Artifacts:
     """
@@ -363,39 +327,249 @@ def assert_success_if(artifacts: nanaimo.Artifacts,
     assert conditional(artifacts)
     return artifacts
 
+# +===========================================================================+
+# | NANAIMO PYTEST PLUGIN INTERNALS
+# +===========================================================================+
 
-_display_singleton = None  # type: typing.Optional[nanaimo.display.CharacterDisplay]
+
+class PytestFixtureManager(nanaimo.fixtures.FixtureManager):
+    """
+    :class:`FixtureManager <nanaimo.fixtures.FixtureManager>` implemented using
+    pytest plugin APIs.
+    """
+
+    def __init__(self, pluginmanager: '_pytest.config.PytestPluginManager', loop: asyncio.AbstractEventLoop):
+        super().__init__(loop=loop)
+        self._pluginmanager = pluginmanager
+
+    def create_fixture(self,
+                       canonical_name: str,
+                       args: typing.Optional[nanaimo.Namespace] = None,
+                       loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> nanaimo.fixtures.Fixture:
+        fixture_plugin = self._pluginmanager.get_plugin(canonical_name)
+        fixture_type = fixture_plugin.fixture_type
+        return fixture_type(self, args, loop=loop)
 
 
-def _get_display() -> nanaimo.display.CharacterDisplay:
+# +---------------------------------------------------------------------------+
+# | INTERNALS :: INTEGRATED DISPLAY
+# +---------------------------------------------------------------------------+
+
+_display_singleton = None  # type: typing.Optional[nanaimo.fixtures.Fixture]
+
+
+def _get_display(config: _pytest.config.Config) -> 'nanaimo.fixtures.Fixture':
     global _display_singleton
     if _display_singleton is None:
-        # TODO: #65, use generic version
-        _display_singleton = typing.cast(nanaimo.display.CharacterDisplay,
-                                         _get_default_fixture_manager().create_fixture('character_display'))
+        for fixture_type in config.pluginmanager.hook.pytest_nanaimo_fixture_type():
+            if fixture_type.get_canonical_name() == 'character_display':
+                _display_singleton = fixture_type(nanaimo.fixtures.FixtureManager(asyncio.get_event_loop()))
+        if _display_singleton is None:
+            raise KeyError('character_display fixture was not found.')
     return _display_singleton
 
+
 # +---------------------------------------------------------------------------+
-# | PYTEST HOOKS
+# | INTERNALS :: TEST SYNTHESIS (nait mode)
 # +---------------------------------------------------------------------------+
 
 
-def pytest_addoption(parser) -> None:  # type: ignore
+_nait_mode = False
+
+
+def is_nait_mode() -> bool:
+    """
+    A special mode enabled by the 'nait' commandline that discards all collected tests
+    and inserts a single test item driven by nait. This mode is used to interact with
+    Nanaimo fixtures from a commandline.
+    """
+    return _nait_mode
+
+
+class _NanaimoItem(pytest.Item):
+    """
+    When running in :func:`is_nait_mode` a single test is synthesized out of this class. The action
+    (i.e. :meth:`runtest`) is always executed as the single activity for the invocation.
+    """
+
+    nanaimo_results_sneaky_key = '_nanaimo_artifacts'
+    """
+    An attribute we add to the session's :class:`_pytest.config.Config` instance to store
+    fixture artifacts for later reporting in the terminal.
+    """
+
+    def __init__(self, parent, fixture_names):
+        super().__init__('nanaimo : {}'.format(str(fixture_names)), parent)
+        self._logger = logging.getLogger(__name__)
+        self._fixture_names = fixture_names
+
+    def on_setup(self) -> None:
+        if not hasattr(self.session.config, self.nanaimo_results_sneaky_key):
+            setattr(self.session.config, self.nanaimo_results_sneaky_key, dict())
+
+    def runtest(self) -> None:
+        """
+        Run all fixtures specified on the command-line.
+        """
+        loop = asyncio.get_event_loop()
+        fixtures = []
+        nanaimo_defaults = nanaimo.config.ArgumentDefaults.create_defaults_with_early_rc_config()
+        nanaimo_args = nanaimo.Namespace(self.session.config.option, nanaimo_defaults)
+        fixture_manager = PytestFixtureManager(self.config.pluginmanager, loop)
+        for fixture_name in self._fixture_names:
+            fixtures.append(fixture_manager.create_fixture(fixture_name, nanaimo_args))
+        gathers = [asyncio.ensure_future(f.gather()) for f in fixtures]
+        results = loop.run_until_complete(asyncio.gather(*gathers, loop=loop))
+        combined = nanaimo.Artifacts.combine(*results)
+        assert combined.result_code == 0
+        getattr(self.session.config, self.nanaimo_results_sneaky_key)[','.join(self._fixture_names)] = combined
+
+    def _prunetraceback(self, excinfo):
+        """
+        Removes pytest itself from exception traces.
+        """
+        traceback = excinfo.traceback
+        traceback_before_this_item = traceback.cut(path=self.fspath)
+        excinfo.traceback = traceback_before_this_item.filter()
+
+
+# +---------------------------------------------------------------------------+
+# | INTERNALS :: PYTEST HOOKS
+# +---------------------------------------------------------------------------+
+
+
+class _SyntheticPlugin:
+    """
+    Used to synthesize a pytest plugin with the same name as a fixture's canonical name.
+    """
+
+    _RemoveInvisiblesPattern = re.compile(r'\.\.\s+invisible-code-block:.*\n(?:[\n]|\s{4,}.*\n)+')
+
+    def __init__(self, fixture_type):
+        self._fixture_type = fixture_type
+
+        fixture_type_name = fixture_type.get_canonical_name()
+
+        def _generic_async_fixture(request, nanaimo_fixture_manager):
+            fixture = self._create_pytest_fixture(request, nanaimo_fixture_manager, fixture_type)
+            if fixture is not None and fixture.get_canonical_name() != request.fixturename:
+                raise ValueError('Requested fixture {} but that fixture\'s canonical name is {}'.format(
+                    request.fixturename,
+                    fixture.get_canonical_name()))
+            return fixture
+
+        dedent_docstring = textwrap.dedent(fixture_type.__doc__)
+        cleaned_docstring = self._RemoveInvisiblesPattern.sub('', dedent_docstring)
+        _generic_async_fixture.__doc__ = cleaned_docstring
+        self.__dict__[fixture_type_name] = pytest.fixture(_generic_async_fixture,
+                                                          name=fixture_type_name)
+
+    @property
+    def fixture_type(self) -> typing.Type['nanaimo.fixtures.Fixture']:
+        return self._fixture_type
+
+    def _create_pytest_fixture(self,
+                               pytest_request: typing.Any,
+                               nanaimo_fixture_manager: nanaimo.fixtures.FixtureManager,
+                               fixture_type: typing.Type['nanaimo.fixtures.Fixture']) -> nanaimo.fixtures.Fixture:
+        args = pytest_request.config.option
+        args_ns = nanaimo.Namespace(args, nanaimo.config.ArgumentDefaults(args), allow_none_values=False)
+        return fixture_type(nanaimo_fixture_manager, args_ns)
+
+
+def pytest_addoption(parser: '_pytest.config.argparsing.Parser', pluginmanager: '_pytest.config.PytestPluginManager')\
+        -> None:
     """
     See :func:`_pytest.hookspec.pytest_addoption` for documentation.
     Also see the "`Writing Plugins <https://docs.pytest.org/en/latest/writing_plugins.html>`_"
     guide.
     """
-    manager = _get_default_fixture_manager()
+
     nanaimo_defaults = nanaimo.config.ArgumentDefaults.create_defaults_with_early_rc_config()
-    nanaimo_options = parser.getgroup('nanaimo')
-    nanaimo_options.addoption('--environ', action='append', help='Environment variables to provide to subprocesses')
+
+    nanaimo_options = parser.getgroup('nanaimo',
+                                      description='Nanaimo Options')
+    nanaimo_options.addoption('--environ', action='append', help='Environment variables to provide to subprocesses as '
+                                                                 'a key=value pair')
+
+    nanaimo_options.addoption('--gather-timeout-seconds',
+                              type=float,
+                              help=textwrap.dedent('''
+                            A gather timeout in fractional seconds to use for all fixtures.
+                            If not provided then Fixture.gather will not timeout.''').lstrip())
+
+    if is_nait_mode():
+        if hasattr(parser, '_usage'):
+            # Try to help the user with our hacks by rewriting the usage help string.
+            parser._usage = textwrap.dedent('''
+                    %(prog)s [options] [nanaimo_fixture] [nanaimo_fixture] [...]
+
+                        *** NOTICE ***
+                        When running Nanaimo using %(prog)s the pytest "file_or_dir" positional arguments are
+                        interpreted as a list of fixtures to run/gather. Because of this some of the help
+                        text emitted from pytest may be misleading.
+
+                        **************
+                ''').lstrip()
+
+        nanaimo_options.addoption('--concurrent',
+                                  action='store_true',
+                                  help=textwrap.dedent('''
+                                Run specified fixtures concurrently (i.e. asyncio.gather, NOT multi-threaded).
+                                The default is to run/gather each fixture in a separate, synthetic test item.
+
+                            ''').lstrip())
+
+        nanaimo_options.addoption('--environ-shell', '-S', action='store_true', help=textwrap.dedent('''
+                                Dump environment variables to stdout as a set of shell commands.
+                                Use this to export the subprocess environment for a system to a user
+                                shell. For example::
+
+                                    eval $(nait -S)
+
+                            ''').lstrip())
+
     nanaimo_arguments = nanaimo.Arguments(nanaimo_options, defaults=nanaimo_defaults, filter_duplicates=True)
 
-    for fixture_type in manager.fixture_types():
+    # We modify the pytest default behavior here; loading all the plugins here so we are able to visit them
+    # so they can contribute options.
+    pluginmanager.load_setuptools_entrypoints('pytest11')
+
+    for fixture_type in pluginmanager.hook.pytest_nanaimo_fixture_type():
+        pluginmanager.register(_SyntheticPlugin(fixture_type), fixture_type.get_canonical_name())
         group = parser.getgroup(fixture_type.get_canonical_name())
         nanaimo_arguments.set_inner_arguments(group)
         fixture_type.visit_test_arguments(nanaimo_arguments)
+
+
+def pytest_addhooks(pluginmanager):
+    """
+    See :func:`_pytest.hookspec.pytest_addhooks` for documentation.
+    Also see the "`Writing Plugins <https://docs.pytest.org/en/latest/writing_plugins.html>`_"
+    guide.
+    """
+    from nanaimo.pytest import hooks
+
+    pluginmanager.add_hookspecs(hooks)
+
+
+def pytest_collection(session: _pytest.main.Session):
+    """
+    See :func:`_pytest.hookspec.pytest_collection_modifyitems` for documentation.
+    Also see the "`Writing Plugins <https://docs.pytest.org/en/latest/writing_plugins.html>`_"
+    guide.
+    """
+    if is_nait_mode():
+        f = pytest.File(py.path.local(__file__), session)
+        if session.config.option.concurrent:
+            session.items = [_NanaimoItem(f, session.config.option.file_or_dir.copy())]
+            session.testscollected = 1
+        else:
+            session.items = []
+            for fixture_name in session.config.option.file_or_dir:
+                session.items.append(_NanaimoItem(f, [fixture_name]))
+            session.testscollected = len(session.items)
+        return True
 
 
 def pytest_sessionstart(session: _pytest.main.Session) -> None:
@@ -407,18 +581,25 @@ def pytest_sessionstart(session: _pytest.main.Session) -> None:
     args = session.config.option
     args_ns = nanaimo.Namespace(args, nanaimo.config.ArgumentDefaults(args), allow_none_values=False)
     nanaimo.set_subprocess_environment(args_ns)
-    _get_display().set_bg_colour(0, 0, 255)
+    display = _get_display(session.config)
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(display.gather(character_display_status='busy'))
 
 
-def pytest_runtest_setup(item: typing.Any) -> None:
+def pytest_runtest_setup(item: pytest.Item) -> None:
     """
     See :func:`_pytest.hookspec.pytest_runtest_setup` for documentation.
     Also see the "`Writing Plugins <https://docs.pytest.org/en/latest/writing_plugins.html>`_"
     guide.
     """
-    display = _get_display()
-    display.clear(display_default_message=False)
-    display.write(item.name)
+    if isinstance(item, _NanaimoItem):
+        item.on_setup()
+    display = _get_display(item.config)
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(display.gather(
+        character_display_clear=True,
+        character_display_write=item.name
+    ))
 
 
 def pytest_sessionfinish(session: _pytest.main.Session, exitstatus: int) -> None:
@@ -427,9 +608,46 @@ def pytest_sessionfinish(session: _pytest.main.Session, exitstatus: int) -> None
     Also see the "`Writing Plugins <https://docs.pytest.org/en/latest/writing_plugins.html>`_"
     guide.
     """
-    display = _get_display()
-    display.clear(display_default_message=True)
-    if exitstatus == 0:
-        display.set_bg_colour(0, 255, 0)
-    else:
-        display.set_bg_colour(255, 0, 0)
+    display = _get_display(session.config)
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(display.gather(
+        character_display_clear_to_default=True,
+        character_display_status=('okay' if exitstatus == 0 else 'fail')
+    ))
+
+# +---------------------------------------------------------------------------+
+# | INTERNALS :: PYTEST HOOKS :: REPORTING
+# +---------------------------------------------------------------------------+
+
+
+def pytest_report_header(config: _pytest.config.Config, startdir) -> typing.List[str]:
+    """
+    See :func:`_pytest.hookspec.pytest_sessionfinish` for documentation.
+    Also see the "`Writing Plugins <https://docs.pytest.org/en/latest/writing_plugins.html>`_"
+    guide.
+    """
+    return ['nait={}'.format(is_nait_mode())]
+
+
+def pytest_terminal_summary(terminalreporter: '_pytest.terminal.TerminalReporter',
+                            exitstatus: int,
+                            config: _pytest.config.Config) -> None:
+    """
+    See :func:`_pytest.hookspec.pytest_sessionfinish` for documentation.
+    Also see the "`Writing Plugins <https://docs.pytest.org/en/latest/writing_plugins.html>`_"
+    guide.
+    """
+    terminalreporter.write_sep('-', title='nanaimo', bold=True)
+    if hasattr(config, _NanaimoItem.nanaimo_results_sneaky_key):
+        results = getattr(config, _NanaimoItem.nanaimo_results_sneaky_key)  # type: typing.Dict[str, nanaimo.Artifacts]
+        for fixture_names, artifacts in results.items():
+            terminalreporter.write_line('Fixture(s) "{}" result = {}'.format(fixture_names, artifacts.result_code),
+                                        green=(artifacts.result_code == 0),
+                                        red=(artifacts.result_code != 0))
+
+        for fixture_names, artifacts in results.items():
+            terminalreporter.write_sep('.', title='Artifacts for {}'.format(fixture_names), bold=False)
+            artifact_vars = vars(artifacts)
+            for key, value in artifact_vars.items():
+                if not key.startswith('_'):
+                    terminalreporter.write_line('{}={}'.format(key, value))

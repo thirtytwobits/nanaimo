@@ -22,8 +22,6 @@ import re
 import textwrap
 import typing
 
-import pytest
-
 import nanaimo
 import nanaimo.connections
 import nanaimo.connections.uart
@@ -148,20 +146,5 @@ class Fixture(nanaimo.fixtures.Fixture):
         return nanaimo.Artifacts()
 
 
-@nanaimo.fixtures.PluggyFixtureManager.type_factory
-def get_fixture_type() -> typing.Type['Fixture']:
+def pytest_nanaimo_fixture_type() -> typing.Type['Fixture']:
     return Fixture
-
-
-@pytest.fixture
-def nanaimo_serial_watch(request: typing.Any) -> nanaimo.fixtures.Fixture:
-    """
-    This Nanaimo fixture allows a test to monitor a serial port until a provided pattern matches.
-    The `pytest fixture <https://docs.pytest.org/en/latest/fixture.html>`_ provides
-    a :class:`nanaimo.builtin.nanaimo_serial_watch.Fixture` fixture to a pytest.
-
-    :param pytest_request: The request object passed into the pytest fixture factory.
-    :type pytest_request: _pytest.fixtures.FixtureRequest
-    :rtype: nanaimo.builtin.nanaimo_serial_watch.Fixture
-    """
-    return nanaimo.pytest.plugin.create_pytest_fixture(request, Fixture.get_canonical_name())

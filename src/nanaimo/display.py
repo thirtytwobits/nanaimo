@@ -21,7 +21,6 @@ import socket
 import textwrap
 import typing
 
-import pytest
 import serial
 
 import nanaimo
@@ -186,6 +185,13 @@ class CharacterDisplay(nanaimo.fixtures.Fixture):
         arguments.add_argument('--configure', action='store_true', help='Configures the display to use '
                                'configured values (e.g. columns and lines).')
         arguments.add_argument('--clear', action='store_true', help='Clear the screen.')
+        arguments.add_argument('--clear-to-default',
+                               action='store_true',
+                               help='Clear the screen and display the default message.')
+        arguments.add_argument('--status',
+                               choices=['okay', 'busy', 'fail'],
+                               help='Display an overall status for the tests. How this is represented is dependant'
+                                    ' on the display.')
 
     def __init__(self,
                  manager: 'nanaimo.fixtures.FixtureManager',
@@ -193,6 +199,11 @@ class CharacterDisplay(nanaimo.fixtures.Fixture):
                  **kwargs: typing.Any):
         super().__init__(manager, args, **kwargs)
         self._impl = self._create_display(args)
+        self._colour_map = {
+            'okay': [0, 255, 0],
+            'busy': [0, 0, 255],
+            'fail': [255, 0, 0]
+        }
 
     def write(self, input_line: str) -> None:
         """
@@ -229,32 +240,23 @@ class CharacterDisplay(nanaimo.fixtures.Fixture):
 
     async def on_gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
         if args.character_display_configure:
-            self._impl.configure()
+            self.configure()
 
         if args.character_display_clear:
-            self._impl.clear()
+            self.clear(display_default_message=False)
+
+        if args.character_display_clear_to_default:
+            self.clear(display_default_message=True)
 
         if args.character_display_write is not None:
-            self._impl.write(args.character_display_write)
+            self.write(args.character_display_write)
+
+        if args.character_display_status is not None:
+            status_colour = self._colour_map[args.character_display_status]
+            self.set_bg_colour(status_colour[0], status_colour[1], status_colour[2])
 
         return nanaimo.Artifacts()
 
 
-@nanaimo.fixtures.PluggyFixtureManager.type_factory
-def get_fixture_type() -> typing.Type['nanaimo.fixtures.Fixture']:
+def pytest_nanaimo_fixture_type() -> typing.Type['nanaimo.fixtures.Fixture']:
     return CharacterDisplay
-
-
-@pytest.fixture
-def nanaimo_character_display(request: typing.Any) -> nanaimo.fixtures.Fixture:
-    """
-    Provides a :class:`nanaimo.display.CharacterDisplay` fixture to pytest. See
-    `this Adafruit product <https://www.adafruit.com/product/782>`_ for an example of the display
-    type this fixture supports.
-
-    :param pytest_request: The request object passed into the pytest fixture factory.
-    :type pytest_request: _pytest.fixtures.FixtureRequest
-    :return: A fixture providing access to an attached character-oriented display.
-    :rtype: nanaimo.display.CharacterDisplay
-    """
-    return nanaimo.pytest.plugin.create_pytest_fixture(request, CharacterDisplay.get_canonical_name())

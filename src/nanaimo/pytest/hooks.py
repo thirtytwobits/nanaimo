@@ -17,7 +17,15 @@
 #                                        @&&&&&&&&&&%#######&@%
 #  nanaimo                                   (@&&&&####@@*
 #
+"""
+Defines additional pytest hooks defined by the Nanaimo plugin.
+"""
+import typing
+import nanaimo.fixtures  # noqa: F401
 
-__version__ = '0.1.0'
 
-__license__ = 'MIT'
+def pytest_nanaimo_fixture_type() -> typing.Type['nanaimo.fixtures.Fixture']:
+    """
+    Nanaimo entrypoint. Retrives the concrete fixture type defined by a given pytest
+    plugin module.
+    """

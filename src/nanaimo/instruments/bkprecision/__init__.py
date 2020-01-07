@@ -23,8 +23,6 @@ import pathlib
 import re
 import typing
 
-import pytest
-
 import nanaimo
 import nanaimo.fixtures
 import nanaimo.pytest.plugin
@@ -36,7 +34,7 @@ class Series1900BUart(nanaimo.fixtures.Fixture):
     Control of a 1900B series BK Precision power supply via UART.
     """
 
-    fixture_name = 'bkprecision'
+    fixture_name = 'nanaimo_instr_bk_precision'
     argument_prefix = 'bk'
 
     DefaultCommandTimeoutSeconds = 6.0
@@ -317,21 +315,5 @@ class Series1900BUart(nanaimo.fixtures.Fixture):
         return result
 
 
-@nanaimo.fixtures.PluggyFixtureManager.type_factory
-def get_fixture_type() -> typing.Type['nanaimo.fixtures.Fixture']:
+def pytest_nanaimo_fixture_type() -> typing.Type['nanaimo.fixtures.Fixture']:
     return Series1900BUart
-
-
-@pytest.fixture
-def nanaimo_instr_bk_precision(request: typing.Any) -> nanaimo.fixtures.Fixture:
-    """
-    Provides a :class:`nanaimo.instruments.bkprecision.Series1900BUart` fixture to a pytest.
-    This fixture controls a `BK Precision 1900B series power supply <https://bit.ly/34jeSz2>`_
-    attached to the system via UART.
-
-    :param pytest_request: The request object passed into the pytest fixture factory.
-    :type pytest_request: _pytest.fixtures.FixtureRequest
-    :return: A fixture providing control of a Series 1900 BK Precision power supply via UART.
-    :rtype: nanaimo.instruments.bkprecision.Series1900BUart
-    """
-    return nanaimo.pytest.plugin.create_pytest_fixture(request, Series1900BUart.get_canonical_name())
