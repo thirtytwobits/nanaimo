@@ -19,7 +19,7 @@ def test_help(run_nait) -> None:  # type: ignore
     """
     Verify --help doesn't explode.
     """
-    result = run_nait(['gtest_over_jlink', '--help']).stdout.decode('utf-8')
+    result = run_nait(['jlink', '--help']).stdout.decode('utf-8')
     assert len(result) > 4
     print(result)
 

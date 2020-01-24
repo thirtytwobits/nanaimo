@@ -1,0 +1,3 @@
+device {device}
+si {serial_interface}
+loadfile {hexfile}

@@ -17,59 +17,118 @@
 #                                        @&&&&&&&&&&%#######&@%
 #  nanaimo                                   (@&&&&####@@*
 #
-import asyncio
-import logging
-import pathlib
+import tempfile
+import textwrap
 import typing
 
 import nanaimo
+import nanaimo.fixtures
 
 
-class ProgramUploaderJLink:
+class ProgramUploader(nanaimo.fixtures.SubprocessFixture):
     """
-    Async manager of a JLinkExe subprocess.
+    JLinkExe fixture that loads a given hexfile to a target device.
     """
+
+    fixture_name = 'nanaimo_jlink_upload'
+    argument_prefix = 'jlink_up'
+
+    script_template = textwrap.dedent('''
+        f
+        device {device}
+        speed {speed}
+        si {serial_interface}
+        connect
+        hwinfo
+        st
+        h
+        moe
+        rx {reset_delay_millis}
+        loadfile {hexfile}
+        r
+        qc
+        ''').lstrip()
 
     @classmethod
     def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
-        arguments.add_argument('--base_path',
-                               default=str(pathlib.Path().cwd()),
-                               help='The folder under which to search for jlink scripts.')
-        arguments.add_argument('--jlink-scripts',
-                               help='A globbing pattern to collect jlink scripts for flashing tests.')
-        arguments.add_argument('--upload-timeout-seconds',
-                               default='20',
-                               type=float,
-                               help='''The upload will be killed and an error returned
-after waiting for the upload to complete for this
-amount of time.''')
+        super().on_visit_test_arguments(arguments)
+        arguments.add_argument('--exe',
+                               default='JLinkExe',
+                               help='A path to the jlink commander executable.')
+        arguments.add_argument('--hexfile',
+                               help='Path to a hex file to upload.')
+        arguments.add_argument('--device',
+                               help='The target device.')
+        arguments.add_argument('--interface-speed-khz',
+                               help='The interface speed in kilohertz',
+                               default='default')
+        arguments.add_argument('--serial-interface',
+                               help='The serial interface to use (e.g. swd, jtag)',
+                               default='swd')
+        arguments.add_argument('--reset-delay-millis',
+                               default=400,
+                               help='Milliseconds to wait after reset before starting to load the new image.')
+        arguments.add_argument('--script',
+                               default=None,
+                               help=textwrap.dedent('''
+                            Path to a jlink script to use. If not provided then an script will be generated using an
+                            internal default. The following template parameters are supported but optional:
 
-    def __init__(self,
-                 jlink_executable: pathlib.Path = pathlib.Path('JLinkExe'),
-                 extra_arguments: typing.Optional[typing.List[str]] = None):
-        self._logger = logging.getLogger(__name__)
-        self._jlink_exe = jlink_executable
-        self._extra_arguments = extra_arguments
+                                {device}             = The target device.
+                                {speed}              = The interface speed in kilohertz
+                                {serial_interface}   = The serial interface to use.
+                                {reset_delay_millis} = An optional delay to include after reset.
+                                {hexfile}            = The hexfile to upload.
+                            ''').lstrip())
 
-    async def upload(self, jlink_script: pathlib.Path) -> int:
-        cmd = '{} -CommanderScript {}'.format(self._jlink_exe, jlink_script)
-        if self._extra_arguments is not None:
-            cmd += ' ' + ' '.join(self._extra_arguments)
+    def on_construct_command(self, arguments: nanaimo.Namespace, inout_artifacts: nanaimo.Artifacts) -> str:
+        """
+        Construct a command to upload (eke "flash") a firmware to a target device using Segger's JLink
+        Commander program with the assumption that a Segger debug probe like the JLink is attached to the
+        system.
+        +----------------+---------------------------------------+--------------------------------------------------+
+        | **Artifacts**                                                                                             |
+        |                                                                                                           |
+        +----------------+---------------------------------------+--------------------------------------------------+
+        | key            | type                                  | Notes                                            |
+        +================+=======================================+==================================================+
+        | ``tmpfile``    | Optional[tempfile.NamedTemporaryFile] | A temporary file containing the jlink script to  |
+        |                |                                       | execute with expanded template parameters.       |
+        +----------------+---------------------------------------+--------------------------------------------------+
+        | ``scriptfile`` | Optional[str]                         | A path to a script file used to invoke jlink.    |
+        |                |                                       | This file can contain template parameters.       |
+        +----------------+---------------------------------------+--------------------------------------------------+
 
-        self._logger.info('starting upload: %s', cmd)
-        proc = await asyncio.create_subprocess_shell(
-            cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )  # type: asyncio.subprocess.Process
+        """
+        script_file_path = self.get_arg_covariant(arguments, 'script')
+        tmpfile = tempfile.NamedTemporaryFile(mode='w')
+        setattr(inout_artifacts, 'tmpfile', tmpfile)
 
-        stdout, stderr = await proc.communicate()
+        if script_file_path is None:
+            # keep around for as long as the command exists.
+            setattr(inout_artifacts, 'scriptfile', None)
+            template = self.script_template
 
-        self._logger.info('%s exited with %i', cmd, proc.returncode)
+        else:
+            setattr(inout_artifacts, 'scriptfile', script_file_path)
+            with open(script_file_path, 'r') as user_script_file:
+                template = user_script_file.read()
 
-        if stdout:
-            self._logger.debug(stdout.decode())
-        if stderr:
-            self._logger.error(stderr.decode())
+        # poor man's templating
+        expanded_script_file = template.format(
+                hexfile=self.get_arg_covariant_or_fail(arguments, 'hexfile'),
+                device=self.get_arg_covariant_or_fail(arguments, 'device'),
+                speed=self.get_arg_covariant_or_fail(arguments, 'interface-speed-khz'),
+                serial_interface=self.get_arg_covariant_or_fail(arguments, 'serial-interface'),
+                reset_delay_millis=str(self.get_arg_covariant_or_fail(arguments, 'reset-delay-millis'))
+            )
 
-        return proc.returncode
+        with open(tmpfile.name, 'w') as tempfile_handle:
+            tempfile_handle.write(expanded_script_file)
+
+        return '{} -CommanderScript {}'.format(self.get_arg_covariant(arguments, 'exe', 'JLinkExe'),
+                                               tmpfile.name)
+
+
+def pytest_nanaimo_fixture_type() -> typing.Type['nanaimo.fixtures.Fixture']:
+    return ProgramUploader

@@ -84,13 +84,6 @@ Nanaimo (library)
    :members:
    :show-inheritance:
 
-***************************************
-:mod:`nanaimo.builtin.gtest_over_jlink`
-***************************************
-
-.. automodule:: nanaimo.builtin.gtest_over_jlink
-   :members:
-   :show-inheritance:
 
 *************************************
 :mod:`nanaimo.connections`

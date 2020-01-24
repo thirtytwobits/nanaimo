@@ -667,12 +667,15 @@ class SubprocessFixture(Fixture):
         +--------------+---------------------------+-------------------------------------------------------------------+
         | key          | type                      | Notes                                                             |
         +==============+===========================+===================================================================+
+        | ``cmd``      | str                       | The command used to execute the subprocess.                       |
+        +--------------+---------------------------+-------------------------------------------------------------------+
         | ``logfile``  | Optional[pathlib.Path]    | A file containing stdout, stderr, and test logs                   |
         +--------------+---------------------------+-------------------------------------------------------------------+
         """
         artifacts = nanaimo.Artifacts()
 
         cmd = self.on_construct_command(args, artifacts)
+        setattr(artifacts, 'cmd', cmd)
 
         logfile_handler = None  # type: typing.Optional[logging.FileHandler]
 
