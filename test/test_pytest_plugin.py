@@ -11,11 +11,11 @@ from nanaimo.pytest.plugin import assert_success
 
 
 @pytest.mark.asyncio
-async def test_gtest_over_jlink_plugin(gtest_over_jlink: nanaimo.fixtures.Fixture) -> None:
+async def test_jlink_plugin(nanaimo_jlink_upload: nanaimo.fixtures.Fixture) -> None:
     """
-    Make sure we've properly exported gtest_over_jlink as a pytest plugin.
+    Make sure we've properly exported jlink as a pytest plugin.
     """
-    assert isinstance(gtest_over_jlink, nanaimo.fixtures.Fixture)
+    assert isinstance(nanaimo_jlink_upload, nanaimo.fixtures.Fixture)
 
 
 @pytest.mark.asyncio

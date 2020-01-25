@@ -71,14 +71,13 @@ def mock_JLinkExe(request):  # type: ignore
 
 
 @pytest.fixture
-def s32K144_jlink_script(request):  # type: ignore
-    jlink_file = pathlib.Path('test_math_saturation_loadfile_swd').with_suffix('.jlink')
-    return pathlib.Path(material.__file__).parent / jlink_file
+def test_build_config_hex(request):  # type: ignore
+    return pathlib.Path(material.__file__).parent / pathlib.Path('test_build_config').with_suffix('.hex')
 
 
 @pytest.fixture
-def s32K144_jlink_scripts(request):  # type: ignore
-    return pathlib.Path(material.__file__).parent.glob('*.jlink')
+def test_jlink_template(request):  # type: ignore
+    return pathlib.Path(material.__file__).parent / pathlib.Path('test').with_suffix('.jlink')
 
 
 @pytest.fixture

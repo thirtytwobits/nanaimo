@@ -4,9 +4,7 @@
 #
 
 import argparse
-import asyncio
 import os
-import pathlib
 import typing
 from unittest.mock import MagicMock
 
@@ -18,6 +16,7 @@ import nanaimo.config
 import nanaimo.connections
 import nanaimo.connections.uart
 import nanaimo.instruments.jlink
+import nanaimo.parsers
 import nanaimo.parsers.gtest
 from nanaimo import set_subprocess_environment
 
@@ -37,44 +36,6 @@ def test_uart_monitor(serial_simulator_type: typing.Type) -> None:
                 continue
             elif line == last_line:
                 break
-
-
-@pytest.mark.asyncio
-async def test_program_uploader(mock_JLinkExe: pathlib.Path,
-                                s32K144_jlink_script: pathlib.Path) -> None:
-    uploader = nanaimo.instruments.jlink.ProgramUploaderJLink(mock_JLinkExe)
-    assert 0 == await uploader.upload(s32K144_jlink_script)
-
-
-@pytest.mark.asyncio
-async def test_program_uploader_failure(mock_JLinkExe: pathlib.Path,
-                                        s32K144_jlink_script: pathlib.Path) -> None:
-    uploader = nanaimo.instruments.jlink.ProgramUploaderJLink(mock_JLinkExe, ['--simulate-error'])
-    assert 0 != await uploader.upload(s32K144_jlink_script)
-
-
-@pytest.mark.asyncio
-@pytest.mark.timeout(60)
-async def test_program_while_monitoring(mock_JLinkExe: pathlib.Path,
-                                        s32K144_jlink_scripts: typing.Iterator[pathlib.Path],
-                                        serial_simulator_type: typing.Type) -> None:
-    scripts = s32K144_jlink_scripts
-    uploader = nanaimo.instruments.jlink.ProgramUploaderJLink(mock_JLinkExe)
-    serial = serial_simulator_type(material.FAKE_TEST_SUCCESS)
-    uploads = 0
-    with nanaimo.connections.uart.ConcurrentUart(serial) as monitor:
-        for script in scripts:
-            serial.reset_fake_input()
-            results = await asyncio.gather(
-                nanaimo.parsers.gtest.Parser(10).read_test(monitor),
-                uploader.upload(script)
-            )
-            assert 2 == len(results)
-
-            for result in results:
-                assert 0 == result
-            uploads += 1
-    assert uploads > 1
 
 
 @pytest.mark.asyncio
