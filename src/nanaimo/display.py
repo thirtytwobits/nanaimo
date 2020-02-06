@@ -238,6 +238,10 @@ class CharacterDisplay(nanaimo.fixtures.Fixture):
         except serial.SerialException:
             pass
 
+    def set_status(self, status: str) -> None:
+        status_colour = self._colour_map[status]
+        self.set_bg_colour(status_colour[0], status_colour[1], status_colour[2])
+
     async def on_gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
         if args.character_display_configure:
             self.configure()
@@ -252,8 +256,7 @@ class CharacterDisplay(nanaimo.fixtures.Fixture):
             self.write(args.character_display_write)
 
         if args.character_display_status is not None:
-            status_colour = self._colour_map[args.character_display_status]
-            self.set_bg_colour(status_colour[0], status_colour[1], status_colour[2])
+            self.set_status(args.character_display_status)
 
         return nanaimo.Artifacts()
 

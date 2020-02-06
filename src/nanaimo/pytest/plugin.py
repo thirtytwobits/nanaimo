@@ -103,6 +103,7 @@ import pytest
 import nanaimo
 import nanaimo.config
 import nanaimo.fixtures
+import nanaimo.display
 
 
 def create_pytest_fixture(request: typing.Any, fixture_name: str) -> 'nanaimo.fixtures.Fixture':
@@ -123,7 +124,7 @@ def create_pytest_fixture(request: typing.Any, fixture_name: str) -> 'nanaimo.fi
 
 
 @pytest.fixture
-def nanaimo_fixture_manager(request: typing.Any, event_loop: asyncio.AbstractEventLoop) \
+def nanaimo_fixture_manager(request: typing.Any) \
         -> nanaimo.fixtures.FixtureManager:
     """
     Provides a default :class:`FixtureManager <nanaimo.fixtures.FixtureManager>` to a test.
@@ -140,12 +141,10 @@ def nanaimo_fixture_manager(request: typing.Any, event_loop: asyncio.AbstractEve
 
     :param pytest_request: The request object passed into the pytest fixture factory.
     :type pytest_request: _pytest.fixtures.FixtureRequest
-    :param event_loop: The event loop used by the fixture manager and its fixtures.
-    :type event_loop: asyncio.AbstractEventLoop
     :return: A new fixture manager.
     :rtype: nanaimo.fixtures.FixtureManager
     """
-    return PytestFixtureManager(request.config.pluginmanager, event_loop)
+    return PytestFixtureManager(request.config.pluginmanager)
 
 
 @pytest.fixture
@@ -338,7 +337,9 @@ class PytestFixtureManager(nanaimo.fixtures.FixtureManager):
     pytest plugin APIs.
     """
 
-    def __init__(self, pluginmanager: '_pytest.config.PytestPluginManager', loop: asyncio.AbstractEventLoop):
+    def __init__(self,
+                 pluginmanager: '_pytest.config.PytestPluginManager',
+                 loop: typing.Optional[asyncio.AbstractEventLoop] = None):
         super().__init__(loop=loop)
         self._pluginmanager = pluginmanager
 
@@ -348,17 +349,17 @@ class PytestFixtureManager(nanaimo.fixtures.FixtureManager):
                        loop: typing.Optional[asyncio.AbstractEventLoop] = None) -> nanaimo.fixtures.Fixture:
         fixture_plugin = self._pluginmanager.get_plugin(canonical_name)
         fixture_type = fixture_plugin.fixture_type
-        return fixture_type(self, args, loop=loop)
+        return fixture_type(self, args)
 
 
 # +---------------------------------------------------------------------------+
 # | INTERNALS :: INTEGRATED DISPLAY
 # +---------------------------------------------------------------------------+
 
-_display_singleton = None  # type: typing.Optional[nanaimo.fixtures.Fixture]
+_display_singleton = None  # type: typing.Optional[nanaimo.display.CharacterDisplay]
 
 
-def _get_display(config: _pytest.config.Config) -> 'nanaimo.fixtures.Fixture':
+def _get_display(config: _pytest.config.Config) -> 'nanaimo.display.CharacterDisplay':
     global _display_singleton
     if _display_singleton is None:
         for fixture_type in config.pluginmanager.hook.pytest_nanaimo_fixture_type():
@@ -581,9 +582,7 @@ def pytest_sessionstart(session: _pytest.main.Session) -> None:
     args = session.config.option
     args_ns = nanaimo.Namespace(args, nanaimo.config.ArgumentDefaults(args), allow_none_values=False)
     nanaimo.set_subprocess_environment(args_ns)
-    display = _get_display(session.config)
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(display.gather(character_display_status='busy'))
+    _get_display(session.config).set_status('busy')
 
 
 def pytest_runtest_setup(item: pytest.Item) -> None:
@@ -595,11 +594,8 @@ def pytest_runtest_setup(item: pytest.Item) -> None:
     if isinstance(item, _NanaimoItem):
         item.on_setup()
     display = _get_display(item.config)
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(display.gather(
-        character_display_clear=True,
-        character_display_write=item.name
-    ))
+    display.clear(display_default_message=False)
+    display.write(item.name)
 
 
 def pytest_sessionfinish(session: _pytest.main.Session, exitstatus: int) -> None:
@@ -609,11 +605,8 @@ def pytest_sessionfinish(session: _pytest.main.Session, exitstatus: int) -> None
     guide.
     """
     display = _get_display(session.config)
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(display.gather(
-        character_display_clear_to_default=True,
-        character_display_status=('okay' if exitstatus == 0 else 'fail')
-    ))
+    display.clear(display_default_message=True)
+    display.set_status('okay' if exitstatus == 0 else 'fail')
 
 # +---------------------------------------------------------------------------+
 # | INTERNALS :: PYTEST HOOKS :: REPORTING

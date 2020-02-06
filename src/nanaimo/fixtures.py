@@ -65,7 +65,7 @@ class Fixture(metaclass=abc.ABCMeta):
 
     .. invisible-code-block: python
 
-        foo = MyFixture(nanaimo.fixtures.FixtureManager(), nanaimo.Namespace(), loop=_doc_loop)
+        foo = MyFixture(nanaimo.fixtures.FixtureManager(_doc_loop), nanaimo.Namespace())
 
         _doc_loop.run_until_complete(foo.gather())
 
@@ -188,14 +188,49 @@ class Fixture(metaclass=abc.ABCMeta):
         self._name = self.get_canonical_name()
         self._logger = logging.getLogger(self._name)
         if 'loop' in kwargs:
-            self._loop = typing.cast(typing.Optional[asyncio.AbstractEventLoop], kwargs['loop'])
-        else:
-            self._loop = None
+            print('WARNING: Passing loop into Fixture is deprecated. (This will be an exception in a future release).')
         if 'gather_timeout_seconds' in kwargs:
             gather_timeout_seconds = typing.cast(typing.Optional[float], kwargs['gather_timeout_seconds'])
             self._gather_timeout_seconds = gather_timeout_seconds
         else:
             self._gather_timeout_seconds = None
+
+    def gather_until_complete(self, *args: typing.Any, **kwargs: typing.Any) -> nanaimo.Artifacts:
+        """
+        helper function where this:
+
+        .. invisible-code-block: python
+
+            import nanaimo
+            import nanaimo.fixtures
+            import asyncio
+
+            _doc_loop = asyncio.new_event_loop()
+
+            class MyFixture(nanaimo.fixtures.Fixture):
+
+                @classmethod
+                def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
+                    pass
+
+                async def on_gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
+                    artifacts = nanaimo.Artifacts(0)
+                    return artifacts
+
+            foo = MyFixture(nanaimo.fixtures.FixtureManager(_doc_loop), nanaimo.Namespace())
+
+        .. code-block:: python
+
+            foo.gather_until_complete()
+
+        is equivalent to this:
+
+        .. code-block:: python
+
+            foo.loop.run_until_complete(foo.gather())
+
+        """
+        return self.loop.run_until_complete(self.gather(*args, **kwargs))
 
     async def gather(self, *args: typing.Any, **kwargs: typing.Any) -> nanaimo.Artifacts:
         """
@@ -214,7 +249,7 @@ class Fixture(metaclass=abc.ABCMeta):
             routine = self.on_gather(self._args)  # type: typing.Coroutine
             if self._gather_timeout_seconds is not None:
                 done, pending = await asyncio.wait([asyncio.ensure_future(routine)],
-                                                   loop=self.manager.loop,
+                                                   loop=self.loop,
                                                    timeout=self._gather_timeout_seconds,
                                                    return_when=asyncio.ALL_COMPLETED)  \
                     # type: typing.Set[asyncio.Future], typing.Set[asyncio.Future]
@@ -247,11 +282,7 @@ class Fixture(metaclass=abc.ABCMeta):
         running otherwise the loop will be a running loop retrieved by :func:`asyncio.get_event_loop`.
         :raises RuntimeError: if no running event loop could be found.
         """
-        if self._loop is None or not self._loop.is_running():
-            self._loop = self.manager.loop
-        if not self._loop.is_running():
-            raise RuntimeError('No running event loop was found!')
-        return self._loop
+        return self.manager.loop
 
     @property
     def manager(self) -> 'FixtureManager':
@@ -608,6 +639,42 @@ class SubprocessFixture(Fixture):
                 self.write(record.getMessage())
             return True
 
+    class SubprocessMessageMatcher(logging.Filter):
+        """
+        Helper class for working with :meth:`SubprocessFixture.stdout_filter` or
+        :meth:`SubprocessFixture.stderr_filter`. This implementation will watch every
+        log message and store any that match the provided pattern.
+
+        This matcher does not buffer all logged messages.
+
+        :param pattern: A regular expression to match messages on.
+        :param minimum_level: The minimum loglevel to accumulate messages for.
+        """
+
+        def __init__(self, pattern: typing.Any, minimum_level: int = logging.INFO):
+            logging.Filter.__init__(self)
+            self._pattern = pattern
+            self._minimum_level = minimum_level
+            self._matches = []  # type: typing.List
+
+        @property
+        def match_count(self) -> int:
+            """
+            The number of messages that matched the provided pattern.
+            """
+            return len(self._matches)
+
+        @property
+        def matches(self) -> typing.List:
+            return self._matches
+
+        def filter(self, record: logging.LogRecord) -> bool:
+            if record.levelno >= self._minimum_level:
+                match = self._pattern.match(record.getMessage())
+                if match is not None:
+                    self._matches.append(match)
+            return True
+
     def __init__(self,
                  manager: 'FixtureManager',
                  args: typing.Optional[nanaimo.Namespace] = None,
@@ -658,6 +725,28 @@ class SubprocessFixture(Fixture):
         arguments.add_argument('--logfile-date-format',
                                default='%Y-%m-%d %H:%M:%S',
                                help='Logger date format to use for the logfile.')
+        arguments.add_argument('--log-stdout',
+                               action='store_true',
+                               help=textwrap.dedent('''
+                               Log stdout to the logfile as INFO logs. This also makes the stdout text
+                               available to the stdout_filter for this fixture.
+
+                               WARNING: Setting this flag may impact performance if the subprocess sends
+                               a significant amount of data through stdout. The fixture buffers all
+                               data sent through pipes in-memory when this flag is set. Prefer subprocesses
+                               that log data directly to disk and filter on that file instead.
+                               ''').strip())
+        arguments.add_argument('--log-stderr',
+                               action='store_true',
+                               help=textwrap.dedent('''
+                               Log stderr to the logfile as ERROR logs. This also makes the stderr text
+                               available to the stderr_filter for this fixture.
+
+                               WARNING: Setting this flag may impact performance if the subprocess sends
+                               a significant amount of data through stderr. The fixture buffers all
+                               data sent through pipes in-memory when this flag is set. Prefer subprocesses
+                               that log data directly to disk and filter on that file instead.
+                               ''').strip())
 
     async def on_gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
         """
@@ -683,6 +772,8 @@ class SubprocessFixture(Fixture):
         logfile_amend = bool(self.get_arg_covariant(args, 'logfile-amend'))
         logfile_fmt = self.get_arg_covariant(args, 'logfile-format')
         logfile_datefmt = self.get_arg_covariant(args, 'logfile-date-format')
+        log_stdout = self.get_arg_covariant(args, 'log-stdout', False)
+        log_stderr = self.get_arg_covariant(args, 'log-stderr', False)
 
         cwd = self.get_arg_covariant(args, 'cwd')
 
@@ -711,9 +802,19 @@ class SubprocessFixture(Fixture):
                 cwd=cwd
             )  # type: asyncio.subprocess.Process
 
-            await self._wait_for_either_until_neither(
-                (proc.stdout if proc.stdout is not None else self._NoopStreamReader()),
-                (proc.stderr if proc.stderr is not None else self._NoopStreamReader()))
+            if log_stdout or log_stderr:
+                # Take the hit to route the pipes through our process
+                stdout, stderr = await proc.communicate()
+
+                if log_stdout and stdout:
+                    self._log_bytes_like_as_lines(logging.INFO, stdout)
+                if log_stderr and stderr:
+                    self._log_bytes_like_as_lines(logging.ERROR, stderr)
+            else:
+                # Simply let the background process do it's thing and wait for it to finish.
+                await self._wait_for_either_until_neither(
+                    (proc.stdout if proc.stdout is not None else self._NoopStreamReader()),
+                    (proc.stderr if proc.stderr is not None else self._NoopStreamReader()))
 
             await proc.wait()
 
@@ -750,6 +851,14 @@ class SubprocessFixture(Fixture):
     # +-----------------------------------------------------------------------+
     # | PRIVATE METHODS
     # +-----------------------------------------------------------------------+
+
+    def _log_bytes_like_as_lines(self, log_level: int, bytes_like: bytes) -> None:
+        """
+        Given a bytes-like object decode using the system default into text
+        and split the text into lines logging each line at the given log level.
+        """
+        for line in bytes_like.decode(errors='replace').split('\n'):
+            self._logger.log(log_level, (line[:-1] if line.endswith('\r') else line))
 
     class _NoopStreamReader(asyncio.StreamReader):
 
@@ -809,10 +918,8 @@ class FixtureManager:
         running otherwise the loop will be a running loop retrieved by :func:`asyncio.get_event_loop`.
         :raises RuntimeError: if no running event loop could be found.
         """
-        if self._loop is None or not self._loop.is_running():
+        if self._loop is None or self._loop.is_closed():
             self._loop = asyncio.get_event_loop()
-        if not self._loop.is_running():
-            raise RuntimeError('No running event loop was found!')
         return self._loop
 
     def create_fixture(self,
