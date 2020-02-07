@@ -260,9 +260,8 @@ async def test_composite_fixture(event_loop: asyncio.AbstractEventLoop) -> None:
             ]
             return await self._gather.gather(gather_coroutine=coroutines)
 
-    composite = Composite(nanaimo.fixtures.FixtureManager(),
-                          nanaimo.Namespace(),
-                          loop=event_loop)
+    composite = Composite(nanaimo.fixtures.FixtureManager(event_loop),
+                          nanaimo.Namespace())
 
     filter = nanaimo.fixtures.SubprocessFixture.SubprocessMessageAccumulator()
     composite.stdout_filter = filter

@@ -301,8 +301,6 @@ You'll see sections with titles like ``fixtures defined from nanaimo...``. For e
 
         :param pytest_request: The request object passed into the pytest fixture factory.
         :type pytest_request: _pytest.fixtures.FixtureRequest
-        :param event_loop: The event loop used by the fixture manager and its fixtures.
-        :type event_loop: asyncio.AbstractEventLoop
         :return: A new fixture manager.
         :rtype: nanaimo.fixtures.FixtureManager
 
