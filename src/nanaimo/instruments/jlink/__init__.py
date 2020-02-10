@@ -23,6 +23,7 @@ import typing
 
 import nanaimo
 import nanaimo.fixtures
+import functools
 
 
 class ProgramUploader(nanaimo.fixtures.SubprocessFixture):
@@ -83,7 +84,7 @@ class ProgramUploader(nanaimo.fixtures.SubprocessFixture):
 
     def on_construct_command(self, arguments: nanaimo.Namespace, inout_artifacts: nanaimo.Artifacts) -> str:
         """
-        Construct a command to upload (eke "flash") a firmware to a target device using Segger's JLink
+        Construct a command to upload (aka "flash") a firmware to a target device using Segger's JLink
         Commander program with the assumption that a Segger debug probe like the JLink is attached to the
         system.
         +----------------+---------------------------------------+--------------------------------------------------+
@@ -104,6 +105,9 @@ class ProgramUploader(nanaimo.fixtures.SubprocessFixture):
         tmpfile = tempfile.NamedTemporaryFile(mode='w')
         setattr(inout_artifacts, 'tmpfile', tmpfile)
 
+        # without a script, other args are required:
+        get_arg_func = functools.partial(self.get_arg_covariant_or_fail, arguments)
+
         if script_file_path is None:
             # keep around for as long as the command exists.
             setattr(inout_artifacts, 'scriptfile', None)
@@ -113,14 +117,15 @@ class ProgramUploader(nanaimo.fixtures.SubprocessFixture):
             setattr(inout_artifacts, 'scriptfile', script_file_path)
             with open(script_file_path, 'r') as user_script_file:
                 template = user_script_file.read()
+            get_arg_func = functools.partial(self.get_arg_covariant, arguments)  # don't fail fixture on missing args
 
         # poor man's templating
         expanded_script_file = template.format(
-                hexfile=self.get_arg_covariant_or_fail(arguments, 'hexfile'),
-                device=self.get_arg_covariant_or_fail(arguments, 'device'),
-                speed=self.get_arg_covariant_or_fail(arguments, 'interface-speed-khz'),
-                serial_interface=self.get_arg_covariant_or_fail(arguments, 'serial-interface'),
-                reset_delay_millis=str(self.get_arg_covariant_or_fail(arguments, 'reset-delay-millis'))
+                hexfile=get_arg_func('hexfile'),
+                device=get_arg_func('device'),
+                speed=get_arg_func('interface-speed-khz'),
+                serial_interface=get_arg_func('serial-interface'),
+                reset_delay_millis=str(get_arg_func('reset-delay-millis'))
             )
 
         with open(tmpfile.name, 'w') as tempfile_handle:

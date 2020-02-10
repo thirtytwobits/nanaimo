@@ -30,6 +30,7 @@ async def test_jlink_upload(use_internal_template: bool,
 
     if not use_internal_template:
         test_args['jlink_up_script'] = str(test_jlink_template)
+        test_args['jlink_up_device'] = None  # fails unless args are optional with script
 
     artifacts = assert_success(await nanaimo_jlink_upload.gather(**test_args))
 
@@ -48,7 +49,7 @@ async def test_jlink_upload(use_internal_template: bool,
     hexfile_in_script = None  # type: typing.Optional[str]
     with open(scriptfile, 'r') as scriptfile_handle:
         for line in scriptfile_handle:
-            matchobj = re.search(r'^loadfile\s+((?:/|\w)+\.hex)$', line)
+            matchobj = re.search(r'^loadfile\s+((?:/|\w)+(?:/|[\w\. -])*\.hex)$', line)
             if matchobj:
                 hexfile_in_script = matchobj.group(1)
             print(line, end='')
