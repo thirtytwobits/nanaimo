@@ -725,28 +725,6 @@ class SubprocessFixture(Fixture):
         arguments.add_argument('--logfile-date-format',
                                default='%Y-%m-%d %H:%M:%S',
                                help='Logger date format to use for the logfile.')
-        arguments.add_argument('--log-stdout',
-                               action='store_true',
-                               help=textwrap.dedent('''
-                               Log stdout to the logfile as INFO logs. This also makes the stdout text
-                               available to the stdout_filter for this fixture.
-
-                               WARNING: Setting this flag may impact performance if the subprocess sends
-                               a significant amount of data through stdout. The fixture buffers all
-                               data sent through pipes in-memory when this flag is set. Prefer subprocesses
-                               that log data directly to disk and filter on that file instead.
-                               ''').strip())
-        arguments.add_argument('--log-stderr',
-                               action='store_true',
-                               help=textwrap.dedent('''
-                               Log stderr to the logfile as ERROR logs. This also makes the stderr text
-                               available to the stderr_filter for this fixture.
-
-                               WARNING: Setting this flag may impact performance if the subprocess sends
-                               a significant amount of data through stderr. The fixture buffers all
-                               data sent through pipes in-memory when this flag is set. Prefer subprocesses
-                               that log data directly to disk and filter on that file instead.
-                               ''').strip())
 
     async def on_gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
         """
@@ -772,8 +750,6 @@ class SubprocessFixture(Fixture):
         logfile_amend = bool(self.get_arg_covariant(args, 'logfile-amend'))
         logfile_fmt = self.get_arg_covariant(args, 'logfile-format')
         logfile_datefmt = self.get_arg_covariant(args, 'logfile-date-format')
-        log_stdout = self.get_arg_covariant(args, 'log-stdout', False)
-        log_stderr = self.get_arg_covariant(args, 'log-stderr', False)
 
         cwd = self.get_arg_covariant(args, 'cwd')
 
@@ -802,19 +778,10 @@ class SubprocessFixture(Fixture):
                 cwd=cwd
             )  # type: asyncio.subprocess.Process
 
-            if log_stdout or log_stderr:
-                # Take the hit to route the pipes through our process
-                stdout, stderr = await proc.communicate()
-
-                if log_stdout and stdout:
-                    self._log_bytes_like_as_lines(logging.INFO, stdout)
-                if log_stderr and stderr:
-                    self._log_bytes_like_as_lines(logging.ERROR, stderr)
-            else:
-                # Simply let the background process do it's thing and wait for it to finish.
-                await self._wait_for_either_until_neither(
-                    (proc.stdout if proc.stdout is not None else self._NoopStreamReader()),
-                    (proc.stderr if proc.stderr is not None else self._NoopStreamReader()))
+            # Simply let the background process do it's thing and wait for it to finish.
+            await self._wait_for_either_until_neither(
+                (proc.stdout if proc.stdout is not None else self._NoopStreamReader()),
+                (proc.stderr if proc.stderr is not None else self._NoopStreamReader()))
 
             await proc.wait()
 
@@ -852,14 +819,6 @@ class SubprocessFixture(Fixture):
     # | PRIVATE METHODS
     # +-----------------------------------------------------------------------+
 
-    def _log_bytes_like_as_lines(self, log_level: int, bytes_like: bytes) -> None:
-        """
-        Given a bytes-like object decode using the system default into text
-        and split the text into lines logging each line at the given log level.
-        """
-        for line in bytes_like.decode(errors='replace').split('\n'):
-            self._logger.log(log_level, (line[:-1] if line.endswith('\r') else line))
-
     class _NoopStreamReader(asyncio.StreamReader):
 
         def __init__(self) -> None:
@@ -886,17 +845,33 @@ class SubprocessFixture(Fixture):
             done, pending = await asyncio.wait(pending)
 
             for future_done in done:
-                result = future_done.result().strip()
+                result = future_done.result()
                 if len(result) > 0:
                     line = result.decode(errors='replace')
                     if future_done == future_err:
                         future_err = asyncio.ensure_future(stderr.readline())
                         pending.add(future_err)
-                        self._logger.error(line)
+                        self._logger.error(self._ensure_no_newline_at_end(line))
                     else:
                         future_out = asyncio.ensure_future(stdout.readline())
                         pending.add(future_out)
-                        self._logger.info(line.strip())
+                        self._logger.info(self._ensure_no_newline_at_end(line))
+                elif future_done == future_err and not stderr.at_eof():
+                    # spurious awake?
+                    future_err = asyncio.ensure_future(stderr.readline())
+                    pending.add(future_err)
+                elif future_done == future_out and not stdout.at_eof():
+                    # spurious awake?
+                    future_out = asyncio.ensure_future(stdout.readline())
+                    pending.add(future_out)
+
+    @staticmethod
+    def _ensure_no_newline_at_end(text: str) -> str:
+        if text.endswith('\n'):
+            text = text[:-1]
+        if text.endswith('\r'):
+            text = text[:-1]
+        return text
 
 
 # +---------------------------------------------------------------------------+
