@@ -61,6 +61,14 @@ Nanaimo (library)
    :show-inheritance:
 
 ***************************************
+:mod:`nanaimo.builtin.nanaimo_cmd`
+***************************************
+
+.. automodule:: nanaimo.builtin.nanaimo_cmd
+   :members:
+   :show-inheritance:
+
+***************************************
 :mod:`nanaimo.builtin.nanaimo_scp`
 ***************************************
 
