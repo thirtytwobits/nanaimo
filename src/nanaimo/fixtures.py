@@ -359,6 +359,18 @@ class Fixture(metaclass=abc.ABCMeta):
         ...
 
     # +-----------------------------------------------------------------------+
+    # | Optional Hooks
+    # +-----------------------------------------------------------------------+
+    def on_test_teardown(self, test_name: str) -> None:
+        """
+        Invoked for each fixture after it was used in a test as part of the pytest
+        :func:`_pytest.hookspec.pytest_runtest_teardown` protocol.
+
+        :param test_name:    The name of the test the fixture was used with.
+        """
+        pass
+
+    # +-----------------------------------------------------------------------+
     # | ASYNC HELPERS
     # +-----------------------------------------------------------------------+
 
