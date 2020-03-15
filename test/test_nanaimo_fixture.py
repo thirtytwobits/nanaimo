@@ -152,13 +152,29 @@ async def test_countdown_sleep(dummy_nanaimo_fixture: nanaimo.fixtures.Fixture) 
 
 @pytest.mark.timeout(20)
 @pytest.mark.asyncio
-async def test_gather_timeout(gather_timeout_fixture: nanaimo.fixtures.Fixture) -> None:
+async def test_gather_timeout(event_loop: asyncio.AbstractEventLoop) -> None:
     """
     Test the standard fixture timeout.
     """
-    gather_timeout_fixture.gather_timeout_seconds = 1.0
+    class GatherTimeoutFixture(nanaimo.fixtures.Fixture):
+
+        @classmethod
+        def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
+            pass
+
+        async def on_gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
+            """
+            Sleep forever
+            """
+            while True:
+                await asyncio.sleep(1)
+
+    subject = GatherTimeoutFixture(nanaimo.fixtures.FixtureManager(), gather_timeout_seconds=2.0)
+    assert 2.0 == subject.gather_timeout_seconds
+    subject.gather_timeout_seconds = 1.0
+    assert 1.0 == subject.gather_timeout_seconds
     with pytest.raises(asyncio.TimeoutError):
-        await gather_timeout_fixture.gather()
+        await subject.gather()
 
 
 @pytest.mark.asyncio
@@ -230,7 +246,6 @@ async def test_subprocess_fixture_environment(build_output: pathlib.Path) -> Non
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip(reason='https://github.com/thirtytwobits/nanaimo/issues/84')
 async def test_composite_fixture(event_loop: asyncio.AbstractEventLoop) -> None:
     """
     Test creation of a composite fixture.
@@ -244,9 +259,7 @@ async def test_composite_fixture(event_loop: asyncio.AbstractEventLoop) -> None:
         def __init__(self, manager: nanaimo.fixtures.FixtureManager,
                      args: nanaimo.Namespace,
                      **kwargs: typing.Any) -> None:
-            nanaimo_bar.Fixture.__init__(self, manager, args, **kwargs)
-            nanaimo_cmd.Fixture.__init__(self, manager, args, **kwargs)
-            self._gather = nanaimo_gather.Fixture(manager, args, **kwargs)
+            super().__init__(manager, args, **kwargs)
 
         @classmethod
         def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
@@ -254,11 +267,9 @@ async def test_composite_fixture(event_loop: asyncio.AbstractEventLoop) -> None:
             nanaimo_cmd.Fixture.visit_test_arguments(arguments)
 
         async def on_gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
-            coroutines = [
-                nanaimo_bar.Fixture.on_gather(self, args),
-                nanaimo_cmd.Fixture.on_gather(self, args)
-            ]
-            return await self._gather.gather(gather_coroutine=coroutines)
+            cmd_artifacts = await nanaimo_cmd.Fixture.on_gather(self, args)
+            bar_artifacts = await nanaimo_bar.Fixture.on_gather(self, args)
+            return nanaimo.Artifacts.combine(cmd_artifacts, bar_artifacts)
 
     composite = Composite(nanaimo.fixtures.FixtureManager(event_loop),
                           nanaimo.Namespace())
@@ -297,3 +308,24 @@ async def test_subprocess_read_illegal_encoding(paths_for_test: typing.Any) -> N
     subject.stdout_filter = stdout
     subject.stderr_filter = stderr
     assert_success(await subject.gather())
+
+
+@pytest.mark.asyncio
+async def test_loop_into_fixture_arg(event_loop: asyncio.AbstractEventLoop) -> None:
+    class Dummy(nanaimo.fixtures.Fixture):
+
+        def __init__(self, manager: nanaimo.fixtures.FixtureManager,
+                     args: nanaimo.Namespace,
+                     **kwargs: typing.Any) -> None:
+            super().__init__(manager, args, **kwargs)
+
+        def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
+            pass
+
+        async def on_gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
+            return nanaimo.Artifacts()
+
+    with pytest.raises(ValueError):
+        Dummy(nanaimo.fixtures.FixtureManager(event_loop),
+              nanaimo.Namespace(),
+              loop=event_loop)

@@ -7,13 +7,22 @@
             "label": "nanaimo-pytest",
             "type": "shell",
             "options": {
-                "cwd": "${workspaceFolder}/test"
+                "cwd": "${workspaceFolder}"
             },
-            "command": "python -m pytest --log-cli-level=DEBUG -s",
+            "command": "python3 -m pytest --log-cli-level=DEBUG -s",
             "group": {
                 "kind": "test",
                 "isDefault": true
             }
+        },
+        {
+            "label": "tox local",
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "command": "pip3 install -r requirements.txt",
+            "problemMatcher": []
         }
     ]
 }

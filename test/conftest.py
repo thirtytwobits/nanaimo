@@ -96,25 +96,3 @@ def build_output(request):  # type: ignore
 @pytest.fixture
 def nanaimo_bar_from_conftest(nanaimo_fixture_manager, nanaimo_arguments) -> 'nanaimo.fixtures.Fixture':
     return nanaimo.builtin.nanaimo_bar.Fixture(nanaimo_fixture_manager, nanaimo_arguments)
-
-
-class GatherTimeoutFixture(nanaimo.fixtures.Fixture):
-
-    @classmethod
-    def on_visit_test_arguments(cls, arguments: nanaimo.Arguments) -> None:
-        pass
-
-    async def on_gather(self, args: nanaimo.Namespace) -> nanaimo.Artifacts:
-        """
-        Sleep forever
-        """
-        while True:
-            await asyncio.sleep(1)
-
-
-@pytest.fixture
-def gather_timeout_fixture(request: typing.Any) -> nanaimo.fixtures.Fixture:
-    args = nanaimo.Namespace(request.config.option,
-                             nanaimo.config.ArgumentDefaults(request.config.option),
-                             allow_none_values=False)
-    return GatherTimeoutFixture(nanaimo.fixtures.FixtureManager(), args)

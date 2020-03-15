@@ -188,7 +188,8 @@ class Fixture(metaclass=abc.ABCMeta):
         self._name = self.get_canonical_name()
         self._logger = logging.getLogger(self._name)
         if 'loop' in kwargs:
-            print('WARNING: Passing loop into Fixture is deprecated. (This will be an exception in a future release).')
+            raise ValueError('Do not pass the loop into the fixture. '
+                             'Fixtures obtain the loop from their FixtureManager.')
         if 'gather_timeout_seconds' in kwargs:
             gather_timeout_seconds = typing.cast(typing.Optional[float], kwargs['gather_timeout_seconds'])
             self._gather_timeout_seconds = gather_timeout_seconds
@@ -770,18 +771,18 @@ class SubprocessFixture(Fixture):
             logfile_handler = logging.FileHandler(filename=str(logfile), mode=('a' if logfile_amend else 'w'))
             file_formatter = logging.Formatter(fmt=logfile_fmt, datefmt=logfile_datefmt)
             logfile_handler.setFormatter(file_formatter)
-            self._logger.addHandler(logfile_handler)
+            self.logger.addHandler(logfile_handler)
 
         stdout_filter = self._stdout_filter
         stderr_filter = self._stderr_filter
 
         if stdout_filter is not None:
-            self._logger.addFilter(stdout_filter)
+            self.logger.addFilter(stdout_filter)
         if stderr_filter is not None:
-            self._logger.addFilter(stderr_filter)
+            self.logger.addFilter(stderr_filter)
 
         try:
-            self._logger.debug('About to execute command "%s" in a subprocess shell', cmd)
+            self.logger.debug('About to execute command "%s" in a subprocess shell', cmd)
 
             proc = await asyncio.create_subprocess_shell(
                 cmd,
