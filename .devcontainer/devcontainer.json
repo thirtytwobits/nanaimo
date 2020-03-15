@@ -1,0 +1,20 @@
+{
+    "name": "Python dev environment",
+    "dockerFile": "python.Dockerfile",
+    "context": "..",
+    "settings": { 
+        "terminal.integrated.shell.linux": "/bin/bash"
+    },
+    "workspaceFolder": "/workspace",
+    "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
+    "mounts": [
+        "source=root-vscode-server,target=/root/.vscode-server/extensions,type=volume",
+        "source=nanaimo-tox,target=/workspace/.tox,type=volume"
+    ],
+    "extensions": [
+        "streetsidesoftware.code-spell-checker",
+        "ms-python.python",
+        "lextudio.restructuredtext",
+    ],
+    "postCreateCommand": "tox -e local"
+}

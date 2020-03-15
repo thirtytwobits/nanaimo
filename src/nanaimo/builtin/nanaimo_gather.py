@@ -91,7 +91,7 @@ class Fixture(nanaimo.fixtures.Fixture):
             else:
                 fixture_list.append(self.manager.create_fixture(arg, args).gather())
 
-        results = await asyncio.gather(*fixture_list, loop=self.loop)
+        results = await asyncio.gather(*fixture_list)
         return nanaimo.Artifacts.combine(*results)
 
 

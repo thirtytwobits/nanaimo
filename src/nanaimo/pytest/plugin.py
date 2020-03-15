@@ -424,6 +424,8 @@ class _NanaimoItem(pytest.Item):
         combined = nanaimo.Artifacts.combine(*results)
         assert combined.result_code == 0
         getattr(self.session.config, self.nanaimo_results_sneaky_key)[','.join(self._fixture_names)] = combined
+        for fixture in fixtures:
+            fixture.on_test_teardown('nait')
 
     def _prunetraceback(self, excinfo):
         """
@@ -596,6 +598,19 @@ def pytest_runtest_setup(item: pytest.Item) -> None:
     display = _get_display(item.config)
     display.clear(display_default_message=False)
     display.write(item.name)
+
+
+def pytest_runtest_teardown(item: pytest.Item, nextitem: pytest.Item) -> None:
+    """
+    See :func:`_pytest.hookspec.pytest_teardown` for documentation.
+    Also see the "`Writing Plugins <https://docs.pytest.org/en/latest/writing_plugins.html>`_"
+    guide.
+    """
+    if hasattr(item, 'funcargs'):
+        args = item.funcargs
+        for name, value in args.items():
+            if isinstance(value, nanaimo.fixtures.Fixture):
+                typing.cast(nanaimo.fixtures.Fixture, value).on_test_teardown(item.name)
 
 
 def pytest_sessionfinish(session: _pytest.main.Session, exitstatus: int) -> None:
