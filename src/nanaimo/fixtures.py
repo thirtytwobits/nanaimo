@@ -578,6 +578,10 @@ class SubprocessFixture(Fixture):
     to either filter the subprocess pipes or use the ``--logfile`` argument to write the output
     to a file in persistent storage.
 
+    Nanaimo's output processing may cause performance impact to subprocesses if output is sent 
+    from the subprocess faster than it can be processed by Nanaimo. In that case, the subprocess' 
+    output must be redirected to a file in order to prevent Nanaimo from attempting to process it.
+
     Filtering is accomplished using the :data:`stdout_filter <nanaimo.fixtures.SubprocessFixture.stdout_filter>`
     or :data:`stderr_filter <nanaimo.fixtures.SubprocessFixture.stderr_filter>` property of this class.
     For example:
