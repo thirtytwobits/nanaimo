@@ -2,16 +2,9 @@
 Nanaimo: Hardware-In-the-Loop Unit Testing
 ############################################
 
-|badge_docs|_ |badge_build|_ |badge_github_license|_ |badge_pypi_support|_ |badge_pypi_version|_ \
-|badge_sonarcloud_quality|_ |badge_sonarcloud_coverage|_ |badge_sonarcloud_bugs|_
 
 .. note::
-    Nanaimo is alpha software and will remain so until we bump its version to 1.0.0 or greater.
-    We will not knowingly break compatibility within a minor revision but we will break compatibility
-    a few more times between minor revisions until beta is declared. Because of this you should depend
-    on a minor version explicitly. For example ::
-
-        nanaimo ~= 0.1
+    This project is no longer active.
 
 
 .. figure:: https://thirtytwobits.github.io/nanaimo/static/images/nanaimo.png
